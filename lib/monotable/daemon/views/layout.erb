@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Monotable</title>
+    <link rel="stylesheet" href="/stylesheets/reset.css" type="text/css" media="screen" title="no title" charset="utf-8"/>
+    <link rel="stylesheet" href="/stylesheets/styles.css" type="text/css" media="screen" title="no title" charset="utf-8"/>
+  </head>
+  <body>
+    <section id="sidecol">
+      <header><a href="/">Monotable</a></header>
+      <nav><ul>
+        <li><a href="/chunks">Chunks</a></li>
+        <li><a href="/records">Records</a></li>        
+      </ul></nav>
+    </section>
+    <section id="maincol">      
+      <%= yield %>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+# encoding: BINARY
+
+# PathStore manages all the storage in one specified path
+
+module MonoTable
+  class PathStore
+    attr_accessor :path
+
+    # TODO: switch tousing the JournalManager
+    attr_accessor :journal_manager
+    attr_accessor :chunks # hash keyed by filename
+    attr_accessor :local_store
+
+    def initialize(path,local_store=nil)
+      @local_store=local_store || LocalStore.new([path])
+      @path = File.expand_path(path)
+      @journal_manager = JournalManager.new(path,self)
+      validate_store
+      @next_chunk_number=0
+      init_chunks
+    end
+
+    def validate_store
+      journal_manager.compact
+    end
+
+    def journal
+      journal_manager
+    end
+
+    # Takes a Chunk object, assigns it a filename, saves it to disk,
+    # creates a ChunkFile object, adds that to this pathstore, and returns the ChunkFile
+    def add(chunk)
+      case chunk
+      when Chunk then
+        filename=generate_filename
+        chunk.save(filename)
+        chunks[filename]=ChunkFile.new(filename,:journal=>journal_manager,:path_store=>self)
+      when ChunkFile then
+        raise "ChunkFile attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
+        chunk.path_store=self
+        chunks[chunk.filename]=chunk
+        local_store.add(chunk)
+      else raise "unknown type #{chunk.class}"
+      end
+    end
+
+    #**************************************
+    # internal API
+    #**************************************
+    def init_chunks
+      @chunks={}
+      Dir.glob(File.join(path,"*#{CHUNK_EXT}")) do |f|
+        f[/\/([0-9]+)\#{CHUNK_EXT}$/]
+        chunk_number=$1.to_i
+        @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
+
+        chunks[f]=ChunkFile.new(f,:journal=>journal_manager,:path_store=>self)
+      end
+    end
+
+    # select a numbered filename between 1 and 100 million that is unique on this path
+    def generate_filename
+      while true
+        filename=File.join(path,"%08d#{CHUNK_EXT}" % (@next_chunk_number % 100_000_000))
+        return filename unless chunks[filename] # if unique, return
+        @next_chunk_number+=1
+      end
+    end
+  end
+end
