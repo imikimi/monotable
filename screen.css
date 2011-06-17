@@ -1,0 +1,133 @@
+
+body {
+  margin: 0px;
+  padding: 0px;
+  background: #aaa;
+  font-family: "Lucida Grande", Geneva, Arial, Verdana, sans-serif;
+  color: #333333;
+}
+
+div {
+  margin: 0px;
+  background-position: center;
+  background-repeat: none;
+}
+
+.subtitle {
+  border-top: 1px solid black;
+  text-align:right;
+  font-size:11px;
+  padding-top:3px;
+}
+
+h1 {
+  font-size: 125%;
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
+a {
+  color: #AA110D;
+}
+
+.nav {
+  background-color:#ddd;
+  margin:10px 0px;
+  height:40px;
+}
+
+.nav a {
+  float:left;
+  margin:5px;
+  padding:5px 10px
+  display:block;
+  color:black;
+  text-decoration: none;
+  margin:5px;
+  padding:5px 10px
+}
+
+.nav a:hover {
+  background-color: #AA110D;
+  color:white;
+}
+
+.nav .selected {
+  background-color: #AA110D;
+  color:white;
+}
+
+pre {
+  background: #333333;
+  color: white;
+  padding: 15px;
+  border: 1px solid #666666;
+}
+
+p {
+	line-height: 150%;
+}
+
+.content {
+  background-color:white;
+  margin:10px auto;
+  padding:25px 60px 25px;
+  width:640px;
+  -moz-box-shadow:0px 0px 10px 0 black;
+  -webkit-box-shadow:0px 0px 10px 0 black;
+  position:relative;
+}
+
+.babel_image {
+  background-image: url("images/monotable.png");
+  background-position: center top;
+  background-repeat: no-repeat;
+  margin: 10px;
+  height:170px;
+  width: 170px;
+}
+
+.title_window {
+  height: 395px;
+  margin: 14px 0 0 30px;
+  width: 435px;
+}
+
+.title_window .title {
+  font-size: 50px;
+  margin: 0px;
+  text-align: right;
+}
+
+li {
+  position:relative;
+  list-style-type: none;
+  padding-bottom: 5px;
+}
+
+li .description {
+  padding-left:200px;
+}
+
+ul {
+  padding-left:20px;
+}
+
+li .example{
+  clear: both;
+  position: absolute;
+  left: 0px;
+  top: 6px;
+}
+
+.bullets li {
+  list-style-type: circle;
+}
+
+pre code {color: #ccc;}
+comment {color: #faa;}
+symbol {color: #fff;font-weight:bold;}
+number {color: #fff;}
+keyword {color: #aaf;}
+string {color: #afa;}
+regex {color: #6a6;}

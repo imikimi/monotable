@@ -1,0 +1,8 @@
+Releated parsing expression grammar projects for Ruby
+
+Treetop:
+http://treetop.rubyforge.org/
+
+Walrat looks interesting:
+https://rubygems.org/gems/walrat
+http://www.wincent.com/a/about/wincent/weblog/archives/2007/01/writing_a_parse.php

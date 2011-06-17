@@ -1,0 +1,172 @@
+<html>
+<head>
+  <link href="./screen.css" rel="stylesheet" type="text/css" />
+  <title>Babel-Bridge: Ruby Parsing Expression Grammar Generator</title>
+</head>
+<body>
+<div class="content">
+<div class="babel_image">Athanasius Kircher, The Tower of Babel, 1679.</div>
+<div class="title_window">
+<h1 class="title">Babel Bridge</h1>
+<div class="subtitle"><a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">Memoizing Parsing Expression Grammar</a> generator in Ruby</div>
+</div>
+<h1>Rule Basics</h1>
+<p>Rules are declared inside parser classes using the following form:</p>
+<pre><code>rule <em>[rule name]</em>, <em>[pattern]</em></code></pre>
+<p>The rule's name is just a Ruby symbol. You can create variantes of a rule by listing more than one rule with the same name.
+The variants are tried in the order they were created.</p>
+
+<p>For Example:</p>
+<pre><code><keyword>class</keyword> <identifier>MyParser</identifier> <symbol><</symbol> <identifier>BabelBridge</identifier><symbol>:</symbol><string>:Parser</string>
+  <identifier>rule</identifier> <string>:foo</string><symbol>,</symbol> <string>"foo"</string>
+  <identifier>rule</identifier> <string>:foo</string><symbol>,</symbol> <string>"bar"</string>
+<keyword>end</keyword></code></pre>
+
+<p>Here the rule :foo has two variants. It can match either the string "foo" or the string "bar".</p>
+
+<h1>Pattern Basics</h1>
+<p>A pattern consists of one or more pattern elements. The simplest pattern element is just a Ruby string, which must matched exactly.
+If there is more than one pattern element in a rule, each must match in order. Patterns can be expressed in two ways:</p>
+
+<pre><code><keyword>class</keyword> <identifier>MyParser</identifier> <symbol><</symbol> <identifier>BabelBridge</identifier><symbol>:</symbol><string>:Parser</string>
+  <identifier>rule</identifier> <string>:foo</string><symbol>,</symbol> <string>"foo"</string><symbol>,</symbol> <string>"bar"</string>
+  <identifier>rule</identifier> <string>:boo</string><symbol>,</symbol> <symbol>[</symbol><string>"foo"</string><symbol>,</symbol> <string>"bar"</string><symbol>]</symbol>
+<keyword>end</keyword></code></pre>
+
+<p>Above, rule :foo and rule :boo are equivalent. They both match "foo" followed by "bar": "foobar".</p>
+
+<h1>Pattern Elements</h1>
+<p>Below are the basic pattern elements:</p>
+<ul>
+  <li><code class="example">"string"</code><div class="description">A Ruby string is matched exactly.                 </div>
+  <li><code class="example">/regexp/</code><div class="description">Regular expressions are matched using Ruby Regexp.</div>
+  <li><code class="example">:my_rule</code><div class="description">Rule: Symbols match the named rule.</div>
+  <li><code class="example">:my_rule?</code><div class="description">Optional Rule: Symbols ending in "?" optionally match the rule.</div>
+  <li><code class="example">:my_rule!</code><div class="description">Not Rule: Symbols ending in "!" succeeds if the rule does not match.</div>
+  <li><code class="example">true</code><div class="description">True always matches the empty string. A handy no-op.</div>
+</ul>
+<p>In addition to the basic pattern elements, you can construct more complicated patterns. Internally these are represented as a Hash, but
+the easy way to build these advanced patterns is with these chainable pattern-constructor methods:</p>
+<p>In the examples below, <code>pe</code> is any basic pattern-element
+<ul>
+  <li><code class="example">match(pe)</code><div class="description">Alone, this doesn't do anything interesting</div>
+  <li><code class="example">match?(pe)</code><div class="description">Optional: conditionally match pattern</div>
+  <li><code class="example">match!(pe)</code><div class="description">Not: succeed only if pattern does not match</div>
+  <li><code class="example">many(pe)</code><div class="description">Match the pattern one or more times</div>
+  <li><code class="example">many?(pe)</code><div class="description">Optional: Match the pattern zero or more times</div>
+  <li><code class="example">many!(pe)</code><div class="description">Not: succeed only if pattern does not match</div>
+  <li><code class="example">conditionally.match(pe)</code><div class="description">Optional: optionally match the pattern<br>equivalent to <code>match?(pe)</code></div>
+  <li><code class="example">dont.match(pe)</code><div class="description">Not: succeed only if the pattern doesn't match<br>equivalent to <code>match!(pe)</code></div>
+  <li><code class="example">could.match(pe)</code><div class="description">Could: succeeds only of the pattern is matched, but does not consume any input</div>
+</ul>
+<p>Some examples:</p>
+<pre><code><keyword>class</keyword> <identifier>MyParser</identifier> <symbol><</symbol> <identifier>BabelBridge</identifier><symbol>:</symbol><string>:Parser</string>
+  <identifier>rule</identifier> <string>:foo_a</string><symbol>,</symbol> <identifier>many</identifier><symbol>(</symbol><string>"foo"</string><symbol>)</symbol>
+  <identifier>rule</identifier> <string>:foo_b</string><symbol>,</symbol> <identifier>match</identifier><symbol>?</symbol><symbol>(</symbol><string>:foo_a</string><symbol>)</symbol>
+  <identifier>rule</identifier> <string>:foo_c</string><symbol>,</symbol> <identifier>match</identifier><symbol>!</symbol><symbol>(</symbol><regex>/foo/</regex><symbol>)</symbol>
+  <identifier>rule</identifier> <string>:foo_d</string><symbol>,</symbol> <identifier>could</identifier><symbol>.</symbol><identifier>match</identifier><symbol>(</symbol><string>"foo"</string><symbol>)</symbol>
+<keyword>end</keyword></code></pre>
+
+<h1>The Many Pattern Element</h1>
+<p>The <code>many</code> pattern element has some extra conveniences that are possible by awkward to do with simple
+parsing expression grammars.</p>
+<ul>
+  <li><code class="example">many(pe1,pe2)</code><div class="description">Match one or more of pe1 delimited by pe2</div>
+  <li><code class="example">many(pe1,pe2,true)</code><div class="description">Match one or more of pe1 delimited by pe2 followed by a last pe2</div>
+  <li><code class="example">many(pe1,pe2,pe3)</code><div class="description">Match one or more of pe1 delimited by pe2 followed by pe3</div>
+</ul>
+<p>Examples:</p>
+
+<pre><code><keyword>class</keyword> <identifier>MyParser</identifier> <symbol><</symbol> <identifier>BabelBridge</identifier><symbol>:</symbol><string>:Parser</string>
+  <identifier>rule</identifier> <string>:foo_a</string><symbol>,</symbol> <identifier>many</identifier><symbol>(</symbol><string>"foo"</string><symbol>,</symbol><string>" "</string><symbol>)</symbol>
+    <comment># match one or more "foo"s delimited by spaces</comment>
+    <comment># Ex matches: "foo", "foo foo", "foo foo foo"</comment>
+    <comment># Ex non-matches: "foofoo"</comment>
+
+  <identifier>rule</identifier> <string>:foo_b</string><symbol>,</symbol> <identifier>many</identifier><symbol>(</symbol><string>"foo"</string><symbol>,</symbol><identifier>match</identifier><symbol>?</symbol><symbol>(</symbol><string>" "</string><symbol>)</symbol><symbol>)</symbol>
+    <comment># match one or more "foo"s optionally delimited by spaces</comment>
+    <comment># Ex matches: "foo", "foo foo", "foofoo", "foo foofoo"</comment>
+    <comment># Ex non-matches: "foo  foo"</comment>
+
+  <identifier>rule</identifier> <string>:foo_c</string><symbol>,</symbol> <identifier>many</identifier><symbol>(</symbol><string>"foo"</string><symbol>,</symbol><regex>/ +/</regex><symbol>,</symbol><identifier>true</identifier><symbol>)</symbol>
+    <comment># match one or more "foo"s optionally separated by one or more spaces</comment>
+    <comment># followed by one or more spaces</comment>
+    <comment># Ex matches: "foo ", "foo foo ", "foo    foo "</comment>
+    <comment># Ex non-matches: "foofoo ", "foo foo"</comment>
+<keyword>end</keyword></code></pre>
+
+<h1>Real World Example</h1>
+Below is the complete code for the markup parser I used to convert ruby code into the pretty syntax-highlighted examples on this page.
+
+<pre><code><keyword>require</keyword> <string>"rubygems"</string>
+<keyword>require</keyword> <string>"babel_bridge"</string>
+
+<keyword>class</keyword> <identifier>CodeMarkup</identifier> <symbol>&lt;</symbol> <identifier>BabelBridge</identifier><symbol>:</symbol><string>:Parser</string>
+  <identifier>rule</identifier> <string>:file</string><symbol>,</symbol> <identifier>many</identifier><symbol>(</symbol><string>:element</string><symbol>)</symbol> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier>
+      <string>"&lt;pre&gt;&lt;code&gt;"</string><symbol>+</symbol>
+      <identifier>element</identifier><symbol>.</symbol><identifier>collect</identifier><symbol>{</symbol><symbol>|</symbol><identifier>a</identifier><symbol>|</symbol> <identifier>a</identifier><symbol>.</symbol><identifier>markup</identifier><symbol>}</symbol><symbol>.</symbol><identifier>join</identifier><symbol>.</symbol><identifier>strip</identifier><symbol>+</symbol>
+      <string>"&lt;/code&gt;&lt;/pre&gt;"</string>
+    <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>"&lt;"</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;symbol&gt;&lt;&lt;/symbol&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>"&gt;"</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;symbol&gt;&gt;&lt;/symbol&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:comment</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;comment&gt;#{comment}&lt;/comment&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:keyword</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;keyword&gt;#{keyword}&lt;/keyword&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:string</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier>
+      <identifier>str</identifier><symbol>=</symbol><identifier>string</identifier><symbol>.</symbol><identifier>to_s</identifier><symbol>.</symbol><identifier>gsub</identifier><symbol>(</symbol><string>"&lt;"</string><symbol>,</symbol><string>"&lt;"</string><symbol>)</symbol><symbol>.</symbol><identifier>gsub</identifier><symbol>(</symbol><string>"&gt;"</string><symbol>,</symbol><string>"&gt;"</string><symbol>)</symbol>
+      <string>"&lt;string&gt;#{str}&lt;/string&gt;#{space}"</string>
+    <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:regex</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;regex&gt;#{regex}&lt;/regex&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:identifier</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;identifier&gt;#{identifier}&lt;/identifier&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:symbol</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;symbol&gt;#{symbol}&lt;/symbol&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:number</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"&lt;number&gt;#{number}&lt;/number&gt;#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:element</string><symbol>,</symbol> <string>:non_space</string><symbol>,</symbol> <string>:space</string> <keyword>do</keyword>
+    <keyword>def</keyword> <identifier>markup</identifier><symbol>;</symbol> <string>"#{non_space}#{space}"</string> <keyword>end</keyword>
+  <keyword>end</keyword>
+
+  <identifier>rule</identifier> <string>:space</string><symbol>,</symbol> <regex>/\s*/</regex>
+  <identifier>rule</identifier> <string>:number</string><symbol>,</symbol> <regex>/[0-9]+(\.[0-9]+)?/</regex>
+  <identifier>rule</identifier> <string>:comment</string><symbol>,</symbol> <regex>/#[^\n]*/</regex>
+  <identifier>rule</identifier> <string>:string</string><symbol>,</symbol> <regex>/"(\\.|[^\\"])*"/</regex>
+  <identifier>rule</identifier> <string>:string</string><symbol>,</symbol> <regex>/:[_a-zA-Z0-9]+[?!]?/</regex>
+  <identifier>rule</identifier> <string>:regex</string><symbol>,</symbol> <regex>/\/(\\.|[^\\\/])*\//</regex>
+  <identifier>rule</identifier> <string>:symbol</string><symbol>,</symbol> <regex>/[-!@\#$%^&*()_+={}|\[\];:<>\?,\.\/~]/</regex>
+  <identifier>rule</identifier> <string>:keyword</string><symbol>,</symbol> <regex>/class|end|def|and|or|do|if|then/</regex>
+  <identifier>rule</identifier> <string>:keyword</string><symbol>,</symbol> <regex>/else|elsif|case|then|when|require/</regex>
+  <identifier>rule</identifier> <string>:identifier</string><symbol>,</symbol> <regex>/[_a-zA-Z][0-9_a-zA-Z]*/</regex>
+  <identifier>rule</identifier> <string>:non_space</string><symbol>,</symbol> <regex>/[^\s]+/</regex>
+<keyword>end</keyword>
+
+<identifier>puts</identifier> <identifier>CodeMarkup</identifier><symbol>.</symbol><identifier>new</identifier><symbol>.</symbol><identifier>parse</identifier><symbol>(</symbol><identifier>File</identifier><symbol>.</symbol><identifier>read</identifier><symbol>(</symbol><string>"code_markup.rb"</string><symbol>)</symbol><symbol>)</symbol><symbol>.</symbol><identifier>markup</identifier></code></pre>
+
+</div>
+</body></html>
