@@ -51,10 +51,7 @@ module MonoTable
     #*************************************************************
     # NOTE: The "update" method inherited from Entry works. No need to re-implement.
     def set(key,columns)
-      ret=
-        set_internal(key,
-        journal.set(file_handle,key,columns)
-        )
+      ret=set_internal(key,journal.set(file_handle,key,columns))
       EventQueue<<ChunkFullEvent.new(self) if accounting_size > max_chunk_size
       ret
     end

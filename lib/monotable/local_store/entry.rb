@@ -272,42 +272,30 @@ module MonoTable
       @columns,index = Xbd::Dictionary.parse(columns_block.length.to_asi + columns_block,0)
     end
 
-    def parse_index_block(index_block,file_handle,data_block,data_block_offset)
-
+    def parse_entire_index_block(io_stream)
       # new multi-level index reading
-      num_index_levels=index_block.read_asi
+      num_index_levels=io_stream.read_asi
       index_level_lengths=[]
-      num_index_levels.times {index_level_lengths<<index_block.read_asi}
+      num_index_levels.times {index_level_lengths<<io_stream.read_asi}
 
       # hack to skip the higher index levels
       leaves_length=index_level_lengths.pop
-      index_level_lengths.each {|length| index_block.read(length)}
+      index_level_lengths.each {|length| io_stream.read(length)}
 
       # read the lower-most index entirely into memory
       last_key=""
-      end_pos=index_block.pos + leaves_length
+      end_pos=io_stream.pos + leaves_length
       index_records=[]
-      while index_block.pos < end_pos #index_block.eof?
-        ir=IndexRecord.parse(index_block,last_key)
+      while io_stream.pos < end_pos #io_stream.eof?
+        ir=IndexRecord.parse(io_stream,last_key)
         last_key=ir.key
         index_records<<ir
       end
-
-      # init the records from the index-records
-      @records={}
-      if file_handle
-        index_records.collect do |ir|
-          @records[ir.key]=DiskRecord.new(ir.key,ir.offset+data_block_offset, ir.length, ir.accounting_size, file_handle, @columns)
-        end
-      else
-        index_records.collect do |ir|
-          @records[ir.key]=MemoryRecord.new(ir.key,data_block[ir.offset,ir.length],@columns)
-        end
-      end
+      index_records
     end
 
     # io_stream can be a String or anything that supports the IO interface
-    def parse(io_stream,file_handle=nil)
+    def parse(io_stream)
       # convert String to StringIO
       io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
 
@@ -315,18 +303,11 @@ module MonoTable
       parse_header(io_stream)
 
       # parse the checksum
-      if file_handle
-        # skip over the checksum
-        checksum = io_stream.read_asi_string
-        @data_loaded=false
-      else
-        @data_loaded=true
-        # load the entire entry and validate the checksum
-        entry_body,ignored_index = Tools.read_asi_checksum_string(io_stream)
+      # load the entire entry and validate the checksum
+      entry_body,ignored_index = Tools.read_asi_checksum_string(io_stream)
 
-        # resume parsing from the now-loaded entry_body
-        io_stream = StringIO.new(entry_body)
-      end
+      # resume parsing from the now-loaded entry_body
+      io_stream = StringIO.new(entry_body)
 
       # load the info-block
       parse_info_block(io_stream)
@@ -334,19 +315,19 @@ module MonoTable
       # load the columns-block
       parse_columns_block(io_stream)
 
-      # load the index-block
-      index_block = StringIO.new io_stream.read_asi_string
+      # parse the index-block
+      index_block_length=io_stream.read_asi
+      index_records = parse_entire_index_block(io_stream)
 
       # data_block
-      if file_handle
-        data_block_offset = io_stream.pos
-      else
-        data_block = io_stream.read
-      end
+      data_block = io_stream.read
 
-      # parse the index-block, and optionally, load the data
+      # init the records from the index-records
+      @data_loaded=true
       @records={}
-      parse_index_block(index_block,file_handle,data_block,data_block_offset)
+      index_records.each do |ir|
+        @records[ir.key]=MemoryRecord.new(ir.key,data_block[ir.offset,ir.length],@columns)
+      end
     end
 
     def parse_minimally(io_stream)
@@ -372,8 +353,13 @@ module MonoTable
 
       # parse the index-block, and optionally, load the data
       @data_loaded=false
+      index_records=parse_entire_index_block(io_stream)
+
+      # init the records from the index-records
       @records={}
-      parse_index_block(io_stream,file_handle,nil,data_block_offset)
+      index_records.each do |ir|
+        @records[ir.key]=DiskRecord.new(ir.key, ir.offset+data_block_offset, ir.length, ir.accounting_size, file_handle, @columns)
+      end
     end
 
     # disk_records logs the offset and index of every record in the entry-binary-string returned
