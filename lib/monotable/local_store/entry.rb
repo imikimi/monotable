@@ -202,6 +202,9 @@ module MonoTable
       self.accounting_size=calculate_accounting_size
     end
 
+    #################################
+    # verification
+    ################################
     def verify_accounting_size
       actual_size=calculate_accounting_size
       throw "accounting_size(#{accounting_size.inspect}) does not match the actual_size(#{actual_size.inspect})" unless actual_size==accounting_size
@@ -245,33 +248,6 @@ module MonoTable
 
       # return second_entry
       second_entry
-    end
-
-    def apply_entry(entry)
-      # don't apply entries not meant for this chunk
-      return if entry.range_start && !in_range?(entry.range_start)
-
-      # init info if not already set
-      @info||=entry.info
-
-      # decode action_type
-      action_type = (action_tag=entry.info.tag("action")) && action_tag["type"]
-      case action_type
-      when nil,"set" then bulk_set(entry.records) # set is the default type
-      when "update" then bulk_update(entry.records)
-      when "delete" then bulk_delete(entry.records.keys)
-      when "split" then
-        on_key=action_tag["on_key"]
-        to_file=action_tag["to_file"]
-        second_half=Entry.new(split_entry(on_key))
-        second_half.save(to_file)
-      when "merge" then
-        from_file=action_tag["from_file"]
-        source_chunk=self.class.load(from_file)
-        bulk_set(source_chunk.records)
-      else
-        raise "unsupported action type"
-      end
     end
 
     #***************************************************
