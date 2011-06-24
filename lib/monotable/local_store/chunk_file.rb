@@ -31,7 +31,7 @@ module MonoTable
 
     def load_index_block
       return unless file_handle.exists? # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
-      file_handle.read {|f|parse(f)}
+      file_handle.read {|f|parse_minimally(f)}
     end
 
     # "reload" - re-read/reset all member-variables from the chunk-file on disk

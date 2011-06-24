@@ -254,9 +254,25 @@ module MonoTable
     # LOADING/SAVING
     #***************************************************
 
+    def parse_header(io_stream)
+      test_header_string=io_stream.read(HEADER_STRING.length)
+      raise "invalid Chunk: #{test_header_string.inspect}!=#{HEADER_STRING.inspect}" unless test_header_string==HEADER_STRING
+      major_version = io_stream.read_asi
+      minor_version = io_stream.read_asi
+      raise "unsupported format version #{major_version}" unless major_version<=MAJOR_VERSION
+    end
+
+    def parse_info_block(io_stream)
+      self.info = Xbd.parse io_stream.read_asi_string
+      load_saved_chunk_info
+    end
+
+    def parse_columns_block(io_stream)
+      columns_block = io_stream.read_asi_string
+      @columns,index = Xbd::Dictionary.parse(columns_block.length.to_asi + columns_block,0)
+    end
+
     def parse_index_block(index_block,file_handle,data_block,data_block_offset)
-      last_key=""
-      i=0
 
       # new multi-level index reading
       num_index_levels=index_block.read_asi
@@ -264,33 +280,30 @@ module MonoTable
       num_index_levels.times {index_level_lengths<<index_block.read_asi}
 
       # hack to skip the higher index levels
-      index_level_lengths.pop
+      leaves_length=index_level_lengths.pop
       index_level_lengths.each {|length| index_block.read(length)}
 
       # read the lower-most index entirely into memory
-      until index_block.eof?
-        prefix_length = index_block.read_asi
-        suffix = index_block.read_asi_string
-        key = last_key[0,prefix_length] + suffix
-        last_key = key
-        data_offset = index_block.read_asi
-        data_length = index_block.read_asi
-        data_accounting_size = index_block.read_asi
+      last_key=""
+      end_pos=index_block.pos + leaves_length
+      index_records=[]
+      while index_block.pos < end_pos #index_block.eof?
+        ir=IndexRecord.parse(index_block,last_key)
+        last_key=ir.key
+        index_records<<ir
+      end
 
-        @records[key] = if file_handle
-          DiskRecord.new(key,data_offset+data_block_offset, data_length, data_accounting_size, file_handle, @columns)
-        else
-          MemoryRecord.new(key,data_block[data_offset,data_length],@columns)
+      # init the records from the index-records
+      @records={}
+      if file_handle
+        index_records.collect do |ir|
+          @records[ir.key]=DiskRecord.new(ir.key,ir.offset+data_block_offset, ir.length, ir.accounting_size, file_handle, @columns)
+        end
+      else
+        index_records.collect do |ir|
+          @records[ir.key]=MemoryRecord.new(ir.key,data_block[ir.offset,ir.length],@columns)
         end
       end
-    end
-
-    def parse_header(io_stream)
-      test_header_string=io_stream.read(HEADER_STRING.length)
-      raise "invalid Chunk: #{test_header_string.inspect}!=#{HEADER_STRING.inspect}" unless test_header_string==HEADER_STRING
-      major_version = io_stream.read_asi
-      minor_version = io_stream.read_asi
-      raise "unsupported format version #{major_version}" unless major_version<=MAJOR_VERSION
     end
 
     # io_stream can be a String or anything that supports the IO interface
@@ -301,30 +314,25 @@ module MonoTable
       # parse header
       parse_header(io_stream)
 
-      @records={}
-      if @data_loaded=!file_handle
+      # parse the checksum
+      if file_handle
+        # skip over the checksum
+        checksum = io_stream.read_asi_string
+        @data_loaded=false
+      else
+        @data_loaded=true
         # load the entire entry and validate the checksum
         entry_body,ignored_index = Tools.read_asi_checksum_string(io_stream)
-        next_entry = io_stream.pos
 
         # resume parsing from the now-loaded entry_body
         io_stream = StringIO.new(entry_body)
-      else
-        # ignore the checksum
-        checksum = io_stream.read_asi_string
-
-        # read in the rest of the entry, checksummed
-        entry_length = io_stream.read_asi
-        next_entry = io_stream.pos + entry_length
       end
 
       # load the info-block
-      self.info = Xbd.parse io_stream.read_asi_string
-      load_saved_chunk_info
+      parse_info_block(io_stream)
 
       # load the columns-block
-      columns_block = io_stream.read_asi_string
-      @columns,index = Xbd::Dictionary.parse(columns_block.length.to_asi + columns_block,0)
+      parse_columns_block(io_stream)
 
       # load the index-block
       index_block = StringIO.new io_stream.read_asi_string
@@ -337,10 +345,35 @@ module MonoTable
       end
 
       # parse the index-block, and optionally, load the data
+      @records={}
       parse_index_block(index_block,file_handle,data_block,data_block_offset)
+    end
 
-      #seek to next entry
-      io_stream.seek(next_entry)
+    def parse_minimally(io_stream)
+      # convert String to StringIO
+      io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
+
+      # parse header
+      parse_header(io_stream)
+
+      # skip over the checksum
+      checksum = io_stream.read_asi_string
+      entry_length = io_stream.read_asi
+
+      # load the info-block
+      parse_info_block(io_stream)
+
+      # load the columns-block
+      parse_columns_block(io_stream)
+
+      # load the index-block
+      index_block_length = io_stream.read_asi
+      data_block_offset=io_stream.pos + index_block_length
+
+      # parse the index-block, and optionally, load the data
+      @data_loaded=false
+      @records={}
+      parse_index_block(io_stream,file_handle,nil,data_block_offset)
     end
 
     # disk_records logs the offset and index of every record in the entry-binary-string returned
@@ -422,6 +455,41 @@ module MonoTable
 
   end
 
+  class IndexRecord
+    attr_accessor :key,:offset,:length,:accounting_size
+
+    def init(key,offset,length,accounting_size)
+      @key=key
+      @offset=offset
+      @length=length
+      @accounting_size=accounting_size
+      self
+    end
+
+    def IndexRecord.parse(io_stream,last_key)
+      prefix_length = io_stream.read_asi
+      suffix = io_stream.read_asi_string
+      ir=IndexRecord.new
+      ir.key = last_key[0,prefix_length] + suffix
+      ir.offset = io_stream.read_asi
+      ir.length = io_stream.read_asi
+      ir.accounting_size = io_stream.read_asi
+      ir
+    end
+
+    def to_binary(last_key)
+      prefix_length = Tools.longest_common_prefix(key,last_key)
+      [
+      prefix_length.to_asi,
+      (key.length-prefix_length).to_asi,
+      key[prefix_length..-1],
+      offset.to_asi,
+      length.to_asi,
+      accounting_size.to_asi,
+      ].join
+    end
+  end
+
   class IndexBlockEncoder
     attr_accessor :last_key
     attr_accessor :index_records
@@ -468,29 +536,28 @@ module MonoTable
       prefix_length = Tools.longest_common_prefix(key,@last_key)
 
       # encode record
-      encoded_index_record = [
-        prefix_length.to_asi,
-        (key.length-prefix_length).to_asi,
-        key[prefix_length..-1],
-        offset.to_asi,
-        length.to_asi,
-        accounting_size.to_asi,
-        ].join
+      encoded_index_record = IndexRecord.new.init(key,offset,length,accounting_size).to_binary(@last_key)
 
-      if max_index_block_size && (current_block_length + encoded_index_record.length > max_index_block_size)
-        auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length,@total_accounting_size)
+      # detect full block
+      advance_block if current_block_length + encoded_index_record.length > max_index_block_size
 
-        @current_block_key=@last_key
-        @current_block_offset+=@current_block_length
-        @current_block_length=0
-        @total_accounting_size=0
-      end
-
+      # add encoded record
       @total_accounting_size+=accounting_size
       @current_block_length += encoded_index_record.length
-
       @index_records << encoded_index_record
       @last_key=key
+    end
+
+    private
+
+    # advanced to the next index-block
+    def advance_block(next_encoded_index_record)
+      auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length,@total_accounting_size)
+
+      @current_block_key=@last_key
+      @current_block_offset+=@current_block_length
+      @current_block_length=0
+      @total_accounting_size=0
     end
   end
 end
