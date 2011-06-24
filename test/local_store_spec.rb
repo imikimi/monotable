@@ -31,11 +31,12 @@ describe MonoTable::LocalStore do
 
     #load-it-up
     local_store.chunks.length.should == 1
-    local_store.get_chunk("").size.should == 0
+    local_store.get_chunk("").accounting_size.should == 0
     load_test_data_directory(local_store)
     local_store.chunks.length.should == 1
     local_store.get_chunk("").records.length.should == 4
-    local_store.get_chunk("").size.should == 15994
+    local_store.get_chunk("").verify_accounting_size
+    local_store.get_chunk("").accounting_size.should == 15994
   end
 
   it "should be possible to attach a localstore to a path with existing data" do
@@ -49,7 +50,7 @@ describe MonoTable::LocalStore do
     local_store2=MonoTable::LocalStore.new(temp_dir)
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").records.length.should == 4
-    MonoTable::Chunk.load(local_store2.get_chunk("").filename).size.should == 15994
+    MonoTable::Chunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
   end
 
   it "should be possible to attach a localstore to a path with a non-compacted journal" do
@@ -62,7 +63,7 @@ describe MonoTable::LocalStore do
     local_store2=MonoTable::LocalStore.new(temp_dir)
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").records.length.should == 4
-    MonoTable::Chunk.load(local_store2.get_chunk("").filename).size.should == 15994
+    MonoTable::Chunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
 
     #test write
     local_store2.set("testkey",{"field"=>"value"})
@@ -98,5 +99,21 @@ describe MonoTable::LocalStore do
     chunk2=chunk1.split("declaration_of_independence.txt")
     chunk1.records.length.should==1
     chunk2.records.length.should==3
+  end
+
+  it "should be possible to split a chunk on a specific key" do
+    reset_temp_dir
+    #init new localstore
+    local_store=MonoTable::LocalStore.new(temp_dir)
+
+    #load-it-up
+    load_test_data_directory(local_store)
+
+    # split the chunk
+    chunk1=local_store.get_chunk("")
+    chunk1.records.length.should==4
+    chunk2=chunk1.split
+    chunk1.records.length.should==3
+    chunk2.records.length.should==1
   end
 end

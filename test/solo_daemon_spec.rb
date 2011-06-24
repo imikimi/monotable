@@ -85,8 +85,10 @@ describe MonoTable::ChunkFile do
 
     chunks=solo.chunks.values
     chunks.collect {|c| c.range}.should == [["","c"],["c",:infinity]]
+    chunks.each {|c| c.verify_accounting_size}
 
     solo.set("e",:data=>data)
+    chunks.each {|c| c.verify_accounting_size}
     solo.set("f",:data=>data)
   end
 end

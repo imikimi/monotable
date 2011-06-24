@@ -67,7 +67,7 @@ module MonoTable
         set_internal(key,
         journal.set(file_handle,key,columns)
         )
-      EventQueue<<ChunkFullEvent.new(self) if size > max_chunk_size
+      EventQueue<<ChunkFullEvent.new(self) if accounting_size > max_chunk_size
       ret
     end
 
@@ -81,7 +81,11 @@ module MonoTable
     #*************************************************************
     # all keys >= on_key are put into a new chunk
     def split(on_key=nil,to_filename=nil)
-      on_key,size1,size2=middle_key_and_sizes(on_key)
+      if on_key
+        size1,size2=split_on_key_sizes(on_key)
+      else
+        on_key,size1,size2=middle_key_and_sizes
+      end
       to_filename||=path_store.generate_filename
 
       # create new chunk
@@ -98,41 +102,48 @@ module MonoTable
       journal.split(file_handle,on_key,to_filename)
 
       # update sizes
-      self.size=size1
-      second_chunk_file.size=size2
+      self.accounting_size=size1 || self.calculate_accounting_size
+      second_chunk_file.accounting_size=size2 || second_chunk_file.calculate_accounting_size
 
       # return the new ChunkFile object
       second_chunk_file
     end
 
-    def middle_key_and_sizes(mkey)
-      half_size=size/2
-      size1=0
-      size2=0
-
-      if mkey
-        # already have a key
-        records.each do |k,v|
-          vsize=v.size
-          if k < mkey
-            size1+=vsize
-          else
-            size2+=vsize
-          end
-        end
-      else
-        # determine the middle-most key
-        records.each do |k,v|
-          vsize=v.size
-          if !mkey && size1+vsize>half_size
-            mkey=k
-          elsif size1 < half_size
-            size1+=vsize
-          else
-            size2+=vsize
-          end
+    # returns array: [sizes < on_key, sizes >= on_key]
+    def split_on_key_sizes(on_key)
+      size1=size2=0
+      records.each do |k,v|
+        asize=v.accounting_size
+        if k < on_key
+          size1+=asize
+        else
+          size2+=asize
         end
       end
+      [size1,size2]
+    end
+
+    # returns array: [middle_key, sizes < middle_key, sizes >= middle_key]
+    def middle_key_and_sizes
+      half_size=accounting_size/2
+      size1=size2=0
+      mkey=nil
+
+      # determine the middle-most key
+      records.keys.sort.each do |key|
+        v=records[key]
+        asize=v.accounting_size
+        if size1+(asize/2)>half_size
+          mkey=key
+          size2+=accounting_size-size1
+          break
+        end
+        size1+=asize
+      end
+      # Guarantees:
+      # if records.length > 0 then size1 is > 0
+      # if records.length > 1 then size2 is also > 0
+      # size1 + size2 == accounting_size
       [mkey,size1,size2]
     end
   end

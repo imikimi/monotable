@@ -27,7 +27,10 @@ module MonoTable
     # bulk edits
     #################################
     def split(on_key)
-      split_into(on_key,Chunk.new)
+      ret=split_into(on_key,Chunk.new)
+      update_accounting_size
+      ret.update_accounting_size
+      ret
     end
 
     ################################

@@ -66,7 +66,7 @@ module MonoTable
     attr_accessor :info
     attr_accessor :columns
     attr_accessor :records
-    attr_accessor :size         # the bytesize of all keys, field-names and field-values
+    attr_accessor :accounting_size         # the bytesize of all keys, field-names and field-values
 
     attr_accessor :range_start  # all keys are >= range_start; nil == first possible key
     attr_accessor :range_end    # all keys are < range_end; nil == last possible key
@@ -75,7 +75,7 @@ module MonoTable
       @range_start=""
       @range_end=:infinity
       @records=records
-      @size=0
+      @accounting_size=0
     end
 
     def range
@@ -129,14 +129,14 @@ module MonoTable
       sci=saved_chunk_info
       @range_start = sci["range_start"] || ""
       @range_end = sci["range_end"] || :infinity
-      @size = sci["size"] || 0
+      @accounting_size = (sci["accounting_size"] || 0).to_i
     end
 
     def save_saved_chunk_info
       sci=saved_chunk_info
       sci["range_start"] = @range_start
       sci["range_end"] = @range_end == :infinity ? nil : @range_end
-      sci["size"] = @size
+      sci["accounting_size"] = @accounting_size
     end
 
     #*************************************************************
@@ -154,17 +154,20 @@ module MonoTable
     # Write API
     #*************************************************************
     # value must be a hash or a MonoTable::Record
-    def set(key,value)
-      record=case value
-      when Hash then MemoryRecord.new(value)
-      when Record then value
+    def set(key,fields)
+      record=case fields
+      when Hash then MemoryRecord.new(key,fields)
+      when Record then fields
       else raise "value must be a Hash or Record"
       end
       set_internal(key,record)
     end
 
     def update(key,columns)
-      update_internal(key,columns)
+      fields = get(key) || {}
+      fields.update(columns)
+      set(key,fields) # call set so ChunkFile can override it
+      fields
     end
 
     def delete(key)
@@ -172,32 +175,42 @@ module MonoTable
     end
 
     #################################
-    # maintain @size
+    # maintain @accounting_size
     #################################
     def add_size(key,record=nil)
       record||=@records[key]
-      amount=key.length + record.size
-      @size+=amount
+      amount = record.accounting_size
+      @accounting_size+=amount
     end
 
     def sub_size(key,record=nil)
       record||=@records[key]
       return unless record
-      amount=key.length + record.size
-      @size-=amount
+      amount = record.accounting_size
+      @accounting_size-=amount
     end
 
-    def calc_size
-      size=0
+    def calculate_accounting_size
+      sum=0
       records.each do |k,v|
-        size+=v.size
+        sum += v.accounting_size
       end
-      size
+      sum
     end
 
-    def verify_size
-      actual_size=calc_size
-      throw "size(#{size}) does not match the actual_size(#{actual_size})" unless actual_size==size
+    def update_accounting_size
+      self.accounting_size=calculate_accounting_size
+    end
+
+    def verify_accounting_size
+      actual_size=calculate_accounting_size
+      throw "accounting_size(#{accounting_size.inspect}) does not match the actual_size(#{actual_size.inspect})" unless actual_size==accounting_size
+    end
+
+    def verify_records
+      records.each do |key,record|
+        raise "invalid record class: #{record.class} (#{record.inspect})" unless record.kind_of?(Record)
+      end
     end
 
     #################################
@@ -210,22 +223,13 @@ module MonoTable
       record
     end
 
-    def update_internal(key,columns)
-      sub_size(key)
-      record = get(key) || MemoryRecord.new
-      record.update(columns)
-      @records[key]=record
-      add_size(key)
-      record
-    end
-
     def delete_internal(key)
       sub_size(key)
       records.delete(key)
     end
 
     def bulk_set(records)     records.each {|k,v| set_internal(k,v)} end
-    def bulk_update(records)  records.each {|k,v| update_internal(k,v)} end
+    def bulk_update(records)  records.each {|k,v| update(k,v)} end
     def bulk_delete(keys)     keys.each {|key| delete_internal(key)} end
 
     # all keys >= on_key are put into a new entry
@@ -273,6 +277,38 @@ module MonoTable
     #***************************************************
     # LOADING/SAVING
     #***************************************************
+
+    def parse_index_block(index_block,file_handle,data_block,data_block_offset)
+      last_key=""
+      i=0
+
+      # new multi-level index reading
+      num_index_levels=index_block.read_asi
+      index_level_lengths=[]
+      num_index_levels.times {index_level_lengths<<index_block.read_asi}
+
+      # hack to skip the higher index levels
+      index_level_lengths.pop
+      index_level_lengths.each {|length| index_block.read(length)}
+
+      # read the lower-most index entirely into memory
+      until index_block.eof?
+        prefix_length = index_block.read_asi
+        suffix = index_block.read_asi_string
+        key = last_key[0,prefix_length] + suffix
+        last_key = key
+        data_offset = index_block.read_asi
+        data_length = index_block.read_asi
+        data_accounting_size = index_block.read_asi
+
+        @records[key] = if file_handle
+          DiskRecord.new(key,data_offset+data_block_offset, data_length, data_accounting_size, file_handle, @columns)
+        else
+          MemoryRecord.new(key,data_block[data_offset,data_length],@columns)
+        end
+      end
+    end
+
     # io_stream can be a String or anything that supports the IO interface
     def parse(io_stream,file_handle=nil)
       # convert String to StringIO
@@ -321,33 +357,7 @@ module MonoTable
       end
 
       # parse the index-block, and optionally, load the data
-      last_key=""
-      i=0
-
-      # new multi-level index reading
-      num_index_levels=index_block.read_asi
-      index_level_lengths=[]
-      num_index_levels.times {index_level_lengths<<index_block.read_asi}
-
-      # hack to skip the higher index levels
-      index_level_lengths.pop
-      index_level_lengths.each {|length| index_block.read(length)}
-
-      # read the lower-most index entirely into memory
-      until index_block.eof?
-        prefix_length = index_block.read_asi
-        suffix = index_block.read_asi_string
-        key = last_key[0,prefix_length] + suffix
-        last_key = key
-        data_offset = index_block.read_asi
-        data_length = index_block.read_asi
-
-        @records[key] = if file_handle
-          DiskRecord.new(data_offset+data_block_offset,data_length,file_handle,@columns)
-        else
-          data_length == 0 || MemoryRecord.new(data_block[data_offset,data_length],@columns)
-        end
-      end
+      parse_index_block(index_block,file_handle,data_block,data_block_offset)
 
       #seek to next entry
       io_stream.seek(next_entry)
@@ -411,7 +421,7 @@ module MonoTable
       ibe=IndexBlockEncoder.new
       index_block_string = sorted_keys.collect do |key|
         dr=disk_records[key]
-        ibe.add(key,dr.offset,dr.length)
+        ibe.add(key,dr.offset,dr.length,dr.accounting_size)
       end
       ibe.to_s
     end
@@ -421,8 +431,9 @@ module MonoTable
       sorted_keys||=@records.keys.sort
       offset=0
       encoded_data = sorted_keys.collect do |key|
-        encoded_record = @records[key].encoded(columns)
-        disk_records[key] = DiskRecord.new(offset,encoded_record.length)  # offset and length of encoded data
+        record=@records[key]
+        encoded_record = record.encoded(columns)
+        disk_records[key] = DiskRecord.new(key,offset,encoded_record.length,record.accounting_size)  # offset and length of encoded data
         offset += encoded_record.length
         encoded_record
       end.join
@@ -439,6 +450,7 @@ module MonoTable
     attr_accessor :current_block_length
     attr_accessor :max_index_block_size
     attr_accessor :parent_index_block_encoder
+    attr_accessor :total_accounting_size
 
     def initialize(max_index_block_size=(64*1024))
       @current_block_key=@last_key=""
@@ -446,6 +458,7 @@ module MonoTable
       @index_records=[]
       @current_block_length=0
       @max_index_block_size=max_index_block_size
+      @total_accounting_size=0
     end
 
     def auto_parent_index_block_encoder
@@ -471,20 +484,29 @@ module MonoTable
       ].flatten.join.to_asi_string
     end
 
-    def add(key,offset,length)
+    def add(key,offset,length,accounting_size)
       prefix_length = Tools.longest_common_prefix(key,@last_key)
 
       # encode record
-      encoded_index_record = [prefix_length.to_asi, (key.length-prefix_length).to_asi, key[prefix_length..-1], offset.to_asi, length.to_asi].join
+      encoded_index_record = [
+        prefix_length.to_asi,
+        (key.length-prefix_length).to_asi,
+        key[prefix_length..-1],
+        offset.to_asi,
+        length.to_asi,
+        accounting_size.to_asi,
+        ].join
 
       if max_index_block_size && (current_block_length + encoded_index_record.length > max_index_block_size)
-        auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length)
+        auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length,@total_accounting_size)
 
         @current_block_key=@last_key
         @current_block_offset+=@current_block_length
         @current_block_length=0
+        @total_accounting_size=0
       end
 
+      @total_accounting_size+=accounting_size
       @current_block_length += encoded_index_record.length
 
       @index_records << encoded_index_record

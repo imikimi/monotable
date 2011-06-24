@@ -1,13 +1,18 @@
 module MonoTable
 
   class Record
-    attr_accessor :size
+    attr_accessor :accounting_size
+    attr_accessor :key
 
-    def size
-      @size||=0
+    def accounting_size
+      @accounting_size||=calculate_accounting_size
     end
 
     def [](key) fields[key] end
+
+    def update(new_fields)
+      fields.update(new_fields)
+    end
 
     def length() fields.length end
     def keys() fields.keys end
@@ -15,7 +20,6 @@ module MonoTable
 
     def Record.parse_record(data,column_dictionary,column_hash=nil)
       fields={}
-      @size=0
       di=0
       data = StringIO.new(data) if data.kind_of?(String)
       until data.eof?
@@ -28,19 +32,18 @@ module MonoTable
           col_data = data.read_asi_string
         else
           d=data.read_asi_string
-          @size+=col.length + d.length
           fields[col] = d
         end
       end
       fields
     end
 
-    def recalc_size(fs=nil)
-      @size=0
+    def calculate_accounting_size(fs=nil)
+      sum=key.length #+ MINIMUM_CHUNK_RECORD_OVERHEAD_IN_BYTES
       (fs||fields).each do |k,v|
-        @size+=k.length + v.length
+        sum+=k.length + v.length
       end
-      @size
+      sum
     end
 
     def encoded(columns)
@@ -67,7 +70,8 @@ module MonoTable
       end
     end
 
-    def initialize(fields=nil,column_dictionary=nil,columns_hash=nil)
+    def initialize(key,fields=nil,column_dictionary=nil,columns_hash=nil)
+      @key=key
       if fields
         if fields.respond_to?(:eof?) || fields.kind_of?(String)
           @fields=Record.parse_record(fields,column_dictionary,columns_hash)
@@ -78,7 +82,6 @@ module MonoTable
       else
         @fields={}
       end
-      recalc_size
     end
 
     def validate_fields(fields)
@@ -92,7 +95,7 @@ module MonoTable
     def fields=(fields)
       validate_fields(fields)
       @fields=fields
-      recalc_size
+      @accounting_size=nil
       fields
     end
 
@@ -110,10 +113,12 @@ module MonoTable
     attr_accessor :length
     attr_accessor :column_dictionary
 
-    def initialize(offset,length,file_handle=nil,column_dictionary=nil)
+    def initialize(key,offset,length,accounting_size,file_handle=nil,column_dictionary=nil)
+      @key=key
       self.file_handle=file_handle
       self.offset=offset
       self.length=length
+      self.accounting_size=accounting_size
       self.column_dictionary=column_dictionary
     end
 
@@ -138,11 +143,16 @@ module MonoTable
     attr_accessor :offset
     attr_accessor :length
 
-    def initialize(file_handle,offset,length,record=nil)
+    def initialize(key,file_handle,offset,length,record)
+      @key=key
       self.file_handle=file_handle
       self.offset=offset
       self.length=length
-      recalc_size(record)
+      self.accounting_size=case record
+      when Record then record.accounting_size
+      when Hash then calculate_accounting_size(record)
+      else raise "invalid record class #{record.class}"
+      end
     end
 
     def [](key)

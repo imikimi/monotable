@@ -4,9 +4,9 @@ solo.get_chunk("").journal.hold_file_open
 
 def stats(mt)
   num_chunks=mt.chunks.length
-  size=0
-  mt.chunks.each {|k,v| size+=v.size}
-  "#{mt.class}(size=#{size},chunks.length=#{num_chunks})"
+  accounting_size=0
+  mt.chunks.each {|k,v| accounting_size+=v.accounting_size}
+  "#{mt.class}(accounting_size=#{accounting_size},chunks.length=#{num_chunks})"
 end
 
 def populate(mt,num,fields)

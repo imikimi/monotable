@@ -22,15 +22,15 @@ module MonoTable
       until EventQueue.empty?
         case event=EventQueue.pop
         when ChunkFullEvent then
-          puts "split chunk..."
+#          puts "split chunk..."
           time=Time.now
           event.chunk.split
-          puts "split chunk done in #{(1000*(Time.now-time)).to_i}ms."
+#          puts "split chunk done in #{(1000*(Time.now-time)).to_i}ms."
         when JournalFullEvent then
-          puts "compact journal..."
+#          puts "compact journal..."
           time=Time.now
           event.journal.compact
-          puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms."
+#          puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms."
         end
       end
     end

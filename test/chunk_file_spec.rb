@@ -123,6 +123,7 @@ describe MonoTable::ChunkFile do
     chunk["foo"].should == {"bar" => "June", "baz" => "December"}
 
     chunkfile = MonoTable::ChunkFile.new(file)
+    chunkfile.verify_records
     chunkfile.update("foo",{"baz" => "January"})
     chunkfile.journal.compact
 

@@ -60,6 +60,8 @@ module MonoTable
       when :delete then chunk.delete(journal_entry[:key])
       when :split then
         chunk2=chunk.split(journal_entry[:key])
+
+        # TODO - there is no reason to actually write this to disk here. We will be writing to disk again after the journal compaction
         chunk2.save(journal_entry[:to_file])
         chunks[journal_entry[:to_file]]={:chunk=>chunk2}
       end
@@ -83,7 +85,7 @@ module MonoTable
       offset=@size
       save_str=save_entry (["set",chunk_file.to_s,key] + record.collect {|k,v| [k,v]}).flatten
       length=save_str.length
-      JournalDiskRecord.new(journal_file,offset,length,record)
+      JournalDiskRecord.new(key,journal_file,offset,length,record)
     end
 
     def delete(chunk_file,key)
