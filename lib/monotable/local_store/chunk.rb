@@ -12,15 +12,15 @@ module MonoTable
         init_entry(from_s)
       else
         init_entry
-        parse_all_entries(from_s) if from_s
+        if from_s
+          io_stream = from_s.kind_of?(String) ? StringIO.new(from_s) : from_s
+          parse(io_stream)
+        end
       end
     end
 
     def Chunk.load(filename)
-      chunk=File.open(filename,"rb") {|f|Chunk.new(f)}
-#      journal_filename=filename+".journal"
-#      File.open(journal_filename,"rb") {|f| chunk.parse_all_entries(f)} if File.exists?(journal_filename)
-      chunk
+      File.open(filename,"rb") {|f|Chunk.new(f)}
     end
 
     #################################
@@ -31,18 +31,6 @@ module MonoTable
       update_accounting_size
       ret.update_accounting_size
       ret
-    end
-
-    ################################
-    # multi-entry parsing
-    ################################
-
-    def parse_all_entries(io_stream)
-      io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
-      while !io_stream.eof?
-        entry = Entry.new(io_stream)
-        apply_entry(entry)
-      end
     end
   end
 end

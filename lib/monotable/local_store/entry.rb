@@ -309,17 +309,21 @@ module MonoTable
       end
     end
 
+    def parse_header(io_stream)
+      test_header_string=io_stream.read(HEADER_STRING.length)
+      raise "invalid Chunk: #{test_header_string.inspect}!=#{HEADER_STRING.inspect}" unless test_header_string==HEADER_STRING
+      major_version = io_stream.read_asi
+      minor_version = io_stream.read_asi
+      raise "unsupported format version #{major_version}" unless major_version<=MAJOR_VERSION
+    end
+
     # io_stream can be a String or anything that supports the IO interface
     def parse(io_stream,file_handle=nil)
       # convert String to StringIO
       io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
 
       # parse header
-      test_header_string=io_stream.read(HEADER_STRING.length)
-      raise "invalid Chunk: #{test_header_string.inspect}!=#{HEADER_STRING.inspect}" unless test_header_string==HEADER_STRING
-      major_version = io_stream.read_asi
-      minor_version = io_stream.read_asi
-      raise "unsupported format version #{major_version}" unless major_version<=MAJOR_VERSION
+      parse_header(io_stream)
 
       @records={}
       if @data_loaded=!file_handle

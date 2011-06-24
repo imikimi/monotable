@@ -30,20 +30,8 @@ module MonoTable
     end
 
     def load_index_block
-      parse_all_entries(file_handle)
-      # SBD 2011-05-04 - I think ChunkFile should never think about multiple entries. It should just expect and load one entry in a chunk-file. Only journals have multiple entries, and the journal compaction code should handle that.
-      #parse_all_entries(journal.journal_file)
-    end
-
-    def parse_all_entries(file_handle)
-      return unless file_handle.exists?
-      file_handle.read do |f|
-        # read the first chunk (faster to do it this way)
-        while !f.eof?
-          entry = Entry.new(f,file_handle)
-          apply_entry(entry)
-        end
-      end
+      return unless file_handle.exists? # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
+      file_handle.read {|f|parse(f)}
     end
 
     # "reload" - re-read/reset all member-variables from the chunk-file on disk
