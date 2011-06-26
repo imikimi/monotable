@@ -21,12 +21,8 @@ module MonoTable
     #     If the file is not open, it is opened and then closed
     # If there is no block, the file is opened and left open
     def open_read(&block)
-      if read_handle
-        yield read_handle
-        return
-      end
-      close
-      @read_handle=File.open(filename,"rb")
+      close if write_handle
+      @read_handle||=File.open(filename,"rb")
       if block
         begin
           yield read_handle if block
@@ -85,7 +81,9 @@ module MonoTable
     end
 
     def read(offset=nil,length=nil,&block)
+      "filehandle.read 1"
       open(:read) do |f|
+      "filehandle.read 2"
         f.seek(offset) if offset
         block ? yield(f) : f.read(length).force_encoding("BINARY")
       end

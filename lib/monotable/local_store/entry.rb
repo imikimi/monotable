@@ -76,12 +76,12 @@ module MonoTable
       @range_end=:infinity
       @records=records
       @accounting_size=0
+      @loaded_record_count=0
     end
 
     def range
       [range_start,range_end]
     end
-
 
     def info; @info||=Xbd::Tag.new("info") end
 
@@ -130,6 +130,7 @@ module MonoTable
       @range_start = sci["range_start"] || ""
       @range_end = sci["range_end"] || :infinity
       @accounting_size = (sci["accounting_size"] || 0).to_i
+      @loaded_record_count = (sci["record_count"] || 0).to_i
     end
 
     def save_saved_chunk_info
@@ -137,6 +138,7 @@ module MonoTable
       sci["range_start"] = @range_start
       sci["range_end"] = @range_end == :infinity ? nil : @range_end
       sci["accounting_size"] = @accounting_size
+      sci["record_count"] = length
     end
 
     #*************************************************************
@@ -178,16 +180,15 @@ module MonoTable
     # maintain @accounting_size
     #################################
     def add_size(key,record=nil)
-      record||=@records[key]
-      amount = record.accounting_size
-      @accounting_size+=amount
+      @accounting_size+=get_accounting_size(key,record)
+    end
+
+    def get_accounting_size(key,record=nil)
+      ((record||=@records[key]) && record.accounting_size) || 0
     end
 
     def sub_size(key,record=nil)
-      record||=@records[key]
-      return unless record
-      amount = record.accounting_size
-      @accounting_size-=amount
+      @accounting_size-=get_accounting_size(key,record)
     end
 
     def calculate_accounting_size
@@ -222,7 +223,7 @@ module MonoTable
     def set_internal(key,record)
       sub_size(key)
       @records[key]=record
-      add_size(key)
+      add_size(key,record)
       record
     end
 
@@ -443,6 +444,7 @@ module MonoTable
 
   class IndexRecord
     attr_accessor :key,:offset,:length,:accounting_size
+    attr_accessor :sub_index_block
 
     def init(key,offset,length,accounting_size)
       @key=key

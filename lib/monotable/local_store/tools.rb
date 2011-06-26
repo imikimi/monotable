@@ -1,5 +1,24 @@
 require 'zlib'
+require "inline"
 module MonoTable
+  class FastBitField
+    attr_reader :size
+
+    def initialize(size, bits=nil)
+      @size = size
+      @bits = bits || "\000" * (( (size - 1) / 8 ) +1)
+    end
+
+    def set(bit) set_c(@bits,bit) end
+    def [](bit) get_c(@bits,bit) end
+    def to_s; @bits; end
+
+    inline do |compiler|
+      compiler.c "void set_c(char *bits, int bit) {bits[bit/8] |= (1 << (bit % 8));}"
+      compiler.c "VALUE get_c(char *bits, int bit) {return bits[bit/8] & (1 << (bit % 8)) ? Qtrue : Qfalse;}"
+    end
+  end
+
   module Tools
     # returns the number of characters s1 and s2 hold in column at the beginning of the strings
     def Tools.longest_common_prefix(s1,s2)

@@ -17,7 +17,6 @@ module MonoTable
       @path_store=options[:path_store]
       @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(fn+".testing_journal")
       load_index_block
-
     end
 
     # load the value from file
