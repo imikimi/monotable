@@ -71,6 +71,9 @@ module MonoTable
     attr_accessor :range_start  # all keys are >= range_start; nil == first possible key
     attr_accessor :range_end    # all keys are < range_end; nil == last possible key
 
+    attr_accessor :data_block_offset
+    attr_accessor :file_handle
+
     def init_entry(records={})
       @range_start=""
       @range_end=:infinity
@@ -141,12 +144,16 @@ module MonoTable
       sci["record_count"] = length
     end
 
+    def record(key)
+      records[key]
+    end
+
     #*************************************************************
     # Read API
     #*************************************************************
     def get(key,columns=nil)
       if columns
-        Tools.select_columns(records[key],columns)
+        Tools.select_columns(record(key),columns)
       else
         records[key]
       end
@@ -158,7 +165,7 @@ module MonoTable
     # value must be a hash or a MonoTable::Record
     def set(key,fields)
       record=case fields
-      when Hash then MemoryRecord.new(key,fields)
+      when Hash then MemoryRecord.new.init(key,fields)
       when Record then fields
       else raise "value must be a Hash or Record"
       end
@@ -180,15 +187,12 @@ module MonoTable
     # maintain @accounting_size
     #################################
     def add_size(key,record=nil)
-      @accounting_size+=get_accounting_size(key,record)
-    end
-
-    def get_accounting_size(key,record=nil)
-      ((record||=@records[key]) && record.accounting_size) || 0
+      @accounting_size+=(record || record(key)).accounting_size
     end
 
     def sub_size(key,record=nil)
-      @accounting_size-=get_accounting_size(key,record)
+      record||=record(key)
+      @accounting_size-=record.accounting_size if record
     end
 
     def calculate_accounting_size
@@ -273,7 +277,7 @@ module MonoTable
       @columns,index = Xbd::Dictionary.parse(columns_block.length.to_asi + columns_block,0)
     end
 
-    def parse_entire_index_block(io_stream)
+    def parse_entire_index_block(io_stream,record_type)
       # new multi-level index reading
       num_index_levels=io_stream.read_asi
       index_level_lengths=[]
@@ -286,13 +290,13 @@ module MonoTable
       # read the lower-most index entirely into memory
       last_key=""
       end_pos=io_stream.pos + leaves_length
-      index_records=[]
+      records={}
       while io_stream.pos < end_pos #io_stream.eof?
-        ir=IndexRecord.parse(io_stream,last_key)
-        last_key=ir.key
-        index_records<<ir
+        record=record_type.new(self).parse_index_record(io_stream,last_key)
+        last_key=record.key
+        records[record.key]=record
       end
-      index_records
+      records
     end
 
     # io_stream can be a String or anything that supports the IO interface
@@ -318,16 +322,15 @@ module MonoTable
 
       # parse the index-block
       index_block_length=io_stream.read_asi
-      index_records = parse_entire_index_block(io_stream)
+      @records = parse_entire_index_block(io_stream,MemoryRecord)
 
       # data_block
       data_block = io_stream.read
 
       # init the records from the index-records
       @data_loaded=true
-      @records={}
-      index_records.each do |ir|
-        @records[ir.key]=MemoryRecord.new(ir.key,data_block[ir.offset,ir.length],@columns)
+      @records.each do |k,record|
+        record.parse_record(data_block[record.disk_offset,record.disk_length],@columns)
       end
     end
 
@@ -350,17 +353,18 @@ module MonoTable
 
       # load the index-block
       index_block_length = io_stream.read_asi
-      data_block_offset=io_stream.pos + index_block_length
+      @data_block_offset = io_stream.pos + index_block_length
 
       # parse the index-block, and optionally, load the data
       @data_loaded=false
-      index_records=parse_entire_index_block(io_stream)
+      @records=parse_entire_index_block(io_stream,DiskRecord)
 
       # init the records from the index-records
-      @records={}
-      index_records.each do |ir|
-        @records[ir.key]=DiskRecord.new(ir.key, ir.offset+data_block_offset, ir.length, ir.accounting_size, file_handle, @columns)
-      end
+#      @records=index_records
+#      @records={}
+#      index_records.each do |ir|
+#        @records[ir.key]=DiskRecord.new.init(ir.key, ir.disk_offset+data_block_offset, ir.disk_length, ir.accounting_size, file_handle, @columns)
+#      end
     end
 
     # disk_records logs the offset and index of every record in the entry-binary-string returned
@@ -421,7 +425,7 @@ module MonoTable
       ibe=IndexBlockEncoder.new
       index_block_string = sorted_keys.collect do |key|
         dr=disk_records[key]
-        ibe.add(key,dr.offset,dr.length,dr.accounting_size)
+        ibe.add(key,dr.disk_offset,dr.disk_length,dr.accounting_size)
       end
       ibe.to_s
     end
@@ -433,49 +437,13 @@ module MonoTable
       encoded_data = sorted_keys.collect do |key|
         record=@records[key]
         encoded_record = record.encoded(columns)
-        disk_records[key] = DiskRecord.new(key,offset,encoded_record.length,record.accounting_size)  # offset and length of encoded data
+        disk_records[key] = DiskRecord.new(self).init(key,offset,encoded_record.length,record.accounting_size)  # offset and length of encoded data
         offset += encoded_record.length
         encoded_record
       end.join
       encoded_data
     end
 
-  end
-
-  class IndexRecord
-    attr_accessor :key,:offset,:length,:accounting_size
-    attr_accessor :sub_index_block
-
-    def init(key,offset,length,accounting_size)
-      @key=key
-      @offset=offset
-      @length=length
-      @accounting_size=accounting_size
-      self
-    end
-
-    def IndexRecord.parse(io_stream,last_key)
-      prefix_length = io_stream.read_asi
-      suffix = io_stream.read_asi_string
-      ir=IndexRecord.new
-      ir.key = last_key[0,prefix_length] + suffix
-      ir.offset = io_stream.read_asi
-      ir.length = io_stream.read_asi
-      ir.accounting_size = io_stream.read_asi
-      ir
-    end
-
-    def to_binary(last_key)
-      prefix_length = Tools.longest_common_prefix(key,last_key)
-      [
-      prefix_length.to_asi,
-      (key.length-prefix_length).to_asi,
-      key[prefix_length..-1],
-      offset.to_asi,
-      length.to_asi,
-      accounting_size.to_asi,
-      ].join
-    end
   end
 
   class IndexBlockEncoder
@@ -524,7 +492,8 @@ module MonoTable
       prefix_length = Tools.longest_common_prefix(key,@last_key)
 
       # encode record
-      encoded_index_record = IndexRecord.new.init(key,offset,length,accounting_size).to_binary(@last_key)
+#      encoded_index_record = IndexRecord.new.init(key,offset,length,accounting_size).to_binary(@last_key)
+      encoded_index_record = DiskRecord.new.init(key,offset,length,accounting_size).encode_index_record(@last_key)
 
       # detect full block
       advance_block if current_block_length + encoded_index_record.length > max_index_block_size

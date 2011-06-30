@@ -6,8 +6,10 @@ module MonoTable
 
   class IndexBlock
     attr_accessor :index_records,:depth,:level_offsets,:level_lengths,:root_key,:file_handle,:offset,:length,:leaf
+    attr_accessor :chunk
 
-    def initialize(depth,level_offsets,level_lengths,root_key,file_handle,io_stream=nil)
+    def initialize(chunk,depth,level_offsets,level_lengths,root_key,file_handle,io_stream=nil)
+      @chunk=chunk
       @depth=depth
       @level_offsets=level_offsets
       @level_lengths=level_lengths
@@ -33,7 +35,8 @@ module MonoTable
       end_pos=io_stream.pos + block_length
       @index_records=RBTree.new
       while io_stream.pos < end_pos #io_stream.eof?
-        ir=IndexRecord.parse(io_stream,last_key)
+        ir=DiskRecord.new(chunk,0).parse_index_record(io_stream,last_key)
+#        ir=IndexRecord.parse(io_stream,last_key)
         last_key=ir.key
         @index_records[ir.key]=ir
       end
@@ -48,7 +51,7 @@ module MonoTable
 
       # currenly I'm keeping in memory every index-block read
       # in the future this should go through a central cache that only keeps in memory a fixed number of most-recently-used blocks
-      index_record.sub_index_block||=IndexBlock.new(depth+1,level_offsets,level_lengths,match_key,file_handle)
+      index_record.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,match_key,file_handle)
       sub_index_block.locate(key)
     end
 
@@ -57,7 +60,7 @@ module MonoTable
         @index_records.each(&block)
       else
         @index_records.each do |ir|
-          ir.sub_index_block||=IndexBlock.new(depth+1,level_offsets,level_lengths,ir.key,file_handle)
+          ir.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,ir.key,file_handle)
           ir.sub_index_block.each(&block)
         end
       end
@@ -95,7 +98,7 @@ module MonoTable
     # Just don't use this for any real work ;).
     def keys
       keys=[]
-      @first_block.each {|key,ir| keys<<key}
+      @top_index_block.each {|key,ir| keys<<key}
       keys
     end
 
@@ -123,7 +126,7 @@ module MonoTable
       end
 
       # load the first block
-      @first_block = IndexBlock.new(0,@index_level_offsets,@index_level_lengths,"",file_handle,io_stream)
+      @top_index_block = IndexBlock.new(self,0,@index_level_offsets,@index_level_lengths,"",file_handle,io_stream)
     end
 
     def parse_minimally(io_stream)
@@ -158,21 +161,21 @@ module MonoTable
       return record if record
 
       index_record=locate_index_record(key)
-      index_record && index_record.key==key && DiskRecord.new(
+      index_record && index_record.key==key && DiskRecord.new(self).init(
         key,
-        @data_block_offset+index_record.offset,
-        index_record.length,
+        @data_block_offset+index_record.disk_offset,
+        index_record.disk_length,
         index_record.accounting_size,
         file_handle,@columns
       )
     end
 
     def locate_index_record(key)
-      @first_block.locate(key)
+      @top_index_block.locate(key)
     end
 
-    def get_accounting_size(key,record=nil)
-      ((record ||= locate_index_record(key)) && record && record.accounting_size) || 0
+    def record(key)
+      locate_index_record(key)
     end
 
     def exists_on_disk?(key)
@@ -291,6 +294,16 @@ Possible algorithm:
   may be a fair amount of complexity and constant-time overhead. It is hard to say if it would be a net-win. "n" is ultimiately limited by the chunk-size.
 
 =end
+    # returns array: [middle_key, sizes < middle_key, sizes >= middle_key]
+    def middle_key_and_sizes_2
+      mem_recs=@records.values.sort_by {|a| a.key}
+      del_recs=@deleted_records.values.sort_by {|a| a.key}
+      cur_index_block=@top_index_block
+      total_lower_bound=0
+      total_upper_bound=accounting_size
+      half_size=accounting_size/2
+    end
+
     # returns array: [middle_key, sizes < middle_key, sizes >= middle_key]
     def middle_key_and_sizes
       raise "not supported yet"

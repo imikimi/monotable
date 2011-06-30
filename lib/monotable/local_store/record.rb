@@ -3,6 +3,14 @@ module MonoTable
   class Record
     attr_accessor :accounting_size
     attr_accessor :key
+    attr_accessor :disk_offset
+    attr_accessor :disk_length
+    attr_accessor :chunk
+
+    def initialize(chunk=nil)
+      @chunk=chunk
+      @disk_offset=0
+    end
 
     def accounting_size
       @accounting_size||=calculate_accounting_size
@@ -54,6 +62,28 @@ module MonoTable
       end.compact.join
     end
 
+    def parse_index_record(io_stream,last_key)
+      prefix_length = io_stream.read_asi
+      suffix = io_stream.read_asi_string
+      @key = last_key[0,prefix_length] + suffix
+      @disk_offset += io_stream.read_asi
+      @disk_length = io_stream.read_asi
+      @accounting_size = io_stream.read_asi
+      self
+    end
+
+    def encode_index_record(last_key)
+      prefix_length = Tools.longest_common_prefix(key,last_key)
+      [
+      prefix_length.to_asi,
+      (key.length-prefix_length).to_asi,
+      key[prefix_length..-1],
+      @disk_offset.to_asi,
+      @disk_length.to_asi,
+      accounting_size.to_asi,
+      ].join
+    end
+
     #api for derived classes to implement:
     #def fields(column_hash=nil) end
     #def update(column_hash) end
@@ -70,7 +100,12 @@ module MonoTable
       end
     end
 
-    def initialize(key,fields=nil,column_dictionary=nil,columns_hash=nil)
+    def parse_record(fields,columns_dictionary)
+      @fields=Record.parse_record(fields,columns_dictionary)
+      self
+    end
+
+    def init(key,fields=nil,column_dictionary=nil,columns_hash=nil)
       @key=key
       if fields
         if fields.respond_to?(:eof?) || fields.kind_of?(String)
@@ -82,6 +117,7 @@ module MonoTable
       else
         @fields={}
       end
+      self
     end
 
     def validate_fields(fields)
@@ -109,17 +145,37 @@ module MonoTable
 
   class DiskRecord < Record
     attr_accessor :file_handle
-    attr_accessor :offset
-    attr_accessor :length
     attr_accessor :column_dictionary
 
-    def initialize(key,offset,length,accounting_size,file_handle=nil,column_dictionary=nil)
+    def initialize(chunk=nil,data_block_offset=nil)
+      @chunk=chunk
+      if chunk
+        @file_handle=chunk.file_handle
+        @column_dictionary=chunk.columns
+      end
+      @disk_offset=data_block_offset || (chunk && chunk.data_block_offset)
+    end
+
+    def inspect
+      attrs=[:key,:disk_offset,:disk_length].collect {|k| "#{k}=#{self.send(k).inspect}"}.join(" ")
+      "<DiskRecord #{attrs}>"
+    end
+
+    def init_rest(file_handle,column_dictionary,data_block_offset=0)
+      @file_handle=file_handle
+      @disk_offset+=data_block_offset
+      @column_dictionary=column_dictionary
+      self
+    end
+
+    def init(key,offset,length,accounting_size,file_handle=nil,column_dictionary=nil)
       @key=key
-      self.file_handle=file_handle
-      self.offset=offset
-      self.length=length
-      self.accounting_size=accounting_size
-      self.column_dictionary=column_dictionary
+      @file_handle=file_handle
+      @disk_offset=offset
+      @disk_length=length
+      @accounting_size=accounting_size
+      @column_dictionary=column_dictionary
+      self
     end
 
     def [](key)
@@ -127,27 +183,27 @@ module MonoTable
     end
 
     def fields(column_hash=nil)
-      data=file_handle.read(offset,length)
+      data=file_handle.read(disk_offset,disk_length)
       Record.parse_record(data,column_dictionary,column_hash)
     end
 
     def match_to_entry_on_disk(entry_offset_on_disk,entry_file_handle=nil,entry_columns_dictionary=nil)
-      self.offset+=entry_offset_on_disk
-      self.file_handle=entry_file_handle if entry_file_handle
-      self.column_dictionary=entry_columns_dictionary if entry_columns_dictionary
+      @disk_offset+=entry_offset_on_disk
+      @file_handle=entry_file_handle if entry_file_handle
+      @column_dictionary=entry_columns_dictionary if entry_columns_dictionary
     end
   end
 
   class JournalDiskRecord < Record
     attr_accessor :file_handle
-    attr_accessor :offset
-    attr_accessor :length
+    attr_accessor :disk_offset
+    attr_accessor :disk_length
 
-    def initialize(key,file_handle,offset,length,record)
+    def initialize(key,file_handle,disk_offset,disk_length,record)
       @key=key
       self.file_handle=file_handle
-      self.offset=offset
-      self.length=length
+      self.disk_offset=disk_offset
+      self.disk_length=disk_length
       self.accounting_size=case record
       when Record then record.accounting_size
       when Hash then calculate_accounting_size(record)
@@ -160,7 +216,7 @@ module MonoTable
     end
 
     def fields(columns_hash=nil)
-      data=file_handle.read(offset,length)
+      data=file_handle.read(disk_offset,disk_length)
       f=Journal.read_entry(StringIO.new(data))[:fields]
       f=Tools.select_columns(f,columns_hash) if columns_hash
       f
