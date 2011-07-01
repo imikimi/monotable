@@ -146,6 +146,7 @@ module MonoTable
   class DiskRecord < Record
     attr_accessor :file_handle
     attr_accessor :column_dictionary
+    attr_accessor :sub_index_block    # only used if this is not an actual record by instead an index -record pointing to a sub-IndexBlock
 
     def initialize(chunk=nil,data_block_offset=nil)
       @chunk=chunk

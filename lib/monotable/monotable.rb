@@ -10,8 +10,9 @@ require File.join(File.dirname(__FILE__),"xbd")
   journal_manager
   record
   entry
+  index_block
   chunk
-  chunk_file
+  chunk_file2
   path_store
   local_store
   }.each do |file|

@@ -4,69 +4,6 @@ require 'digest/md5'
 
 module MonoTable
 
-  class IndexBlock
-    attr_accessor :index_records,:depth,:level_offsets,:level_lengths,:root_key,:file_handle,:offset,:length,:leaf
-    attr_accessor :chunk
-
-    def initialize(chunk,depth,level_offsets,level_lengths,root_key,file_handle,io_stream=nil)
-      @chunk=chunk
-      @depth=depth
-      @level_offsets=level_offsets
-      @level_lengths=level_lengths
-      @root_key=root_key
-      @offset=level_offsets[depth]
-      @length=level_lengths[depth]
-      @leaf = depth == level_lengths.length-1
-
-      #if there is an existing io_stream, use it, otherwise use the file_handle
-      if io_stream
-        parse(io_stream,length)
-      else
-        file_handle.read(@offset) do |io_stream|
-          parse(io_stream,length)
-        end
-      end
-    end
-
-    def leaf?; @leaf; end
-
-    def parse(io_stream,block_length)
-      last_key=@root_key
-      end_pos=io_stream.pos + block_length
-      @index_records=RBTree.new
-      while io_stream.pos < end_pos #io_stream.eof?
-        ir=DiskRecord.new(chunk,0).parse_index_record(io_stream,last_key)
-#        ir=IndexRecord.parse(io_stream,last_key)
-        last_key=ir.key
-        @index_records[ir.key]=ir
-      end
-      @index_records
-    end
-
-    def locate(key)
-      # upper_bound returns match with key <= the passed in key
-      match_key,index_record=@index_records.upper_bound(key)
-      return nil unless match_key
-      return match_key==key ? index_record : nil if leaf
-
-      # currenly I'm keeping in memory every index-block read
-      # in the future this should go through a central cache that only keeps in memory a fixed number of most-recently-used blocks
-      index_record.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,match_key,file_handle)
-      sub_index_block.locate(key)
-    end
-
-    def each(&block)
-      if @leaf
-        @index_records.each(&block)
-      else
-        @index_records.each do |ir|
-          ir.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,ir.key,file_handle)
-          ir.sub_index_block.each(&block)
-        end
-      end
-    end
-  end
-
   class ChunkFile < Entry
     attr_accessor :file_handle
     attr_accessor :path_store
@@ -97,9 +34,10 @@ module MonoTable
     # this is very inefficient - it has to load the entire index into memory, but there is no other way to do it.
     # Just don't use this for any real work ;).
     def keys
-      keys=[]
-      @top_index_block.each {|key,ir| keys<<key}
-      keys
+      keys=@records
+      (@top_index_block||[]).each {|key,ir| keys[key]=true}
+      @deleted_records.each {|key,v| keys.delete_at(key)}
+      keys.keys
     end
 
     #***************************************************
@@ -171,7 +109,7 @@ module MonoTable
     end
 
     def locate_index_record(key)
-      @top_index_block.locate(key)
+      @top_index_block && @top_index_block.locate(key)
     end
 
     def record(key)
@@ -190,7 +128,7 @@ module MonoTable
     end
 
     def exists?(key)
-      !@deleted_records[key] && locate_index_record(key) && true
+      (@records[key] || (!@deleted_records[key] && locate_index_record(key))) && true
     end
 
     #*************************************************************
@@ -295,38 +233,39 @@ Possible algorithm:
 
 =end
     # returns array: [middle_key, sizes < middle_key, sizes >= middle_key]
-    def middle_key_and_sizes_2
-      mem_recs=@records.values.sort_by {|a| a.key}
-      del_recs=@deleted_records.values.sort_by {|a| a.key}
-      cur_index_block=@top_index_block
-      total_lower_bound=0
-      total_upper_bound=accounting_size
-      half_size=accounting_size/2
-    end
 
+    # this is the baseline algorithm
+    # It scans N/2 records, all off of disk, unless they are already cached. Note, that it isn't as bad as it could be - it only reads index records, it doesn't read actual record data
     # returns array: [middle_key, sizes < middle_key, sizes >= middle_key]
-    def middle_key_and_sizes
-      raise "not supported yet"
-      half_size=accounting_size/2
-      size1=size2=0
-      mkey=nil
+    # Guarantees:
+    # if records.length > 0 then size1 is > 0
+    # if records.length > 1 then size2 is also > 0
+    # size1 + size2 == accounting_size
+    def middle_key_and_sizes_slow
+      chunk_accounting_size=accounting_size
+      half_size=chunk_accounting_size/2
+      mem_record_keys = @records.keys.sort
+      mrk_index = 0
 
-      # determine the middle-most key
-      records.keys.sort.each do |key|
-        v=records[key]
-        asize=v.accounting_size
-        if size1+(asize/2)>half_size
-          mkey=key
-          size2+=accounting_size-size1
-          break
+      accounting_offset=0
+      (@top_index_block||[]).each do |record|
+        while (key=mem_record_keys[mrk_index]) && key.key < record.key
+          asize=@records[key].accounting_size
+          return [key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
+          accounting_offset+=asize
+          mrk_index+=1
         end
-        size1+=asize
+        next if @deleted_records[record.key]  # skip deleted records
+        return [record.key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + record.accounting_size/2 > half_size
       end
-      # Guarantees:
-      # if records.length > 0 then size1 is > 0
-      # if records.length > 1 then size2 is also > 0
-      # size1 + size2 == accounting_size
-      [mkey,size1,size2]
+      while key=mem_record_keys[mrk_index]
+        asize=@records[key].accounting_size
+        return [key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
+        accounting_offset+=asize
+        mrk_index+=1
+      end
+      raise "this should never happen"
     end
+    alias :middle_key_and_sizes :middle_key_and_sizes_slow
   end
 end
