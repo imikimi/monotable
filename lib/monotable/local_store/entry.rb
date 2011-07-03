@@ -456,7 +456,7 @@ module MonoTable
     attr_accessor :parent_index_block_encoder
     attr_accessor :total_accounting_size
 
-    def initialize(max_index_block_size=(64*1024))
+    def initialize(max_index_block_size=MAX_INDEX_BLOCK_SIZE)
       @current_block_key=@last_key=""
       @current_block_offset=0
       @index_records=[]
@@ -477,7 +477,7 @@ module MonoTable
       all_index_levels=[]
       ibe=self
       while(ibe)
-        all_index_levels<<@index_records.join
+        all_index_levels<<ibe.index_records.join
         ibe=ibe.parent_index_block_encoder
       end
       all_index_levels.reverse!
@@ -508,7 +508,7 @@ module MonoTable
     private
 
     # advanced to the next index-block
-    def advance_block(next_encoded_index_record)
+    def advance_block
       auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length,@total_accounting_size)
 
       @current_block_key=@last_key

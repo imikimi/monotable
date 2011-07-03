@@ -35,3 +35,7 @@ module MonoTableHelperMethods
     MonoTable::Tools.chunkify_directory(test_data_dir,out_file)
   end
 end
+
+class MonoTableHelper
+  include MonoTableHelperMethods
+end

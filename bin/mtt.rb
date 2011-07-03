@@ -20,7 +20,7 @@ class MTTChunk
   end
 
   def ls
-    chunk.keys.each do |key|
+    chunk.each_key do |key|
       puts key.inspect
     end
   end

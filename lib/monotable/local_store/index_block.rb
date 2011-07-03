@@ -1,27 +1,50 @@
 module MonoTable
 
   class IndexBlock
-    attr_accessor :index_records,:depth,:level_offsets,:level_lengths,:root_key,:file_handle,:offset,:length,:leaf
+    # core attributes
+    attr_accessor :root_key     # All keys in this block are >= this key
+    attr_accessor :disk_offset  # absolute disk_offset from start of file
+    attr_accessor :disk_length  # byte-disk_length of this block on disk
+    attr_accessor :parent       # either an IndexBlock or the ChunkFile itself if this is the root IndexBlock
+
+    # cached/derived from "parent"
+    attr_accessor :index_depth  # 0 == root IndexBlock
+    attr_accessor :leaf         # true if index_depth == chunk.index_level_offsets.disk_length-1
+    attr_accessor :file_handle
     attr_accessor :chunk
 
-    def initialize(chunk,depth,level_offsets,level_lengths,root_key,file_handle,io_stream=nil)
-      @chunk=chunk
-      @depth=depth
-      @level_offsets=level_offsets
-      @level_lengths=level_lengths
-      @root_key=root_key
-      @offset=level_offsets[depth]
-      @length=level_lengths[depth]
-      @leaf = depth == level_lengths.length-1
+    attr_accessor :index_records
+
+    # parent should be a ChunkFile or an Indexblock
+    # options:
+    #   :io_stream - if there is an open IO stream already pointing exactly at the index-block, this is the efficient way to read it
+    def initialize(parent,root_key,disk_offset,disk_length,options={})
+      @parent=parent
+      @chunk = parent.chunk
+      @file_handle = @chunk.file_handle
+      @index_depth = parent.index_depth+1
+      @leaf = index_depth == index_level_offsets.length-1
+
+      @root_key = root_key
+      @disk_offset = disk_offset + index_level_offsets[@index_depth]
+      @disk_length = disk_length
 
       #if there is an existing io_stream, use it, otherwise use the file_handle
+      io_stream=options[:io_stream]
       if io_stream
-        parse(io_stream,length)
+        parse(io_stream,disk_length)
       else
-        file_handle.read(@offset) do |io_stream|
-          parse(io_stream,length)
+        file_handle.read(@disk_offset) do |io_stream|
+          parse(io_stream,disk_length)
         end
       end
+    end
+
+    def index_level_offsets; chunk.index_level_offsets; end
+    def index_level_lengths; chunk.index_level_lengths; end
+
+    def inspect
+      "<IndexBlock root_key=#{root_key.inspect} index_depth=#{index_depth} disk_offset=#{disk_offset} disk_length=#{disk_length}/>"
     end
 
     def leaf?; @leaf; end
@@ -32,7 +55,6 @@ module MonoTable
       @index_records=RBTree.new
       while io_stream.pos < end_pos #io_stream.eof?
         ir=DiskRecord.new(chunk,0).parse_index_record(io_stream,last_key)
-#        ir=IndexRecord.parse(io_stream,last_key)
         last_key=ir.key
         @index_records[ir.key]=ir
       end
@@ -42,7 +64,7 @@ module MonoTable
     def sub_index_block(index_record)
       # currenly I'm keeping in memory every index-block read
       # in the future this should go through a central cache that only keeps in memory a fixed number of most-recently-used blocks
-      index_record.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,index_record.key,file_handle)
+      index_record.sub_index_block||=IndexBlock.new(self,index_record.key,index_record.disk_offset,index_record.disk_length)
     end
 
     def locate(key)
@@ -58,9 +80,8 @@ module MonoTable
       if @leaf
         @index_records.each(&block)
       else
-        @index_records.each do |ir|
-          ir.sub_index_block||=IndexBlock.new(chunk,depth+1,level_offsets,level_lengths,ir.key,file_handle)
-          ir.sub_index_block.each(&block)
+        @index_records.each do |key,ir|
+          sub_index_block(ir).each(&block)
         end
       end
     end

@@ -9,6 +9,8 @@ module MonoTable
     attr_accessor :path_store
     attr_accessor :journal
     attr_accessor :max_chunk_size
+    attr_accessor :index_level_offsets
+    attr_accessor :index_level_lengths
 
     def initialize(fn,options={})
       init_entry
@@ -40,6 +42,15 @@ module MonoTable
       keys.keys
     end
 
+    def each_key
+      @records.each {|key,value| yield key}
+      (@top_index_block||[]).each {|key,ir| yield key unless @deleted_records[key]}
+    end
+
+    # provided for compatibility so ChunkFile object can be the "parent" of an IndexBlock
+    def chunk; self; end
+    def index_depth; -1; end
+
     #***************************************************
     # parsing
     #***************************************************
@@ -64,7 +75,7 @@ module MonoTable
       end
 
       # load the first block
-      @top_index_block = IndexBlock.new(self,0,@index_level_offsets,@index_level_lengths,"",file_handle,io_stream)
+      @top_index_block = IndexBlock.new(self,"",0,@index_level_lengths[0],:io_stream=>io_stream)
     end
 
     def parse_minimally(io_stream)
@@ -249,7 +260,7 @@ Possible algorithm:
 
       accounting_offset=0
       (@top_index_block||[]).each do |record|
-        while (key=mem_record_keys[mrk_index]) && key.key < record.key
+        while (key=mem_record_keys[mrk_index]) && key < record.key
           asize=@records[key].accounting_size
           return [key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
           accounting_offset+=asize
