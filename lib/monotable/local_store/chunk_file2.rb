@@ -115,18 +115,7 @@ module MonoTable
     # additional useful internal API
     #*************************************************************
     def fetch_record(key)
-      return nil if @deleted_records[key]
-      record=@records[key]
-      return record if record
-
-      index_record=locate_index_record(key)
-      index_record && index_record.key==key && DiskRecord.new(self).init(
-        key,
-        index_record.disk_offset,
-        index_record.disk_length,
-        index_record.accounting_size,
-        file_handle,@columns
-      )
+      (@records[key] || locate_index_record(key)) unless @deleted_records[key]
     end
 
     def locate_index_record(key)
