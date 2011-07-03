@@ -31,8 +31,10 @@ module MonoTable
       @file_handle.filename
     end
 
+    # returns number of records in the chunk
     def length; @loaded_record_count - @deleted_records.length + @records.length; end
 
+    # returns a list of all keys in the chunk (unsorted)
     # this is very inefficient - it has to load the entire index into memory, but there is no other way to do it.
     # Just don't use this for any real work ;).
     def keys
@@ -42,11 +44,16 @@ module MonoTable
       keys.keys
     end
 
+    # yields each key in the chunk
+    # Unless the chunk has not been written to since it was opened, the order will be unsorted
     def each_key
       @records.each {|key,value| yield key}
       (@top_index_block||[]).each {|key,ir| yield key unless @deleted_records[key]}
     end
 
+    #***************************************************
+    # IndexBlock interface compatibility
+    #***************************************************
     # provided for compatibility so ChunkFile object can be the "parent" of an IndexBlock
     def chunk; self; end
     def index_depth; -1; end
@@ -104,6 +111,9 @@ module MonoTable
       partially_parse_index(io_stream)
     end
 
+    #*************************************************************
+    # additional useful internal API
+    #*************************************************************
     def fetch_record(key)
       return nil if @deleted_records[key]
       record=@records[key]
@@ -112,7 +122,7 @@ module MonoTable
       index_record=locate_index_record(key)
       index_record && index_record.key==key && DiskRecord.new(self).init(
         key,
-        @data_block_offset+index_record.disk_offset,
+        index_record.disk_offset,
         index_record.disk_length,
         index_record.accounting_size,
         file_handle,@columns

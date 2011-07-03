@@ -99,7 +99,11 @@ module MonoTable
     end
 
     def data_loaded?; @data_loaded; end
+
+    # returns a list of all keys in the chunk (unsorted)
     def keys; @records.keys; end
+
+    # returns number of records in the chunk
     def length; @records.length; end
 
     #**********************************************************************

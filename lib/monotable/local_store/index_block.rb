@@ -26,7 +26,7 @@ module MonoTable
       @leaf = index_depth == index_level_offsets.length-1
 
       @root_key = root_key
-      @disk_offset = disk_offset + index_level_offsets[@index_depth]
+      @disk_offset = disk_offset #+ index_level_offsets[@index_depth]
       @disk_length = disk_length
 
       #if there is an existing io_stream, use it, otherwise use the file_handle
@@ -53,8 +53,9 @@ module MonoTable
       last_key=@root_key
       end_pos=io_stream.pos + block_length
       @index_records=RBTree.new
+      offset_base = leaf? ? chunk.data_block_offset : index_level_offsets[@index_depth+1]
       while io_stream.pos < end_pos #io_stream.eof?
-        ir=DiskRecord.new(chunk,0).parse_index_record(io_stream,last_key)
+        ir=DiskRecord.new(chunk,offset_base).parse_index_record(io_stream,last_key)
         last_key=ir.key
         @index_records[ir.key]=ir
       end

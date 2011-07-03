@@ -162,13 +162,6 @@ module MonoTable
       "<DiskRecord #{attrs}>"
     end
 
-    def init_rest(file_handle,column_dictionary,data_block_offset=0)
-      @file_handle=file_handle
-      @disk_offset+=data_block_offset
-      @column_dictionary=column_dictionary
-      self
-    end
-
     def init(key,offset,length,accounting_size,file_handle=nil,column_dictionary=nil)
       @key=key
       @file_handle=file_handle
