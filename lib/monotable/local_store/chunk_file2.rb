@@ -121,10 +121,7 @@ module MonoTable
     def locate_index_record(key)
       @top_index_block && @top_index_block.locate(key)
     end
-
-    def record(key)
-      locate_index_record(key)
-    end
+    alias :record :locate_index_record
 
     def exists_on_disk?(key)
       locate_index_record(key) && true

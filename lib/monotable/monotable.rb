@@ -11,6 +11,7 @@ require File.join(File.dirname(__FILE__),"xbd")
   record
   entry
   index_block
+  index_block_encoder
   chunk
   chunk_file2
   path_store
