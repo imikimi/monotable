@@ -23,14 +23,53 @@ module MonoTable
       File.open(filename,"rb") {|f|Chunk.new(f)}
     end
 
-    #################################
-    # bulk edits
-    #################################
+    #***************************************************
+    # split
+    #***************************************************
     def split(on_key)
       ret=split_into(on_key,Chunk.new)
       update_accounting_size
       ret.update_accounting_size
       ret
     end
+
+    #***************************************************
+    # parsing
+    #***************************************************
+    # io_stream can be a String or anything that supports the IO interface
+    def parse(io_stream)
+      # convert String to StringIO
+      io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
+
+      # parse header
+      parse_header(io_stream)
+
+      # parse the checksum
+      # load the entire entry and validate the checksum
+      entry_body,ignored_index = Tools.read_asi_checksum_string(io_stream)
+
+      # resume parsing from the now-loaded entry_body
+      io_stream = StringIO.new(entry_body)
+
+      # load the info-block
+      parse_info_block(io_stream)
+
+      # load the columns-block
+      parse_columns_block(io_stream)
+
+      # parse the index-block
+      index_block_length=io_stream.read_asi
+      @records = parse_index_block(io_stream,MemoryRecord)
+
+      # data_block
+      data_block = io_stream.read
+
+      # init the records from the index-records
+      @data_loaded = true
+      @records.each do |k,record|
+        record.parse_record(data_block[record.disk_offset,record.disk_length],@columns)
+      end
+    end
+
   end
 end

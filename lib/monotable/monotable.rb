@@ -13,6 +13,7 @@ require File.join(File.dirname(__FILE__),"xbd")
   index_block
   index_block_encoder
   chunk
+  disk_chunk_base
   chunk_file2
   path_store
   local_store

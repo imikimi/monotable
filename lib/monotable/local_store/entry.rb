@@ -88,13 +88,13 @@ module MonoTable
 
     def info; @info||=Xbd::Tag.new("info") end
 
-    def [](key) @records[key]; end
+    def [](key) get(key); end
     def []=(key,value) set(key,value); end
 
     def initialize(records_or_parse={},file_handle=nil)
       case records_or_parse
       when Hash then  init_entry(records_or_parse)
-      else            parse(records_or_parse,file_handle)
+      else            parse(records_or_parse)
       end
     end
 
@@ -105,6 +105,25 @@ module MonoTable
 
     # returns number of records in the chunk
     def length; @records.length; end
+
+    #***************************************************
+    # Iterators
+    #***************************************************
+    # yields each key in the chunk in sorted order
+    def each_key
+      keys.sort.each {|key| yield key}
+    end
+
+    # yields each key in the chunk, not necessarilly in sorted order
+    # this is (potentially) faster than each_key
+    def each_key_unsorted
+      @records.each {|k,v| yield k}
+    end
+
+    # yields every record in the chunk in sorted Key-order
+    def each_record
+      keys.sort.each {|key| yield @records[key]}
+    end
 
     #**********************************************************************
     # Multiple-Chunk tools
@@ -156,11 +175,7 @@ module MonoTable
     # Read API
     #*************************************************************
     def get(key,columns=nil)
-      if columns
-        Tools.select_columns(record(key),columns)
-      else
-        records[key]
-      end
+      (record=@records[key]) && record.fields(columns)
     end
 
     #*************************************************************
@@ -244,6 +259,9 @@ module MonoTable
     def bulk_update(records)  records.each {|k,v| update(k,v)} end
     def bulk_delete(keys)     keys.each {|key| delete_internal(key)} end
 
+    #***************************************************
+    # Chunk Splitting
+    #***************************************************
     # all keys >= on_key are put into a new entry
     def split_into(on_key,second_entry)
       # TODO: if @records where an RBTree, couldn't we just do a spit in O(1) ?
@@ -259,9 +277,83 @@ module MonoTable
       second_entry
     end
 
+    # all keys >= on_key are put into a new chunk
+    def split(on_key=nil,to_filename=nil)
+      if on_key
+        size1,size2=split_on_key_sizes(on_key)
+      else
+        on_key,size1,size2=middle_key_and_sizes
+      end
+      to_filename||=path_store.generate_filename
+
+      # create new chunk
+      second_chunk_file=ChunkFile.new(to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
+
+      # do the actual split
+      # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.
+      self.split_into(on_key,second_chunk_file)
+
+      # update the path_store (which will also update the local_store
+      path_store.add(second_chunk_file) if path_store
+
+      # set entry
+      journal.split(file_handle,on_key,to_filename)
+
+      # update sizes
+      self.accounting_size=size1 || self.calculate_accounting_size
+      second_chunk_file.accounting_size=size2 || second_chunk_file.calculate_accounting_size
+
+      # return the new ChunkFile object
+      second_chunk_file
+    end
+
+    # returns array: [sizes < on_key, sizes >= on_key]
+    def split_on_key_sizes(on_key)
+      size1=size2=0
+      records.each do |k,v|
+        asize=v.accounting_size
+        if k < on_key
+          size1+=asize
+        else
+          size2+=asize
+        end
+      end
+      [size1,size2]
+    end
+
+    # Find the middle-most key of the chunk
+    #
+    # Baseline (slow) algorithm
+    #   It scans N/2 records, potenitally all off of disk, unless they are already cached.
+    #   Note, that it isn't as bad as it could be - it only reads index records, it doesn't need to read actual record data
+    #
+    # returns array: [middle_key, size1, size2]
+    #   size1 = sum of all accounting_sizes for records with keys < middle_key
+    #   size2 = sum of all accounting_sizes for records with keys >= middle_key
+    #
+    # Guarantees:
+    #   if records.length > 0 then size1 is > 0
+    #   if records.length > 1 then size2 is also > 0
+    #   size1 + size2 == accounting_size
+    def middle_key_and_sizes_slow
+      chunk_accounting_size = accounting_size
+      half_size  = chunk_accounting_size/2
+      accounting_offset = 0
+
+      each_record do |record|
+        asize = record.accounting_size
+        return [record.key, accounting_offset, chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
+        accounting_offset += asize
+      end
+      raise "this should never happen"
+    end
+    alias :middle_key_and_sizes :middle_key_and_sizes_slow
+
     #***************************************************
-    # LOADING/SAVING
+    # Parsing Helpers
     #***************************************************
+    # actual parsing is done by the "parse(io_stream)" method, which each Chunk class implements based on
+    # what parts of the chunk it wants to parse.
 
     def parse_header(io_stream)
       test_header_string=io_stream.read(HEADER_STRING.length)
@@ -281,7 +373,7 @@ module MonoTable
       @columns,index = Xbd::Dictionary.parse(columns_block.length.to_asi + columns_block,0)
     end
 
-    def parse_entire_index_block(io_stream,record_type)
+    def parse_index_block(io_stream,record_type)
       # new multi-level index reading
       num_index_levels=io_stream.read_asi
       index_level_lengths=[]
@@ -303,74 +395,9 @@ module MonoTable
       records
     end
 
-    # io_stream can be a String or anything that supports the IO interface
-    def parse(io_stream)
-      # convert String to StringIO
-      io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
-
-      # parse header
-      parse_header(io_stream)
-
-      # parse the checksum
-      # load the entire entry and validate the checksum
-      entry_body,ignored_index = Tools.read_asi_checksum_string(io_stream)
-
-      # resume parsing from the now-loaded entry_body
-      io_stream = StringIO.new(entry_body)
-
-      # load the info-block
-      parse_info_block(io_stream)
-
-      # load the columns-block
-      parse_columns_block(io_stream)
-
-      # parse the index-block
-      index_block_length=io_stream.read_asi
-      @records = parse_entire_index_block(io_stream,MemoryRecord)
-
-      # data_block
-      data_block = io_stream.read
-
-      # init the records from the index-records
-      @data_loaded=true
-      @records.each do |k,record|
-        record.parse_record(data_block[record.disk_offset,record.disk_length],@columns)
-      end
-    end
-
-    def parse_minimally(io_stream)
-      # convert String to StringIO
-      io_stream = StringIO.new(io_stream) if io_stream.kind_of?(String)
-
-      # parse header
-      parse_header(io_stream)
-
-      # skip over the checksum
-      checksum = io_stream.read_asi_string
-      entry_length = io_stream.read_asi
-
-      # load the info-block
-      parse_info_block(io_stream)
-
-      # load the columns-block
-      parse_columns_block(io_stream)
-
-      # load the index-block
-      index_block_length = io_stream.read_asi
-      @data_block_offset = io_stream.pos + index_block_length
-
-      # parse the index-block, and optionally, load the data
-      @data_loaded=false
-      @records=parse_entire_index_block(io_stream,DiskRecord)
-
-      # init the records from the index-records
-#      @records=index_records
-#      @records={}
-#      index_records.each do |ir|
-#        @records[ir.key]=DiskRecord.new.init(ir.key, ir.disk_offset+data_block_offset, ir.disk_length, ir.accounting_size, file_handle, @columns)
-#      end
-    end
-
+    #***************************************************
+    # Encoding
+    #***************************************************
     # disk_records logs the offset and index of every record in the entry-binary-string returned
     def to_binary(return_disk_records=nil)
       disk_records = return_disk_records || {}
