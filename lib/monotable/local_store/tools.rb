@@ -84,11 +84,11 @@ module MonoTable
 
     # target should implement the Monotable API
     # can be a chunk, localstore, etc.
-    # if target is nil, a Chunk is created (and returned)
+    # if target is nil, a MemoryChunk is created (and returned)
     # target is returned
     # key_prefix is prepended onto every key inserted
     def Tools.load_directory(path,target=nil,key_prefix=nil)
-      target||=Chunk.new
+      target||=MemoryChunk.new
       bytes_loaded=0
       Dir.glob(File.join(path,"**")) do |key|
         continue if File.stat(key).directory?

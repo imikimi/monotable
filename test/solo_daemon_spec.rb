@@ -2,7 +2,7 @@ require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 require File.join(File.dirname(__FILE__),"../lib/monotable/solo_daemon/solo_daemon.rb")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
-describe MonoTable::ChunkFile do
+describe MonoTable::DiskChunk do
   include MonoTableHelperMethods
 
   it "should be possible to initialize a new SoloDaemon" do

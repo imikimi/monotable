@@ -3,7 +3,7 @@ require "fileutils"
 require 'digest/md5'
 
 =begin
-ChunkFile's record's structure consists of three sub-structures:
+DiskChunk's record's structure consists of three sub-structures:
 
   @tip_index_block
     Index & Records on disk
@@ -28,7 +28,7 @@ ChunkFile's record's structure consists of three sub-structures:
 
 module MonoTable
 
-  class ChunkFile < DiskChunkBase
+  class DiskChunk < DiskChunkBase
     attr_accessor :index_level_offsets
     attr_accessor :index_level_lengths
 
@@ -96,7 +96,7 @@ module MonoTable
     #***************************************************
     # IndexBlock interface compatibility
     #***************************************************
-    # provided for compatibility so ChunkFile object can be the "parent" of an IndexBlock
+    # provided for compatibility so DiskChunk object can be the "parent" of an IndexBlock
     def chunk; self; end
     def index_depth; -1; end
 
@@ -113,7 +113,7 @@ module MonoTable
     def set(key,columns)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
 
-      # rest is same as DiskChunkFileBase 
+      # rest is same as DiskChunkFileBase
       ret=set_internal(key,journal.set(file_handle,key,columns))
       EventQueue<<ChunkFullEvent.new(self) if accounting_size > max_chunk_size
       ret

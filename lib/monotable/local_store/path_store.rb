@@ -28,16 +28,16 @@ module MonoTable
       journal_manager
     end
 
-    # Takes a Chunk object, assigns it a filename, saves it to disk,
-    # creates a ChunkFile object, adds that to this pathstore, and returns the ChunkFile
+    # Takes a MemoryChunk object, assigns it a filename, saves it to disk,
+    # creates a DiskChunk object, adds that to this pathstore, and returns the DiskChunk
     def add(chunk)
       case chunk
-      when Chunk then
+      when MemoryChunk then
         filename=generate_filename
         chunk.save(filename)
-        chunks[filename]=ChunkFile.new(filename,:journal=>journal_manager,:path_store=>self)
-      when ChunkFile then
-        raise "ChunkFile attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
+        chunks[filename]=DiskChunk.new(filename,:journal=>journal_manager,:path_store=>self)
+      when DiskChunk then
+        raise "DiskChunk attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
         chunk.path_store=self
         chunks[chunk.filename]=chunk
         local_store.add(chunk)
@@ -55,7 +55,7 @@ module MonoTable
         chunk_number=$1.to_i
         @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
 
-        chunks[f]=ChunkFile.new(f,:journal=>journal_manager,:path_store=>self)
+        chunks[f]=DiskChunk.new(f,:journal=>journal_manager,:path_store=>self)
       end
     end
 

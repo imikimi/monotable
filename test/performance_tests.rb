@@ -33,14 +33,14 @@ def write_unchecked_record_asi(key,record,file)
 end
 
 def write_monotable_entry(k,r,file)
-  entry=MonoTable::Entry.new
+  entry=MonoTable::Chunk.new
   entry.set(k,r)
   file.append entry.to_binary
   file.flush
 end
 
 def read_monotable_entry(file)
-  MonoTable::Entry.new(file)
+  MonoTable::Chunk.new(file)
 end
 
 def read_asi(file)
@@ -108,7 +108,7 @@ end
 def test_chunk(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.close
-  chunk_file=MonoTable::ChunkFile.new("test_chunk")
+  chunk_file=MonoTable::DiskChunk.new("test_chunk")
   chunk_file.journal.journal_file.open_append
   testname="%10s"%testname.to_s
   time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
@@ -177,7 +177,7 @@ Benchmark.bm do |x|
   test_journal(:Journal,x,file,10000) {|key,val,journal| journal.set("0000000.mt_chunk",key,val);}
 #  read_test(:JournalEntry,x,file)   {|f| MonoTable::Journal.read_entry(f)}
   journal_read_test(:Journal,x,file)
-  test_chunk(:ChunkFile,x,file,10000) {|key,val,chunk_file| chunk_file.set(key,val);}
+  test_chunk(:DiskChunk,x,file,10000) {|key,val,chunk_file| chunk_file.set(key,val);}
   test_local_store(:LocalStore,x,file,10000) {|key,val,ls| ls.set(key,val);}
 #  test(:marshal,x,file,100000) {|key,val,file| write_record_marshal(key,val,file);}
 #  read_test(:marshal,x,file) {|file| read_marshal(file);}
@@ -202,7 +202,7 @@ end
   file.delete if file.exists?
   file.open_write
   x.report(" 1x: entry,full,internal-append,preopen,flush   ") {(0..10000).each do |a|
-    entry=MonoTable::Entry.new
+    entry=MonoTable::Chunk.new
     entry.set(a.to_s,"value"=>a.to_s)
     file.append entry.to_binary
     file.flush

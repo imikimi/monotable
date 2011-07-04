@@ -4,7 +4,7 @@ require 'digest/md5'
 
 module MonoTable
 
-  class ChunkFile < DiskChunkBase
+  class DiskChunk < DiskChunkBase
     def parse(io_stream)
       parse_base(io_stream)
       # parse the index-block, and optionally, load the data

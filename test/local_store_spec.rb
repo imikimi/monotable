@@ -20,7 +20,7 @@ describe MonoTable::LocalStore do
     local_store.chunks.length.should == 1
 
     local_store.chunks.each do |k,v|
-      v.kind_of?(MonoTable::ChunkFile).should == true
+      v.kind_of?(MonoTable::DiskChunk).should == true
     end
   end
 
@@ -50,7 +50,7 @@ describe MonoTable::LocalStore do
     local_store2=MonoTable::LocalStore.new(temp_dir)
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").length.should == 4
-    MonoTable::Chunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    MonoTable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
   end
 
   it "should be possible to attach a localstore to a path with a non-compacted journal" do
@@ -63,7 +63,7 @@ describe MonoTable::LocalStore do
     local_store2=MonoTable::LocalStore.new(temp_dir)
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").length.should == 4
-    MonoTable::Chunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    MonoTable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
 
     #test write
     local_store2.set("testkey",{"field"=>"value"})
@@ -81,7 +81,7 @@ describe MonoTable::LocalStore do
     local_store.path_stores[0].journal_manager.current_journal.compact
 
     # load the chunk
-    chunk=MonoTable::Chunk.load(local_store.get_chunk("").filename)
+    chunk=MonoTable::MemoryChunk.load(local_store.get_chunk("").filename)
     chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png"].sort
   end
 

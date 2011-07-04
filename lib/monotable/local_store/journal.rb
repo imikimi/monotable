@@ -50,7 +50,7 @@ module MonoTable
         end
         {:command=>:set,:chunk_file=>strings[1],:key=>strings[2],:fields=>fields}
       else
-        raise "invalid Journal Entry command: #{command.inspect}"
+        raise "invalid Journal Chunk command: #{command.inspect}"
       end
     end
 
@@ -149,7 +149,7 @@ module MonoTable
           if ch=chunks[chunk_filename]
             chunk=ch[:chunk]
           else
-            chunk=Chunk.load(chunk_filename)
+            chunk=MemoryChunk.load(chunk_filename)
             chunks[chunk_filename]={:chunk=>chunk}
           end
           Journal.apply_entry(entry,chunk,chunks)
@@ -164,7 +164,7 @@ module MonoTable
         end
 
         # TODO: lock all the effected chunks until the end of this block
-        #   Better-yet, as we save each chunk, we should update its in-memory ChunkFile.
+        #   Better-yet, as we save each chunk, we should update its in-memory DiskChunk.
         #   This will point to the file in the compacted_chunk_path, though.
         #   And then after we delete the journal, we can just update the filename for each chunk to it's normal location
 
@@ -175,10 +175,10 @@ module MonoTable
       # move all the compacted files back into position
       Dir.glob(File.join(compacted_chunks_path,"*#{CHUNK_EXT}")).each do |compacted_file|
         chunk_file=File.join(base_path,File.basename(compacted_file))
-        # TODO: lock chunk_file's matching ChunkFile object
+        # TODO: lock chunk_file's matching DiskChunk object
         FileUtils.rm [chunk_file]
         FileUtils.mv compacted_file,chunk_file
-        # TODO: reset and then unlock chunk_file's matching ChunkFile object
+        # TODO: reset and then unlock chunk_file's matching DiskChunk object
       end
 
 

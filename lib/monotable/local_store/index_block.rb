@@ -5,7 +5,7 @@ module MonoTable
     attr_accessor :root_key     # All keys in this block are >= this key
     attr_accessor :disk_offset  # absolute disk_offset from start of file
     attr_accessor :disk_length  # byte-disk_length of this block on disk
-    attr_accessor :parent       # either an IndexBlock or the ChunkFile itself if this is the root IndexBlock
+    attr_accessor :parent       # either an IndexBlock or the DiskChunk itself if this is the root IndexBlock
 
     # cached/derived from "parent"
     attr_accessor :index_depth  # 0 == root IndexBlock
@@ -15,7 +15,7 @@ module MonoTable
 
     attr_accessor :index_records
 
-    # parent should be a ChunkFile or an Indexblock
+    # parent should be a DiskChunk or an Indexblock
     # options:
     #   :io_stream - if there is an open IO stream already pointing exactly at the index-block, this is the efficient way to read it
     def initialize(parent,root_key,disk_offset,disk_length,options={})

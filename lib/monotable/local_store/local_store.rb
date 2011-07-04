@@ -23,7 +23,7 @@ module MonoTable
     end
 
     def initialize_new_store
-      chunk=Chunk.new
+      chunk=MemoryChunk.new
       chunk_file=@path_stores[0].add(chunk)
       chunks[chunk_file.range_start]=chunk_file
     end
@@ -36,7 +36,7 @@ module MonoTable
     end
 
     #*************************************************************
-    # Chunk API
+    # MemoryChunk API
     #*************************************************************
     # Throws errors if chunk for key not present
     def get_chunk(key) # rename chunk_for_record
@@ -65,7 +65,7 @@ module MonoTable
     #*************************************************************
     def add(chunk)
       case chunk
-      when ChunkFile then chunks[chunk.range_start]=chunk
+      when DiskChunk then chunks[chunk.range_start]=chunk
       else raise "unknown type #{chunk.class}"
       end
     end

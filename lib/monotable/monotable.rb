@@ -9,12 +9,12 @@ require File.join(File.dirname(__FILE__),"xbd")
   journal
   journal_manager
   record
-  entry
+  chunk
   index_block
   index_block_encoder
-  chunk
+  memory_chunk
   disk_chunk_base
-  chunk_file2
+  disk_chunk2
   path_store
   local_store
   }.each do |file|

@@ -4,7 +4,7 @@ require 'digest/md5'
 
 module MonoTable
 
-  class DiskChunkBase < Entry
+  class DiskChunkBase < Chunk
     attr_accessor :file_handle
     attr_accessor :path_store
     attr_accessor :journal
@@ -35,7 +35,7 @@ module MonoTable
     #*************************************************************
     # Write API
     #*************************************************************
-    # NOTE: The "update" method inherited from Entry works. No need to re-implement.
+    # NOTE: The "update" method inherited from Chunk works. No need to re-implement.
     def set(key,columns)
       ret=set_internal(key,journal.set(file_handle,key,columns))
       EventQueue<<ChunkFullEvent.new(self) if accounting_size > max_chunk_size
