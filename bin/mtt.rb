@@ -10,8 +10,8 @@ class MTTChunk
 
   def initialize(filename)
     #time=Time.now
-    @chunk=MonoTable::ChunkFile.new(filename)
-    #puts "ChunkFile init: #{Time.now-time}"
+    @chunk=MonoTable::DiskChunk.new(filename)
+    #puts "DiskChunk init: #{Time.now-time}"
   end
 
   def info

@@ -73,8 +73,7 @@ module MonoTable
 
       # syncronized, step through both @records (sorted by key) and @top_index_block.each
       # skips records in @deleted_records
-      (@top_index_block||[]).each do |record|
-        disk_key = record.key
+      (@top_index_block||[]).each do |disk_key,record|
 
         # yield all memory records before "record"
         while (key=mem_record_keys[mrk_index]) && key < disk_key
