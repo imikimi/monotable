@@ -1,5 +1,9 @@
 # encoding: BINARY
 require 'digest/md5'
+=begin
+This sub-class of Chunk loads the entier chunk into memory, or can work without a disk-image at all.
+Write methods only alter the in-memory structure.
+=end
 
 module MonoTable
 

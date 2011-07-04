@@ -3,6 +3,10 @@ require "fileutils"
 require 'digest/md5'
 
 =begin
+This implementation of DiskChunk only loads the first IndexBlock when created. Other IndexBlocks are loaded on demand.
+  Sub-IndexBlocks, DiskRecords and fields are loaded on demand.
+  Writes are journaled.
+
 DiskChunk's record's structure consists of three sub-structures:
 
   @tip_index_block
