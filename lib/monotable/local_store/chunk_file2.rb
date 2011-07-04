@@ -44,11 +44,43 @@ module MonoTable
       keys.keys
     end
 
-    # yields each key in the chunk
-    # Unless the chunk has not been written to since it was opened, the order will be unsorted
+    # yields each key in the chunk in sorted order
     def each_key
+      each_record {|r| yield r.key}
+    end
+
+    # yields each key in the chunk, not necessarilly in sorted order
+    # this is (potentially) faster than each_key
+    def each_key_unsorted
       @records.each {|key,value| yield key}
-      (@top_index_block||[]).each {|key,ir| yield key unless @deleted_records[key]}
+      (@top_index_block||[]).each {|key,record| yield key unless @deleted_records[key]}
+    end
+
+    # yields every record in the chunk in sorted Key-order
+    def each_record
+      mem_record_keys = @records.keys.sort
+      mrk_index = 0
+
+      # syncronized, step through both @records (sorted by key) and @top_index_block.each
+      # skips records in @deleted_records
+      (@top_index_block||[]).each do |record|
+        disk_key = record.key
+
+        # yield all memory records before "record"
+        while (key=mem_record_keys[mrk_index]) && key < disk_key
+          yield @records[key]
+          mrk_index+=1
+        end
+
+        # yield "record" unless it is deleted
+        yield record unless @deleted_records[disk_key]
+      end
+
+      # yield any remaining memory records
+      while(key=mem_record_keys[mrk_index]) do
+        yield @records[key]
+        mrk_index+=1
+      end
     end
 
     #***************************************************
@@ -171,7 +203,7 @@ module MonoTable
       second_chunk_file=ChunkFile.new(to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
 
       # do the actual split
-      # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.
+      # NOTE: this just splits the in-memory Records. If there are DiskRecords, they will still point to the same, old file, which is correct for reading.
       self.split_into(on_key,second_chunk_file)
 
       # update the path_store (which will also update the local_store
@@ -248,28 +280,16 @@ Possible algorithm:
     # if records.length > 0 then size1 is > 0
     # if records.length > 1 then size2 is also > 0
     # size1 + size2 == accounting_size
-    def middle_key_and_sizes_slow
-      chunk_accounting_size=accounting_size
-      half_size=chunk_accounting_size/2
-      mem_record_keys = @records.keys.sort
-      mrk_index = 0
 
-      accounting_offset=0
-      (@top_index_block||[]).each do |record|
-        while (key=mem_record_keys[mrk_index]) && key < record.key
-          asize=@records[key].accounting_size
-          return [key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
-          accounting_offset+=asize
-          mrk_index+=1
-        end
-        next if @deleted_records[record.key]  # skip deleted records
-        return [record.key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + record.accounting_size/2 > half_size
-      end
-      while key=mem_record_keys[mrk_index]
-        asize=@records[key].accounting_size
-        return [key,accounting_offset,chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
-        accounting_offset+=asize
-        mrk_index+=1
+    def middle_key_and_sizes_slow
+      chunk_accounting_size = accounting_size
+      half_size  = chunk_accounting_size/2
+      accounting_offset = 0
+
+      each_record do |record|
+        asize = record.accounting_size
+        return [record.key, accounting_offset, chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
+        accounting_offset += asize
       end
       raise "this should never happen"
     end
