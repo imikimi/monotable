@@ -7,20 +7,20 @@ describe MonoTable::DiskChunk do
   it "should be possible to read chunkified directory" do
     file=chunkify_test_data_directory
 
-    chunk = MonoTable::DiskChunk.new(file)
+    chunk = MonoTable::DiskChunk.new(:filename=>file)
   end
 
   it "should be possible to list chunkified directory" do
     file=chunkify_test_data_directory
 
-    chunk = MonoTable::DiskChunk.new(file)
+    chunk = MonoTable::DiskChunk.new(:filename=>file)
     chunk.keys.sort.should == %w{0-255.binary declaration_of_independence.txt plato.jpeg simple.png}
   end
 
   it "should return nil if key is not in chunk" do
     file=chunkify_test_data_directory
 
-    chunk = MonoTable::DiskChunk.new(file)
+    chunk = MonoTable::DiskChunk.new(:filename=>file)
     chunk["not_there"].should == nil
   end
 
@@ -33,7 +33,7 @@ describe MonoTable::DiskChunk do
   it "should be possible to extract values from chunkified directory" do
     file=chunkify_test_data_directory
 
-    chunk = MonoTable::DiskChunk.new(file)
+    chunk = MonoTable::DiskChunk.new(:filename=>file)
 
     test_read(chunk,"declaration_of_independence.txt")
     test_read(chunk,"plato.jpeg")
@@ -43,7 +43,7 @@ describe MonoTable::DiskChunk do
   it "should work to journal a 'set' to a DiskChunk" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.set("foo",{"bar" => "June"})
 
@@ -54,7 +54,7 @@ describe MonoTable::DiskChunk do
   it "should work to 'get' using MonoTable::MemoryChunk from a journaled entry" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.set("foo",{"bar" => "June"})
     chunkfile.journal.compact
@@ -68,7 +68,7 @@ describe MonoTable::DiskChunk do
   it "should work to 'get' after 'set' using MonoTable::DiskChunk from a journaled entry" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.set("foo",{"bar" => "June"})
     chunkfile.get("foo").should == {"bar" => "June"}
@@ -77,14 +77,14 @@ describe MonoTable::DiskChunk do
     chunkfile.journal.compact
 
     # test partial loading with DiskChunk
-    chunkfile2 = MonoTable::DiskChunk.new(file)
+    chunkfile2 = MonoTable::DiskChunk.new(:filename=>file)
     chunkfile2.get("foo").should =={"bar" => "June"}
   end
 
   it "should work to 'delete' using MonoTable::MemoryChunk and a journaled entry" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.delete("declaration_of_independence.txt")
     chunkfile.journal.compact
@@ -97,7 +97,7 @@ describe MonoTable::DiskChunk do
   it "should work to 'delete' using MonoTable::DiskChunk and a journaled entry" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.get("declaration_of_independence.txt")["file_data"].length.should == 407
     chunkfile.delete("declaration_of_independence.txt")
@@ -107,14 +107,14 @@ describe MonoTable::DiskChunk do
     chunkfile.journal.compact
 
     # test partial loading with DiskChunk
-    chunkfile2 = MonoTable::DiskChunk.new(file)
+    chunkfile2 = MonoTable::DiskChunk.new(:filename=>file)
     chunkfile2.get("declaration_of_independence.txt").should == nil
   end
 
   it "should work to journal an 'update' to a DiskChunk" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.set("foo",{"bar" => "June", "baz" => "December"})
     chunkfile.journal.compact
@@ -122,7 +122,7 @@ describe MonoTable::DiskChunk do
     chunk = MonoTable::MemoryChunk.load(file)
     chunk["foo"].should == {"bar" => "June", "baz" => "December"}
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
     chunkfile.verify_records
     chunkfile.update("foo",{"baz" => "January"})
     chunkfile.journal.compact
@@ -135,7 +135,7 @@ describe MonoTable::DiskChunk do
   it "should work to journal a 'delete' to a DiskChunk" do
     file=chunkify_test_data_directory
 
-    chunkfile = MonoTable::DiskChunk.new(file)
+    chunkfile = MonoTable::DiskChunk.new(:filename=>file)
 
     chunkfile.delete("plato.jpeg")
     chunkfile.journal.compact

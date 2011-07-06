@@ -9,17 +9,19 @@ module MonoTable
     attr_accessor :parent_index_block_encoder
     attr_accessor :total_accounting_size
 
-    def initialize(max_index_block_size=MAX_INDEX_BLOCK_SIZE)
+    #options
+    # :max_index_block_size
+    def initialize(options={})
       @current_block_key=@last_key=""
       @current_block_offset=0
       @index_records=[]
       @current_block_length=0
-      @max_index_block_size=max_index_block_size
+      @max_index_block_size=options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
       @total_accounting_size=0
     end
 
     def auto_parent_index_block_encoder
-      @parent_index_block_encoder ||= IndexBlockEncoder.new(max_index_block_size)
+      @parent_index_block_encoder ||= IndexBlockEncoder.new(:max_index_block_size=>@max_index_block_size)
     end
 
     def to_s

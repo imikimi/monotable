@@ -36,9 +36,11 @@ module MonoTable
     attr_accessor :index_level_offsets
     attr_accessor :index_level_lengths
 
-    def initialize(filename,options={})
+    # options
+    #   :filename =>
+    def initialize(options={})
       @deleted_records={}
-      init_disk_chunk_base(filename,options)
+      init_disk_chunk_base(options)
     end
 
     # returns number of records in the chunk

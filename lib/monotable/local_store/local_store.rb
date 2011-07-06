@@ -7,13 +7,20 @@ require "rbtree"
 module MonoTable
   class LocalStore
     attr_accessor :chunks
+    attr_accessor :max_index_block_size
+    attr_accessor :max_chunk_size
     attr_accessor :path_stores
 
-    def initialize(store_paths)
+    #options
+    #   :store_paths
+    def initialize(options={})
+      @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
+      @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
+
       @chunks=RBTree.new
-      store_paths=[store_paths] unless store_paths.kind_of?(Array)
+      store_paths = options[:store_paths]
       @path_stores=store_paths.collect do |path|
-        ps=PathStore.new(path,self)
+        ps=PathStore.new(path,:local_store=>self)
         ps.chunks.each do |filename,chunk_file|
           chunks[chunk_file.range_start]=chunk_file
         end

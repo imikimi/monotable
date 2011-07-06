@@ -11,20 +11,19 @@ module MonoTable
 
     # from_s can be a string or IOStream to the raw bytes of a chunk (one or more entries)
     # OR it can be an Chunk object
-    def initialize(from_s=nil)
-      if from_s.kind_of? Chunk
-        init_entry(from_s)
-      else
-        init_entry
-        if from_s
-          io_stream = from_s.kind_of?(String) ? StringIO.new(from_s) : from_s
-          parse(io_stream)
-        end
+    # options
+    #   :data => string
+    def initialize(options={})
+      data=options[:data]
+      init_chunk(options)
+      if data
+        io_stream = data.kind_of?(String) ? StringIO.new(data) : data
+        parse(io_stream)
       end
     end
 
     def MemoryChunk.load(filename)
-      File.open(filename,"rb") {|f|MemoryChunk.new(f)}
+      File.open(filename,"rb") {|f|MemoryChunk.new(:data=>f)}
     end
 
     #***************************************************

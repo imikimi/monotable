@@ -108,7 +108,7 @@ end
 def test_chunk(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.close
-  chunk_file=MonoTable::DiskChunk.new("test_chunk")
+  chunk_file=MonoTable::DiskChunk.new(:filename=>"test_chunk")
   chunk_file.journal.journal_file.open_append
   testname="%10s"%testname.to_s
   time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
@@ -123,7 +123,7 @@ end
 def test_local_store(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.close
-  local_store=MonoTable::LocalStore.new([File.expand_path("tmp")])
+  local_store=MonoTable::LocalStore.new(:path_stores=>[File.expand_path("tmp")])
   local_store.get_chunk("").journal.hold_file_open
   testname="%10s"%testname.to_s
   time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|

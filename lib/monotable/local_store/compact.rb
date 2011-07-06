@@ -19,7 +19,7 @@ module MonoTable
         end
 
         # read the last read-only version of the chunk
-        chunk=MemoryChunk.new_from_file(read_file)
+        chunk=MemoryChunk.new_from_file(:data=>read_file)
 
         # load and apply all edits in the
         chunk.load(compact_file)

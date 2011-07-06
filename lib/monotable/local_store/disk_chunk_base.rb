@@ -10,16 +10,19 @@ module MonoTable
     attr_accessor :journal
     attr_accessor :max_chunk_size
 
-    def initialize(filename,options={})
-      init_disk_chunk_base(filename,options)
+    def initialize(options={})
+      init_disk_chunk_base(options)
     end
 
-    def init_disk_chunk_base(filename,options={})
-      init_entry
-      @file_handle=FileHandle.new(filename)
+    # options
+    #   :filename => required
+    def init_disk_chunk_base(options={})
+      raise ":filename require" unless options[:filename]
+      init_chunk(options)
+      @file_handle=FileHandle.new(options[:filename])
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @path_store=options[:path_store]
-      @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(filename+".testing_journal")
+      @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       # parse the file on disk
       # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.

@@ -11,14 +11,18 @@ module MonoTable
     attr_accessor :chunks # hash keyed by filename
     attr_accessor :local_store
 
-    def initialize(path,local_store=nil)
-      @local_store=local_store || LocalStore.new([path])
+    def initialize(path,options={})
+
+      @local_store=options[:local_store] || LocalStore.new(:store_paths=>[path])
       @path = File.expand_path(path)
       @journal_manager = JournalManager.new(path,self)
       validate_store
       @next_chunk_number=0
       init_chunks
     end
+
+    def max_chunk_size; @local_store.max_chunk_size; end
+    def max_index_block_size; @local_store.max_index_block_size; end
 
     def validate_store
       journal_manager.compact
@@ -35,7 +39,7 @@ module MonoTable
       when MemoryChunk then
         filename=generate_filename
         chunk.save(filename)
-        chunks[filename]=DiskChunk.new(filename,:journal=>journal_manager,:path_store=>self)
+        chunks[filename]=DiskChunk.new(:filename=>filename,:journal=>journal_manager,:path_store=>self)
       when DiskChunk then
         raise "DiskChunk attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
         chunk.path_store=self
@@ -55,7 +59,7 @@ module MonoTable
         chunk_number=$1.to_i
         @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
 
-        chunks[f]=DiskChunk.new(f,:journal=>journal_manager,:path_store=>self)
+        chunks[f]=DiskChunk.new(:filename=>f,:journal=>journal_manager,:path_store=>self)
       end
     end
 

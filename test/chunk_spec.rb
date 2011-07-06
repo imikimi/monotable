@@ -14,7 +14,7 @@ describe MonoTable::MemoryChunk do
     chunk["test_key"]= {"test_column"=>"test_value"}
     chunk_str=chunk.to_binary
 
-    chunk2=MonoTable::MemoryChunk.new(chunk_str)
+    chunk2=MonoTable::MemoryChunk.new(:data=>chunk_str)
     chunk2.length.should == 1
     chunk2["test_key"].should == {"test_column"=>"test_value"}
   end
@@ -24,7 +24,7 @@ describe MonoTable::MemoryChunk do
     chunk["test_key"]= {"test_column"=>"test_value"}
     chunk_str=chunk.to_binary
 
-    chunk2=MonoTable::MemoryChunk.new(chunk_str)
+    chunk2=MonoTable::MemoryChunk.new(:data=>chunk_str)
     chunk2["test_key2"].should == nil
   end
 
@@ -34,7 +34,7 @@ describe MonoTable::MemoryChunk do
     chunk["key2"]={"col2"=>"val3","col3"=>"val4"}
     chunk_str=chunk.to_binary
 
-    chunk2=MonoTable::MemoryChunk.new(chunk_str)
+    chunk2=MonoTable::MemoryChunk.new(:data=>chunk_str)
     chunk2.length.should == 2
     chunk2["key1"].should == {"col1"=>"val1","col2"=>"val2"}
     chunk2["key2"].should == {"col2"=>"val3","col3"=>"val4"}
@@ -47,7 +47,7 @@ describe MonoTable::MemoryChunk do
     chunk["test_key"]= {"test_column"=>data}
     chunk_str=chunk.to_binary
 
-    chunk2=MonoTable::MemoryChunk.new(chunk_str)
+    chunk2=MonoTable::MemoryChunk.new(:data=>chunk_str)
     chunk2["test_key"]["test_column"].should == data
   end
 end

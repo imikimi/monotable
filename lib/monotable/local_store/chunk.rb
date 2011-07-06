@@ -74,10 +74,16 @@ module MonoTable
     attr_accessor :data_block_offset
     attr_accessor :file_handle
 
-    def init_entry(records={})
+    attr_accessor :max_chunk_size
+    attr_accessor :max_index_block_size
+
+    def init_chunk(options={})
+      @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
+      @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
+
       @range_start=""
       @range_end=:infinity
-      @records=records
+      @records=options[:records] || {}
       @accounting_size=0
       @loaded_record_count=0
     end
@@ -91,11 +97,13 @@ module MonoTable
     def [](key) get(key); end
     def []=(key,value) set(key,value); end
 
-    def initialize(records_or_parse={},file_handle=nil)
-      case records_or_parse
-      when Hash then  init_entry(records_or_parse)
-      else            parse(records_or_parse)
-      end
+    # options:
+    #   :records => {}
+    #   :data => string or io_stream
+    #   :file_handle
+    def initialize(options={})
+      init_chunk(options)
+      parse(options[:data]) if options[:data]
     end
 
     def data_loaded?; @data_loaded; end
@@ -287,7 +295,7 @@ module MonoTable
       to_filename||=path_store.generate_filename
 
       # create new chunk
-      second_chunk_file=DiskChunk.new(to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
+      second_chunk_file=DiskChunk.new(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
 
       # do the actual split
       # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.

@@ -7,13 +7,13 @@ describe MonoTable::DiskChunk do
 
   it "should be possible to initialize a new SoloDaemon" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(temp_dir)
+    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
     solo.chunks.length.should == 1
   end
 
   it "should auto-split too-big chunks" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(temp_dir)
+    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size=4000}
@@ -36,7 +36,7 @@ describe MonoTable::DiskChunk do
 
   it "should auto-split too-big journals" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(temp_dir)
+    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
 
     # set a small max_journal_size for testing
     start_journal=solo.path_stores[0].journal_manager.current_journal
@@ -64,7 +64,7 @@ describe MonoTable::DiskChunk do
 
   it "should auto-split too-big chunks and auto-compact too-big journals" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(temp_dir)
+    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size=4000}
