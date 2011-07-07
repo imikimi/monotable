@@ -28,6 +28,10 @@ module MonoTable
       journal_manager.compact
     end
 
+    def compact
+      journal_manager.compact
+    end
+
     def journal
       journal_manager
     end

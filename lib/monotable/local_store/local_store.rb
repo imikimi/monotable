@@ -30,7 +30,7 @@ module MonoTable
     end
 
     def initialize_new_store
-      chunk=MemoryChunk.new
+      chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
       chunk_file=@path_stores[0].add(chunk)
       chunks[chunk_file.range_start]=chunk_file
     end
@@ -75,6 +75,16 @@ module MonoTable
       when DiskChunk then chunks[chunk.range_start]=chunk
       else raise "unknown type #{chunk.class}"
       end
+    end
+
+    def length
+      total=0
+      chunks.each {|a,c| total+=c.length}
+      total
+    end
+
+    def compact
+      path_stores.each {|path_store| path_store.compact}
     end
 
     def verify_chunk_ranges

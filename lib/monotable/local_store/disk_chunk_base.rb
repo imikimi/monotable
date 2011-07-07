@@ -8,7 +8,6 @@ module MonoTable
     attr_accessor :file_handle
     attr_accessor :path_store
     attr_accessor :journal
-    attr_accessor :max_chunk_size
 
     def initialize(options={})
       init_disk_chunk_base(options)
@@ -20,8 +19,6 @@ module MonoTable
       raise ":filename require" unless options[:filename]
       init_chunk(options)
       @file_handle=FileHandle.new(options[:filename])
-      @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
-      @path_store=options[:path_store]
       @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       # parse the file on disk

@@ -78,8 +78,9 @@ module MonoTable
     attr_accessor :max_index_block_size
 
     def init_chunk(options={})
-      @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
-      @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
+      @path_store = options[:path_store]
+      @max_chunk_size = options[:max_chunk_size] || ((ps=options[:path_store]) && ps.max_chunk_size) || DEFAULT_MAX_CHUNK_SIZE
+      @max_index_block_size = options[:max_index_block_size] || ((ps=options[:path_store]) && ps.max_index_block_size) ||  DEFAULT_MAX_INDEX_BLOCK_SIZE
 
       @range_start=""
       @range_end=:infinity
@@ -165,6 +166,8 @@ module MonoTable
       @range_end = sci["range_end"] || :infinity
       @accounting_size = (sci["accounting_size"] || 0).to_i
       @loaded_record_count = (sci["record_count"] || 0).to_i
+      @max_chunk_size = (sci["max_chunk_size"] || DEFAULT_MAX_CHUNK_SIZE).to_i
+      @max_index_block_size = (sci["max_index_block_size"] || DEFAULT_MAX_INDEX_BLOCK_SIZE).to_i
     end
 
     def save_saved_chunk_info
@@ -173,6 +176,8 @@ module MonoTable
       sci["range_end"] = @range_end == :infinity ? nil : @range_end
       sci["accounting_size"] = @accounting_size
       sci["record_count"] = length
+      sci["max_chunk_size"] = @max_chunk_size
+      sci["max_index_block_size"] = @max_index_block_size
     end
 
     def record(key)
@@ -461,7 +466,7 @@ module MonoTable
     #   if log_index is set, it should be an empty Hash. A DiskRecord of every record saved is added to the log_index.
     def encoded_index_block(disk_records, sorted_keys=nil)
       sorted_keys||=@records.keys.sort
-      ibe=IndexBlockEncoder.new
+      ibe=IndexBlockEncoder.new(:max_index_block_size => max_index_block_size)
       index_block_string = sorted_keys.collect do |key|
         dr=disk_records[key]
         ibe.add(key,dr.disk_offset,dr.disk_length,dr.accounting_size)
