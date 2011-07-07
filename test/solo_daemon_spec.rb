@@ -64,10 +64,10 @@ describe MonoTable::DiskChunk do
 
   it "should auto-split too-big chunks and auto-compact too-big journals" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000)
 
     # set a small max_chunk_size for testing
-    solo.chunks.each {|key,chunk| chunk.max_chunk_size=4000}
+    solo.chunks.each {|key,chunk| chunk.max_chunk_size.should == 4000}
 
     # set a small max_journal_size for testing
     start_journal=solo.path_stores[0].journal_manager.current_journal
@@ -90,5 +90,59 @@ describe MonoTable::DiskChunk do
     solo.set("e",:data=>data)
     chunks.each {|c| c.verify_accounting_size}
     solo.set("f",:data=>data)
+  end
+
+  it "seems many chunks should work" do
+    reset_temp_dir
+    options={:store_paths=>[temp_dir],:max_chunk_size => 1024, :max_index_block_size => 256}
+    solo = MonoTable::SoloDaemon.new(options)
+
+    control_set={}
+    (0..127).each do |n|
+      key = "%010d" % n
+      record = {"data" => key*10}
+      control_set[key] = record
+      solo.set(key, record)
+    end
+
+    solo.chunks.length.should == 25
+
+    solo.compact
+
+    solo2 = MonoTable::SoloDaemon.new(options)
+    solo2.length.should == control_set.length
+    control_set.each do |key,record|
+      solo2.get(key).should == record
+    end
+  end
+
+  it "seems many index blocks should work" do
+    reset_temp_dir
+    options={:store_paths=>[temp_dir],:max_chunk_size => 64*1024, :max_index_block_size => 64}
+    solo = MonoTable::SoloDaemon.new(options)
+
+    control_set={}
+    (0..127).each do |n|
+      key = "%010d" % n
+      record = {"data" => key*10}
+      control_set[key] = record
+      solo.set(key, record)
+    end
+
+    solo.chunks.length.should == 1
+
+    solo.compact
+
+    solo2 = MonoTable::SoloDaemon.new(options)
+
+    chunk = solo2.get_chunk("")
+    puts "chunk.max_index_block_size=#{chunk.max_index_block_size}"
+    puts "index offsets: #{chunk.index_level_offsets.inspect}"
+    puts "index lengths: #{chunk.index_level_lengths.inspect}"
+
+    solo2.length.should == control_set.length
+    control_set.each do |key,record|
+      solo2.get(key).should == record
+    end
   end
 end

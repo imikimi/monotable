@@ -116,4 +116,24 @@ describe MonoTable::LocalStore do
     chunk1.length.should==3
     chunk2.length.should==1
   end
+
+  it "max_chunk_size and max_index_block_size should propagate" do
+    test_max_chunk_size = 16 * 1024
+    test_max_index_block_size = 256
+    local_store=MonoTable::LocalStore.new(
+      :store_paths => [temp_dir],
+      :max_chunk_size => test_max_chunk_size,
+      :max_index_block_size => test_max_index_block_size
+    )
+
+    # split the chunk
+    path_store1=local_store.path_stores[0]
+    path_store1.max_chunk_size.should == test_max_chunk_size
+    path_store1.max_index_block_size.should == test_max_index_block_size
+
+    # split the chunk
+    chunk1=local_store.get_chunk("")
+    chunk1.max_chunk_size.should == test_max_chunk_size
+    chunk1.max_index_block_size.should == test_max_index_block_size
+  end
 end
