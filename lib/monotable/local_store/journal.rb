@@ -61,9 +61,6 @@ module MonoTable
       when :delete then chunk.delete(journal_entry[:key])
       when :split then
         chunk2=chunk.split(journal_entry[:key])
-
-        # TODO - there is no reason to actually write this to disk here. We will be writing to disk again after the journal compaction
-        chunk2.save(journal_entry[:to_file])
         chunks[journal_entry[:to_file]]={:chunk=>chunk2}
       end
     end
@@ -117,7 +114,6 @@ module MonoTable
           yield Journal.read_entry(file)
         end
       end
-      journal_file.open_write
     end
 
     # compact this journal and all the chunks it is tied to
@@ -155,6 +151,7 @@ module MonoTable
           end
           Journal.apply_entry(entry,chunk,chunks)
         end
+        journal_file.close
 
         # write all compacted chunks to disk
         # TODO: Write comacted_chunks to most-empty/least-loaded PathStores to Balance them
@@ -177,7 +174,7 @@ module MonoTable
       Dir.glob(File.join(compacted_chunks_path,"*#{CHUNK_EXT}")).each do |compacted_file|
         chunk_file=File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
-        FileUtils.rm [chunk_file]
+        FileUtils.rm [chunk_file] if File.exists?(chunk_file)
         FileUtils.mv compacted_file,chunk_file
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
       end
