@@ -12,12 +12,13 @@ module MonoTable
     attr_accessor :journal_manager
     attr_accessor :max_journal_size
 
-    def initialize(file_name,journal_manager=nil)
-      @journal_manager=journal_manager
+    def initialize(file_name,options={})
+      @journal_manager=options[:journal_manager]
       @journal_file=FileHandle.new(file_name.chomp(COMPACT_DIR_EXT))
       @read_only=journal_file.exists?
       @size=journal_file.length
-      @max_journal_size = DEFAULT_MAX_JOURNAL_SIZE
+      @max_journal_size = options[:max_journal_size] || DEFAULT_MAX_JOURNAL_SIZE
+      puts "max_journal_size=#{max_journal_size}"
     end
 
     def full?

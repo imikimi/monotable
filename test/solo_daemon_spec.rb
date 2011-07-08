@@ -92,57 +92,36 @@ describe MonoTable::DiskChunk do
     solo.set("f",:data=>data)
   end
 
-  it "seems many chunks should work" do
+  def test_index_block_structure(max_chunk_size, max_index_block_size, num_records, data_multiplier, expected_chunk_count, expected_depth)
     reset_temp_dir
-    options={:store_paths=>[temp_dir],:max_chunk_size => 1024, :max_index_block_size => 256}
+    options={:store_paths=>[temp_dir],:max_chunk_size => max_chunk_size, :max_index_block_size => max_index_block_size}
     solo = MonoTable::SoloDaemon.new(options)
 
     control_set={}
-    (0..127).each do |n|
+    (1..num_records).each do |n|
       key = "%010d" % n
-      record = {"data" => key*10}
+      record = {"data" => key*data_multiplier}
       control_set[key] = record
       solo.set(key, record)
     end
-
-    solo.chunks.length.should == 25
-
-    solo.compact
-
-    solo2 = MonoTable::SoloDaemon.new(options)
-    solo2.length.should == control_set.length
-    control_set.each do |key,record|
-      solo2.get(key).should == record
-    end
-  end
-
-  it "seems many index blocks should work" do
-    reset_temp_dir
-    options={:store_paths=>[temp_dir],:max_chunk_size => 64*1024, :max_index_block_size => 64}
-    solo = MonoTable::SoloDaemon.new(options)
-
-    control_set={}
-    (0..127).each do |n|
-      key = "%010d" % n
-      record = {"data" => key*10}
-      control_set[key] = record
-      solo.set(key, record)
-    end
-
-    solo.chunks.length.should == 1
-
     solo.compact
 
     solo2 = MonoTable::SoloDaemon.new(options)
 
+    solo2.chunks.length.should == expected_chunk_count
     chunk = solo2.get_chunk("")
-    puts "chunk.max_index_block_size=#{chunk.max_index_block_size}"
-    puts "index offsets: #{chunk.index_level_offsets.inspect}"
-    puts "index lengths: #{chunk.index_level_lengths.inspect}"
+    chunk.index_level_offsets.length.should == expected_depth
 
     solo2.length.should == control_set.length
     control_set.each do |key,record|
       solo2.get(key).should == record
     end
+    [solo2,control_set]
   end
+
+  it "should work to have 25 chunks" do test_index_block_structure(1024,256,128,10,25,1) end
+  it "should work to have 1 index level" do test_index_block_structure(64*1024,64,8,2,1,1) end
+  it "should work to have 2 index level" do test_index_block_structure(64*1024,64,32,2,1,2) end
+  it "should work to have 3 index level" do test_index_block_structure(64*1024,64,128,2,1,3) end
+  it "should work to have 4 index level" do test_index_block_structure(64*1024,64,512,2,1,4) end
 end

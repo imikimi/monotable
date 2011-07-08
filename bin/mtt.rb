@@ -19,9 +19,37 @@ class MTTChunk
     puts chunk.info
   end
 
+  def inspect_index(block=nil,depth=1)
+    block||=@chunk.top_index_block
+    indent="#{depth}#{"  "*(depth-1)}"
+    puts indent+block.inspect
+    if block.leaf?
+      block.index_records.each do |key,ir|
+        puts indent+" | "+ir.inspect
+      end
+    else
+      block.index_records.each do |key,ir|
+        inspect_index(block.sub_index_block(ir),depth+1)
+      end
+    end
+  end
+
   def ls
     chunk.each_key do |key|
       puts key.inspect
+    end
+  end
+
+  def get(key,field_names=nil)
+    records=@chunk.get(key)
+    if !records
+      puts "record for key #{key.inspect} does not exists"
+    elsif field_names && field_names.length>0
+      field_names.each do |field_name|
+        puts "#{field_name.inspect} => #{records[field_name].inspect}"
+      end
+    else
+      puts "field-names: "+records.keys.inspect
     end
   end
 
@@ -44,6 +72,10 @@ MonoTable Tool
 Usage: #{__FILE__} (mode) (options)
 
 Modes:
+
+  ii chunk_file
+
+    inspect index
 
   ls chunk_file
   list chunk_file
@@ -74,8 +106,9 @@ end
 
 def tool(args)
   case args[0]
+  when "ii"         then required_args(args,1,"filename");      MTTChunk.new(args[1]).inspect_index
   when "ls","list"  then required_args(args,1,"filename");      MTTChunk.new(args[1]).ls
-  when "g","get"    then required_args(args,2,"filename key");  MTTChunk.new(args[1]).get(args[2],args[3])
+  when "g","get"    then required_args(args,2,"filename key");  MTTChunk.new(args[1]).get(args[2],args[3..-1])
   when "i","info"   then required_args(args,1,"filename");      MTTChunk.new(args[1]).info
   else show_usage
   end

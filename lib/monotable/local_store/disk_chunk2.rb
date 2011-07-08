@@ -35,6 +35,7 @@ module MonoTable
   class DiskChunk < DiskChunkBase
     attr_accessor :index_level_offsets
     attr_accessor :index_level_lengths
+    attr_accessor :top_index_block
 
     # options
     #   :filename =>

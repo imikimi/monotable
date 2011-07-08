@@ -28,9 +28,12 @@ module MonoTable
     attr_accessor :path
     attr_accessor :path_store
     attr_accessor :frozen_journals
+    attr_accessor :max_journal_size
 
-    def initialize(path,path_store=nil)
-      @path_store = path_store || PathStore.new(path)
+    def initialize(path,options={})
+      puts "JournalManager.new options=#{options.inspect}"
+      @max_journal_size=options[:max_journal_size]
+      @path_store = options[:path_store] || PathStore.new(path)
       @path=path
       @journal_number=0
       @frozen_journals=[]
@@ -74,7 +77,7 @@ module MonoTable
       # compact the journals in order
       journals.each do |a|
         num,filename=a
-        Journal.new(filename,self).compact
+        Journal.new(filename,:journal_manager=>self,:max_journal_size=>@max_journal_size).compact
       end
     end
 
@@ -97,7 +100,7 @@ module MonoTable
     #**********************************************
     private
     def new_journal
-      @current_journal=Journal.new File.join(path,"journal.#{"%08d"%@journal_number+=1}#{JOURNAL_EXT}"), self
+      @current_journal=Journal.new(File.join(path,"journal.#{"%08d"%@journal_number+=1}#{JOURNAL_EXT}"), :journal_manager=>self,:max_journal_size=>@max_journal_size)
     end
   end
 end

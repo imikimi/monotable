@@ -24,6 +24,13 @@ module MonoTable
       @parent_index_block_encoder ||= IndexBlockEncoder.new(:max_index_block_size=>@max_index_block_size)
     end
 
+    def self.encode(options={})
+      ibe=IndexBlockEncoder.new(options)
+      yield ibe
+      ibe.finalize
+      ibe.to_s
+    end
+
     def to_s
       # TODO: join-in the parent_index_block_encoder and the entier index's pre-block, as described a the top of this file
       # then we need to ensure the decoder can read this new format. The nice thing is the bottom-most index-level is identical to the current
@@ -51,7 +58,7 @@ module MonoTable
       encoded_index_record = DiskRecord.new.init(key,offset,length,accounting_size).encode_index_record(@last_key)
 
       # detect full block
-      advance_block if current_block_length + encoded_index_record.length > max_index_block_size
+      advance_block(key) if current_block_length + encoded_index_record.length > max_index_block_size
 
       # add encoded record
       @total_accounting_size+=accounting_size
@@ -60,13 +67,20 @@ module MonoTable
       @last_key=key
     end
 
+    def finalize
+      if @parent_index_block_encoder && @current_block_length>0
+        advance_block(nil)
+        @parent_index_block_encoder.finalize
+      end
+    end
+
     private
 
     # advanced to the next index-block
-    def advance_block
+    def advance_block(next_key)
       auto_parent_index_block_encoder.add(current_block_key,current_block_offset,current_block_length,@total_accounting_size)
 
-      @current_block_key=@last_key
+      @current_block_key=next_key
       @current_block_offset+=@current_block_length
       @current_block_length=0
       @total_accounting_size=0

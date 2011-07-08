@@ -466,12 +466,12 @@ module MonoTable
     #   if log_index is set, it should be an empty Hash. A DiskRecord of every record saved is added to the log_index.
     def encoded_index_block(disk_records, sorted_keys=nil)
       sorted_keys||=@records.keys.sort
-      ibe=IndexBlockEncoder.new(:max_index_block_size => max_index_block_size)
-      index_block_string = sorted_keys.collect do |key|
-        dr=disk_records[key]
-        ibe.add(key,dr.disk_offset,dr.disk_length,dr.accounting_size)
+      IndexBlockEncoder.encode(:max_index_block_size => max_index_block_size) do |ibe|
+        index_block_string = sorted_keys.collect do |key|
+          dr=disk_records[key]
+          ibe.add(key,dr.disk_offset,dr.disk_length,dr.accounting_size)
+        end
       end
-      ibe.to_s
     end
 
     # A DiskRecord of every record saved is added to the disk_records hash at the associated key for that record

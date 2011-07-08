@@ -15,7 +15,7 @@ module MonoTable
 
       @local_store=options[:local_store] || LocalStore.new(:store_paths=>[path])
       @path = File.expand_path(path)
-      @journal_manager = JournalManager.new(path,self)
+      @journal_manager = JournalManager.new(path,options.merge(:path_store=>self))
       validate_store
       @next_chunk_number=0
       init_chunks

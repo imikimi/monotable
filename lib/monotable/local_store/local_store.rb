@@ -20,7 +20,7 @@ module MonoTable
       @chunks=RBTree.new
       store_paths = options[:store_paths]
       @path_stores=store_paths.collect do |path|
-        ps=PathStore.new(path,:local_store=>self)
+        ps=PathStore.new(path,options.merge(:local_store=>self))
         ps.chunks.each do |filename,chunk_file|
           chunks[chunk_file.range_start]=chunk_file
         end
