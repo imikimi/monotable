@@ -31,7 +31,6 @@ module MonoTable
     attr_accessor :max_journal_size
 
     def initialize(path,options={})
-      puts "JournalManager.new options=#{options.inspect}"
       @max_journal_size=options[:max_journal_size]
       @path_store = options[:path_store] || PathStore.new(path)
       @path=path

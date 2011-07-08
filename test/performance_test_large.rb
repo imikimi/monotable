@@ -3,7 +3,7 @@ require "./mono_table_helper_methods.rb"
 
 MonoTableHelper.new.reset_temp_dir
 
-solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 16*1024*1024, :max_journal_size => 32*1024*1024)
+solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 16*1024*1024, :max_journal_size => 32*1024*1024, :verbose => true)
 solo.get_chunk("").journal.hold_file_open
 
 

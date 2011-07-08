@@ -18,7 +18,6 @@ module MonoTable
       @read_only=journal_file.exists?
       @size=journal_file.length
       @max_journal_size = options[:max_journal_size] || DEFAULT_MAX_JOURNAL_SIZE
-      puts "max_journal_size=#{max_journal_size}"
     end
 
     def full?

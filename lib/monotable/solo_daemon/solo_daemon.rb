@@ -1,6 +1,11 @@
 module MonoTable
   class SoloDaemon < LocalStore
 
+    def initialize(options={})
+      init_local_store(options)
+      @verbose = options[:verbose]
+    end
+
     #*************************************************************
     # Write API
     #*************************************************************
@@ -22,15 +27,15 @@ module MonoTable
       until EventQueue.empty?
         case event=EventQueue.pop
         when ChunkFullEvent then
-          puts "split chunk..."
+          puts "split chunk..." if @verbose
           time=Time.now
           event.chunk.split
-          puts "split chunk done in #{(1000*(Time.now-time)).to_i}ms."
+          puts "split chunk done in #{(1000*(Time.now-time)).to_i}ms." if @verbose
         when JournalFullEvent then
-          puts "compact journal..."
+          puts "compact journal..." if @verbose
           time=Time.now
           event.journal.compact
-          puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms."
+          puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms." if @verbose
         end
       end
     end

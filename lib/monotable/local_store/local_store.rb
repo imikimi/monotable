@@ -14,6 +14,10 @@ module MonoTable
     #options
     #   :store_paths
     def initialize(options={})
+      init_local_store(options)
+    end
+
+    def init_local_store(options={})
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
 
