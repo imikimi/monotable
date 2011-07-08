@@ -115,6 +115,10 @@ module MonoTable
     # returns number of records in the chunk
     def length; @records.length; end
 
+    def inspect
+      "<#{self.class} range_start=#{range_start.inspect} range_end=#{range_end.inspect} accounting_size=#{accounting_size} length=#{length}>"
+    end
+
     #***************************************************
     # Iterators
     #***************************************************
