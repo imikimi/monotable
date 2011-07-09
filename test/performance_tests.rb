@@ -79,7 +79,7 @@ end
 
 def test(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
-  file.open_write
+  file.open_write(true)
   testname="%10s"%testname.to_s
   time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
     key=a.to_s
@@ -123,8 +123,7 @@ end
 def test_local_store(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.close
-  local_store=MonoTable::LocalStore.new(:path_stores=>[File.expand_path("tmp")])
-  local_store.get_chunk("").journal.hold_file_open
+  local_store=MonoTable::LocalStore.new(:store_paths=>[File.expand_path("tmp")])
   testname="%10s"%testname.to_s
   time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
     key=a.to_s
