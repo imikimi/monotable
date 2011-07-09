@@ -59,7 +59,7 @@ module MonoTable
     def init_chunks
       @chunks={}
       Dir.glob(File.join(path,"*#{CHUNK_EXT}")) do |f|
-        f[/\/([0-9]+)\#{CHUNK_EXT}$/]
+        f[/\/([0-9]+)\.#{CHUNK_EXT}$/]
         chunk_number=$1.to_i
         @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
 

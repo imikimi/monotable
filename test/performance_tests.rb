@@ -1,7 +1,8 @@
 require "benchmark"
 require "../lib/monotable/monotable"
-temp_dir=File.expand_path("tmp")
-file=MonoTable::FileHandle.new(File.join(temp_dir,"/test.tmp"))
+require "./mono_table_helper_methods.rb"
+$temp_dir=File.expand_path("tmp")
+file=MonoTable::FileHandle.new(File.join($temp_dir,"/test.tmp"))
 
 def write_min_record_asi(key,record,file)
   command="set"
@@ -80,65 +81,48 @@ end
 def test(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.open_write(true)
-  testname="%10s"%testname.to_s
-  time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
+  time=benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
     key=a.to_s
     val={"value"=>key}
     yield key,val,file
   end}.real
   file.close
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  puts "\t\t\t\t\t\t\t\t\t\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
 end
 
-def test_journal(testname,benchmarker,file,records=500000)
+def test_journal(testname,benchmarker,file,records=500000,chunk_name="0000000.mt_chunk")
   file.delete if file.exists?
   file.close
+  MonoTableHelper.new.reset_temp_dir
   journal=MonoTable::Journal.new(file.filename)
   journal.journal_file.open_append
-  testname="%10s"%testname.to_s
-  time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
+  time=benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
     key=a.to_s
     val={"value"=>key}
-    yield key,val,journal
+    journal.set(chunk_name,key,val)
   end}.real
   file.close
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  puts "\t\t\t\t\t\t\t\t\t\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
 end
 
-def test_chunk(testname,benchmarker,file,records=500000)
-  file.delete if file.exists?
-  file.close
-  chunk_file=MonoTable::DiskChunk.new(:filename=>"test_chunk")
-  chunk_file.journal.journal_file.open_append
-  testname="%10s"%testname.to_s
-  time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
+def test_mt(testname,benchmarker,records=500000,value="test")
+  MonoTableHelper.new.reset_temp_dir
+  mt=yield # create the monotable object AFTER we empty the test dir
+  #set max_journal_size >> total bytes we are going to write
+  accounting_size_written=0
+  val={"value"=>value}
+  time=benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
     key=a.to_s
-    val={"value"=>key}
-    yield key,val,chunk_file
+    record=mt.set(key,val)
+    accounting_size_written+=record.accounting_size
   end}.real
-  file.close
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
-end
-
-def test_local_store(testname,benchmarker,file,records=500000)
-  file.delete if file.exists?
-  file.close
-  local_store=MonoTable::LocalStore.new(:store_paths=>[File.expand_path("tmp")])
-  testname="%10s"%testname.to_s
-  time=benchmarker.report("#{records}x: #{testname}") {(0..records).each do |a|
-    key=a.to_s
-    val={"value"=>key}
-    yield key,val,local_store
-  end}.real
-  file.close
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  puts "\t\t\t\t\t\t\t\t\t\tsize=#{accounting_size_written} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(accounting_size_written/(time*1024*1024))} records/sec=#{(records/time).to_i}"
 end
 
 def read_test(testname,benchmarker,file)
   file.open_read
-  testname="%10s"%testname.to_s
   records=0
-  time=benchmarker.report("read: #{testname}") do
+  time=benchmarker.report("%-30s"%"#{records}x: #{testname}") do
     f=file.read_handle
     last_entry=nil
     while !f.eof
@@ -148,15 +132,14 @@ def read_test(testname,benchmarker,file)
     expected={:command=>:set, :key=>last_entry[:key], :fields=>{"value"=>last_entry[:key]}}
     raise "decode for first record failed. Decoded=#{last_entry.inspect} Expected=#{expected.inspect}" unless last_entry==expected
   end.real
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  puts "\t\t\t\t\t\t\t\t\t\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
 end
 
-def journal_read_test(testname,benchmarker,file)
+def journal_read_test(testname,benchmarker,file,expected_records)
   file.close
-  testname="%10s"%testname.to_s
   records=0
   journal=MonoTable::Journal.new(file.filename)
-  time=benchmarker.report("read: #{testname}") do
+  time=benchmarker.report("%-30s"%"#{expected_records}x: #{testname}") do
     last_entry=nil
     journal.each_entry do |entry|
       last_entry=entry
@@ -166,45 +149,24 @@ def journal_read_test(testname,benchmarker,file)
     expected={:command=>:set, :key=>last_entry[:key], :fields=>{"value"=>last_entry[:key]}, :chunk_file=>"0000000.mt_chunk"}
     raise "decode for first record failed. Decoded=#{last_entry.inspect} Expected=#{expected.inspect}" unless last_entry==expected
   end.real
-  puts "\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  puts "\t\t\t\t\t\t\t\t\t\tsize=#{file.size} time=#{(time*1000).to_i}ms mB/sec=#{"%.1f"%(file.size/(time*1024*1024))} records/sec=#{(records/time).to_i}"
+  raise "expected_records(#{expected_records}) != records(#{records})" unless expected_records==records
 end
 
-Benchmark.bm do |x|
-  test(:min_possible,x,file,10000) {|key,val,file| write_min_record_asi(key,val,file);}
-  test(:unchecked,x,file,10000) {|key,val,file| write_unchecked_record_asi(key,val,file);}
-#  read_test(:asi,x,file) {|f| read_asi(f)}
-  test_journal(:Journal,x,file,10000) {|key,val,journal| journal.set("0000000.mt_chunk",key,val);}
-#  read_test(:JournalEntry,x,file)   {|f| MonoTable::Journal.read_entry(f)}
-  journal_read_test(:Journal,x,file)
-  test_chunk(:DiskChunk,x,file,10000) {|key,val,chunk_file| chunk_file.set(key,val);}
-  test_local_store(:LocalStore,x,file,10000) {|key,val,ls| ls.set(key,val);}
-#  test(:marshal,x,file,100000) {|key,val,file| write_record_marshal(key,val,file);}
-#  read_test(:marshal,x,file) {|file| read_marshal(file);}
-#  test(:entry,x,file,10000) {|key,val,file| write_monotable_entry(key,val,file);}
-#  read_test(:entry,x,file) {|file| read_monotable_entry(file);}
+Benchmark.bm do |benchmarker|
+  test(:min_possible,benchmarker,file,10000) {|key,val,file| write_min_record_asi(key,val,file);}
+  test(:unchecked,benchmarker,file,10000) {|key,val,file| write_unchecked_record_asi(key,val,file);}
+  test_journal(:journal_min,benchmarker,file,10000)
+  journal_read_test(:journal_read,benchmarker,file,10000)
+  test_journal(:journal_real,benchmarker,file,10000,"/mnt/hgfs/shanebdavis/imikimi/opensource/monotable/test/tmp/test_chunk")
+
+
+  test_mt(:disk_chunk,benchmarker,10000)                  {MonoTable::DiskChunk.new(:filename=>File.join($temp_dir,"test_chunk"))}
+                                                          ls_options={:store_paths=>[$temp_dir],:max_journal_size=>1024**4}
+  test_mt(:local_store_small,benchmarker,10000)           {MonoTable::LocalStore.new(ls_options)}
+  test_mt(:local_store_1k,benchmarker,10000,"0"*1024)     {MonoTable::LocalStore.new(ls_options)}
+  test_mt(:local_store_10k,benchmarker,5000,"0"*10240)    {MonoTable::LocalStore.new(ls_options)}
+  test_mt(:local_store_100k,benchmarker,1000,"0"*102400)  {MonoTable::LocalStore.new(ls_options)}
+
 end
 
-=begin
-  x.report("marshal,full,nowrite                       ") {(0..100000).each {|a| b=a.to_s;c=Marshal.dump({"value"=>a.to_s});[b.length.to_asi,b,c.length.to_asi,c].join}}
-  file.delete if file.exists?
-  x.report("marshal_full,external-append               ") {file.append {|f|(0..100000).each {|a| b=a.to_s;c=Marshal.dump({"value"=>a.to_s});f.write([b.length.to_asi,b,c.length.to_asi,c].join)}}}
-  file.delete if file.exists?
-  x.report("marshal_full,external-append,flush         ") {file.append {|f|(0..100000).each {|a| b=a.to_s;c=Marshal.dump({"value"=>a.to_s});f.write([b.length.to_asi,b,c.length.to_asi,c].join);f.flush}}}
-  file.delete if file.exists?
-  file.open_write
-  x.report("marshal,full,internal-append,preopen       ") {(0..100000).each {|a| b=a.to_s;c=Marshal.dump({"value"=>a.to_s});file.append([b.length.to_asi,b,c.length.to_asi,c].join)}}
-  file.delete if file.exists?
-  file.open_write
-  x.report("marshal,full,internal-append,preopen,flush ") {(0..100000).each {|a| b=a.to_s;c=Marshal.dump({"value"=>a.to_s});file.append([b.length.to_asi,b,c.length.to_asi,c].join);file.flush}}
-
-  next
-  file.delete if file.exists?
-  file.open_write
-  x.report(" 1x: entry,full,internal-append,preopen,flush   ") {(0..10000).each do |a|
-    entry=MonoTable::Chunk.new
-    entry.set(a.to_s,"value"=>a.to_s)
-    file.append entry.to_binary
-    file.flush
-  end}
-
-=end

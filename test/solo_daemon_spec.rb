@@ -20,12 +20,12 @@ describe MonoTable::DiskChunk do
 
     data="a"*1024
 
-    solo.set("a",:data=>data)
-    solo.set("b",:data=>data)
-    solo.set("c",:data=>data)
+    solo.set("a","data"=>data)
+    solo.set("b","data"=>data)
+    solo.set("c","data"=>data)
     solo.chunks.length.should == 1
 
-    solo.set("d",:data=>data)
+    solo.set("d","data"=>data)
     solo.chunks.length.should == 2
     solo.verify_chunk_ranges
     cs=solo.chunks.values
@@ -44,21 +44,21 @@ describe MonoTable::DiskChunk do
 
     data="a"*1024
 
-    solo.set("a",:data=>data)
-    solo.set("b",:data=>data)
+    solo.set("a","data"=>data)
+    solo.set("b","data"=>data)
 
     # just before overflow
-    solo.set("c",:data=>data)
+    solo.set("c","data"=>data)
     solo.path_stores[0].journal_manager.current_journal.should==start_journal
     solo.path_stores[0].journal_manager.current_journal.size.should_not==0
 
     # journal overflow
-    solo.set("d",:data=>data)
+    solo.set("d","data"=>data)
     solo.path_stores[0].journal_manager.current_journal.should_not==start_journal
     solo.path_stores[0].journal_manager.current_journal.size.should==0
 
     # write to new journal
-    solo.set("e",:data=>data)
+    solo.set("e","data"=>data)
     solo.path_stores[0].journal_manager.current_journal.size.should_not==0
   end
 
@@ -75,21 +75,21 @@ describe MonoTable::DiskChunk do
 
     data="a"*1024
 
-    solo.set("a",:data=>data)
-    solo.set("b",:data=>data)
-    solo.set("c",:data=>data)
+    solo.set("a","data"=>data)
+    solo.set("b","data"=>data)
+    solo.set("c","data"=>data)
     solo.chunks.length.should == 1
 
-    solo.set("d",:data=>data)
+    solo.set("d","data"=>data)
     solo.chunks.length.should == 2
 
     chunks=solo.chunks.values
     chunks.collect {|c| c.range}.should == [["","c"],["c",:infinity]]
     chunks.each {|c| c.verify_accounting_size}
 
-    solo.set("e",:data=>data)
+    solo.set("e","data"=>data)
     chunks.each {|c| c.verify_accounting_size}
-    solo.set("f",:data=>data)
+    solo.set("f","data"=>data)
   end
 
   def test_index_block_structure(max_chunk_size, max_index_block_size, num_records, data_multiplier, expected_chunk_count, expected_depth)

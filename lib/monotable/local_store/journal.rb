@@ -31,8 +31,8 @@ module MonoTable
     end
 
     def Journal.parse_entry(io_stream)
-      checksum_string=MonoTable::Tools.read_asi_checksum_string_from_file(io_stream)
-      io_stream = StringIO.new(checksum_string)
+      entry_string=MonoTable::Tools.read_asi_checksum_string_from_file(io_stream)
+      io_stream = StringIO.new(entry_string)
       strings=[]
       strings<<io_stream.read_asi_string while !io_stream.eof?
       command = strings[0]
@@ -78,7 +78,7 @@ module MonoTable
 
     def set(chunk_file,key,record)
       offset=@size
-      save_str=save_entry (["set",chunk_file.to_s,key] + record.collect {|k,v| [k,v]}).flatten
+      save_str=save_entry((["set",chunk_file.to_s,key] + record.collect {|k,v| [k,v]}).flatten)
       length=save_str.length
       JournalDiskRecord.new(key,self,offset,length,record)
     end
