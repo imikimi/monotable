@@ -416,6 +416,9 @@ module MonoTable
     # Encoding
     #***************************************************
     # disk_records logs the offset and index of every record in the entry-binary-string returned
+    # it seems, with some quick benchmarking, that we could speed up writing a chunk to disk by at least 2x if we just:
+    #   write to disk as we go AND
+    #   decrese the amount of string-copying
     def to_binary(return_disk_records=nil)
       disk_records = return_disk_records || {}
       # encode info-block

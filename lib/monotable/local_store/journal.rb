@@ -15,8 +15,8 @@ module MonoTable
     def initialize(file_name,options={})
       @journal_manager=options[:journal_manager]
       @journal_file=FileHandle.new(file_name.chomp(COMPACT_DIR_EXT))
-      @read_only=journal_file.exists?
-      @size=journal_file.length
+      @read_only=@journal_file.exists?
+      @size=@journal_file.length
       @max_journal_size = options[:max_journal_size] || DEFAULT_MAX_JOURNAL_SIZE
     end
 
@@ -24,19 +24,17 @@ module MonoTable
       @size > @max_journal_size
     end
 
-    def hold_file_open
-      journal_file.open_append
+    def read_entry(disk_offset,disk_length)
+      journal_file.open_read(true)
+      journal_file.read_handle.seek(disk_offset)
+      Journal.parse_entry(journal_file.read_handle)
     end
 
-    def close_file
-      journal_file.close
-    end
-
-    def Journal.read_entry(file)
-      checksum_string=MonoTable::Tools.read_asi_checksum_string_from_file(file)
-      file = StringIO.new(checksum_string)
+    def Journal.parse_entry(io_stream)
+      checksum_string=MonoTable::Tools.read_asi_checksum_string_from_file(io_stream)
+      io_stream = StringIO.new(checksum_string)
       strings=[]
-      strings<<file.read_asi_string while !file.eof?
+      strings<<io_stream.read_asi_string while !io_stream.eof?
       command = strings[0]
       case command
       when "del" then {:command=>:delete,:chunk_file=>strings[1],:key=>strings[2]}
@@ -71,7 +69,7 @@ module MonoTable
     def save_entry(string_array)
       save_str=string_array.collect {|str| [str.length.to_asi,str]}.flatten.join
       save_str=MonoTable::Tools.to_asi_checksum_string(save_str)
-      journal_file.append save_str
+      journal_file.append(save_str,true)
       journal_file.flush
       @size+=save_str.length
       EventQueue << JournalFullEvent.new(self) if full?
@@ -82,7 +80,7 @@ module MonoTable
       offset=@size
       save_str=save_entry (["set",chunk_file.to_s,key] + record.collect {|k,v| [k,v]}).flatten
       length=save_str.length
-      JournalDiskRecord.new(key,journal_file,offset,length,record)
+      JournalDiskRecord.new(key,self,offset,length,record)
     end
 
     def delete(chunk_file,key)
@@ -93,24 +91,10 @@ module MonoTable
       save_entry ["split",chunk_file.to_s,key,to_filename]
     end
 
-    # writes the entry to disk and then converts all records in the entry to DiskRecords that line-up with the just-written data
-    def append(entry)
-      raise "depricated"
-      raise "Journal is read-only" if @read_only
-      index={}
-      write_data=entry.to_binary(index)
-      offset=size
-      journal_file.append write_data
-      @size+=write_data.length
-      entry.records=index
-      entry.records.each {|k,record| record.match_to_entry_on_disk(offset,journal_file,entry.columns)}
-      entry
-    end
-
     def each_entry
-      journal_file.read do |file|
-        while !file.eof?
-          yield Journal.read_entry(file)
+      journal_file.read(0,nil,true) do |io_stream|
+        while !io_stream.eof?
+          yield Journal.parse_entry(io_stream)
         end
       end
     end
@@ -140,6 +124,7 @@ module MonoTable
         # The chunks -may- be OK if there were no further writes to them in the rest of the corrupt journal. We can detect their valididity later or immeidately with replicas on other disks.
         # Perhaps we need a possibly-corrupt directory which implies we need to compare with the replicas to verify integrity... ?
 
+#        journal_file.open_read
         each_entry do |entry|
           chunk_filename = entry[:chunk_file]
           if ch=chunks[chunk_filename]

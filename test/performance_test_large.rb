@@ -1,10 +1,11 @@
 require "../lib/monotable/monotable.rb"
 require "./mono_table_helper_methods.rb"
 
+puts "MonoTableHelper.new.reset_temp_dir..."
 MonoTableHelper.new.reset_temp_dir
 
-solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 16*1024*1024, :max_journal_size => 32*1024*1024, :verbose => true)
-solo.get_chunk("").journal.hold_file_open
+puts "MonoTable::SoloDaemon.new..."
+solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 64*1024*1024, :max_journal_size => 128*1024*1024, :verbose => true)
 
 
 def stats(mt)
@@ -15,6 +16,7 @@ def stats(mt)
 end
 
 def populate(mt,num)
+puts "populate(#{num})"
   $last||=0
   fields={}
   num.times do |n|
@@ -25,6 +27,8 @@ def populate(mt,num)
     mt.set(key,fields)
     puts "writing #{n}/#{num} #{stats(mt)}" if (n%1000)==0
   end
+  puts "last compact..."
+  mt.compact
   puts "done writing #{num} records"
 end
 

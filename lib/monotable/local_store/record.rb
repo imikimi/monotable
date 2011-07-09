@@ -177,7 +177,7 @@ module MonoTable
     end
 
     def fields(column_hash=nil)
-      data=file_handle.read(disk_offset,disk_length)
+      data=file_handle.read(disk_offset,disk_length,true)
       Record.parse_record(data,column_dictionary,column_hash)
     end
 
@@ -189,13 +189,13 @@ module MonoTable
   end
 
   class JournalDiskRecord < Record
-    attr_accessor :file_handle
+    attr_accessor :journal
     attr_accessor :disk_offset
     attr_accessor :disk_length
 
-    def initialize(key,file_handle,disk_offset,disk_length,record)
+    def initialize(key,journal,disk_offset,disk_length,record)
       @key=key
-      self.file_handle=file_handle
+      self.journal=journal
       self.disk_offset=disk_offset
       self.disk_length=disk_length
       self.accounting_size=case record
@@ -210,8 +210,7 @@ module MonoTable
     end
 
     def fields(columns_hash=nil)
-      data=file_handle.read(disk_offset,disk_length)
-      f=Journal.read_entry(StringIO.new(data))[:fields]
+      f=journal.read_entry(disk_offset,disk_length)[:fields]
       f=Tools.select_columns(f,columns_hash) if columns_hash
       f
     end

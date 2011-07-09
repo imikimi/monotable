@@ -48,10 +48,6 @@ module MonoTable
       end
     end
 
-    def hold_file_open
-      @current_journal.hold_file_open
-    end
-
     def compact
       if @current_journal
         @current_journal.compact
