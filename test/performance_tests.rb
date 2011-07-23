@@ -1,3 +1,5 @@
+require "rubygems"
+require "inline"
 require "benchmark"
 require "../lib/monotable/monotable"
 require "./mono_table_helper_methods.rb"
@@ -11,9 +13,39 @@ def write_min_record_asi(key,record,file)
     command,
     key.length.to_asi,
     key,
-#    record.length.to_asi
     ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
-  file.append MonoTable::Tools.to_asi_checksum_string(str.join) #.to_asi_string
+  MonoTable::Tools.write_asi_checksum_string file,str.join
+  file.flush
+end
+
+def write_min_record_asi_noflush(key,record,file)
+  command="set"
+  str=[
+    command.length.to_asi,
+    command,
+    key.length.to_asi,
+    key,
+    ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
+  MonoTable::Tools.write_asi_checksum_string file,str.join
+end
+
+# an alternative writing scheme that uses a slitghtly different checksum
+# the main difference is we don't copy any strings in memory; we just write them out in the correct order
+def write_min_record_asi2(key,record,file)
+  command="set"
+  strs=[
+    command,
+    key,
+    ]+record.keys.collect {|k| v=record[k];[k,v]}
+  strs=strs.flatten
+  file.open_append(true) do |f|
+    f.write strs.length.to_asi
+    f.write MonoTable::Tools.checksum_array(strs)
+    strs.each do |str|
+      f.write str.length.to_asi
+      f.write str
+    end
+  end
   file.flush
 end
 
@@ -29,14 +61,14 @@ def write_unchecked_record_asi(key,record,file)
     key,
 #    record.length.to_asi
     ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
-  file.append MonoTable::Tools.to_asi_checksum_string(str.join) #.to_asi_string
+  file.write MonoTable::Tools.to_asi_checksum_string(str.join) #.to_asi_string
   file.flush
 end
 
 def write_monotable_entry(k,r,file)
   entry=MonoTable::Chunk.new
   entry.set(k,r)
-  file.append entry.to_binary
+  file.write entry.to_binary
   file.flush
 end
 
@@ -69,7 +101,7 @@ def write_record_marshal(key,record,file)
     :chunk => chunk
     }
   str=Marshal.dump(to_write).to_asi_string
-  file.append str
+  file.write str
   fi5~le.flush
 end
 
@@ -81,7 +113,8 @@ end
 def test(testname,benchmarker,file,records=500000)
   file.delete if file.exists?
   file.open_write(true)
-  time=benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
+  time=
+  benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
     key=a.to_s
     val={"value"=>key}
     yield key,val,file
@@ -153,8 +186,13 @@ def journal_read_test(testname,benchmarker,file,expected_records)
   raise "expected_records(#{expected_records}) != records(#{records})" unless expected_records==records
 end
 
+
 Benchmark.bm do |benchmarker|
+  test(:write_1_byte,benchmarker,file,10000) {|key,val,file| file.write("a");file.flush;}
+  test(:write_1_byte_noflush,benchmarker,file,10000) {|key,val,file| file.write("a");}
   test(:min_possible,benchmarker,file,10000) {|key,val,file| write_min_record_asi(key,val,file);}
+  test(:min_possible_noflush,benchmarker,file,10000) {|key,val,file| write_min_record_asi_noflush(key,val,file);}
+  test(:min_possible2,benchmarker,file,10000) {|key,val,file| write_min_record_asi2(key,val,file);}
   test(:unchecked,benchmarker,file,10000) {|key,val,file| write_unchecked_record_asi(key,val,file);}
   test_journal(:journal_min,benchmarker,file,10000)
   journal_read_test(:journal_read,benchmarker,file,10000)
@@ -167,6 +205,5 @@ Benchmark.bm do |benchmarker|
   test_mt(:local_store_1k,benchmarker,10000,"0"*1024)     {MonoTable::LocalStore.new(ls_options)}
   test_mt(:local_store_10k,benchmarker,5000,"0"*10240)    {MonoTable::LocalStore.new(ls_options)}
   test_mt(:local_store_100k,benchmarker,1000,"0"*102400)  {MonoTable::LocalStore.new(ls_options)}
-
 end
 

@@ -91,6 +91,10 @@ module MonoTable
       end
     end
 
+    def write(str)
+      @write_handle.write(str)
+    end
+
     def flush
       write_handle.flush if write_handle
     end

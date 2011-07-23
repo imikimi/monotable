@@ -1,7 +1,8 @@
 require "rubygems"
 require 'zlib'
-require "inline"
+#require "inline"
 module MonoTable
+=begin
   class FastBitField
     attr_reader :size
 
@@ -19,7 +20,7 @@ module MonoTable
       compiler.c "VALUE get_c(char *bits, int bit) {return bits[bit/8] & (1 << (bit % 8)) ? Qtrue : Qfalse;}"
     end
   end
-
+=end
   module Tools
     # returns the number of characters s1 and s2 hold in column at the beginning of the strings
     def Tools.longest_common_prefix(s1,s2)
@@ -60,9 +61,17 @@ module MonoTable
       return string
     end
 
+    def Tools.write_asi_checksum_string(file,string)
+      checksum=Tools.checksum(string)
+      file.write checksum.length.to_asi
+      file.write checksum
+      file.write string.length.to_asi
+      file.write string
+    end
+
     def Tools.to_asi_checksum_string(string)
       checksum=Tools.checksum(string)
-      checksum.to_asi_string+string.to_asi_string
+      [checksum.length.to_asi,checksum,string.length.to_asi,string].join
     end
 
     def Tools.asi_checksum_string_prefix(string)
@@ -77,6 +86,19 @@ module MonoTable
 #      hashfunc.hexdigest.force_encoding("BINARY") # place holder
       # crc32 checksum, little-endian encoded into 4 bytes
       [Zlib.crc32(str)].pack("V")
+    end
+
+    def Tools.checksum_array(str_array)
+      # MD5 hash
+#      hashfunc = Digest::MD5.new
+#      hashfunc.update(str)
+#      hashfunc.hexdigest.force_encoding("BINARY") # place holder
+      # crc32 checksum, little-endian encoded into 4 bytes
+      v=0
+      str_array.each do |str|
+        v = v ^ Zlib.crc32(str)
+      end
+      [v].pack("V")
     end
 
     def Tools.chunkify_directory(path,save_filename)
