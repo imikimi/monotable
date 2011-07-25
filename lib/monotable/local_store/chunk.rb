@@ -1,7 +1,7 @@
 # encoding: BINARY
 =begin
 
-Chunks consiste of one or more Entries, append to each other. The first entry is considered the Master. Every subsequent
+Chunks consists of one or more Entries, append to each other. The first entry is considered the Master. Every subsequent
 Chunk is a journalized edit to the master entry. These other entries will each have an "action" specified for the kind of edit
 they represent.
 

@@ -3,6 +3,7 @@ require File.join(File.dirname(__FILE__),"xbd")
 %w{
   events/event
   events/event_queue
+  cache
   constants
   tools
   file_handle

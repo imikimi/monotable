@@ -148,6 +148,10 @@ module MonoTable
     attr_accessor :column_dictionary
     attr_accessor :sub_index_block    # only used if this is not an actual record by instead an index -record pointing to a sub-IndexBlock
 
+    def sub_block_key
+      @sub_block_key ||= [:index_block, @key]
+    end
+
     def initialize(chunk=nil,data_block_offset=nil)
       @chunk=chunk
       if chunk

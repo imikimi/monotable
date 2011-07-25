@@ -15,6 +15,10 @@ module MonoTable
     attr_reader :eviction_count,:eviction_bytes
     attr_reader :head,:tail
 
+    def Cache.global_cache(max_cache_size=nil)
+      @global_cache||=Cache.new(max_cache_size)
+    end
+
     class ListNode
       attr_accessor :nnode, :pnode
       attr_reader :key,:value
@@ -42,10 +46,13 @@ module MonoTable
 
     def initialize(max_size=nil)
       @max_size=max_size || MAX_CACHE_SIZE
+
+      reset
+    end
+
+    def reset
       @size=0
       @eviction_bytes=@eviction_count=0
-
-
       @head=ListNode.new(nil,nil)
       @tail=ListNode.new(nil,nil)
 
@@ -72,8 +79,15 @@ module MonoTable
     end
 
     def [](key)
+      get(key)
+    end
+
+    def get(key,&block)
       node=@hash_cache[key]
-      return unless node
+      unless node
+        return self[key]=yield if block
+        return nil
+      end
       head.add(node.remove) # on use, move to the head of the list
       node.value
     end
@@ -121,4 +135,6 @@ module MonoTable
       end
     end
   end
+
+
 end
