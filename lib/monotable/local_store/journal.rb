@@ -172,7 +172,6 @@ module MonoTable
       ret=nil
       binary=File.join File.dirname(__FILE__), "../../../bin", "compact.rb"
       command="#{binary} #{journal_file}"
-      puts "Journal.compact_phase_1_external command: #{command}"
       begin
         IO.popen(command) do |pipe|
           pid=pipe.pid
@@ -245,7 +244,8 @@ module MonoTable
     def compact
       journal_manager && journal_manager.freeze_journal(self)
       @read_only=true
-      Journal.compact_phase_1(journal_file)
+#      Journal.compact_phase_1(journal_file)
+      Journal.compact_phase_1_external(journal_file)
       Journal.compact_phase_2(journal_file)
     end
   end

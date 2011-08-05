@@ -29,8 +29,9 @@ def compact(journal_file)
     return 2
   end
   begin
-    Journal.compact_phase_1(journal_file)
+    MonoTable::Journal.compact_phase_1(journal_file)
     puts "SUCCESS"
+    return 0
   rescue Exception => e
     $stderr.puts "error: #{e.inspect}"
     $stderr.puts "\t#{e.backtrace.join("\n\t")}"
