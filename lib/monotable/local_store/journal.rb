@@ -93,7 +93,7 @@ module MonoTable
       save_entry ["split",chunk_file.to_s,key,to_filename]
     end
 
-    def each_entry
+    def Journal.each_entry(journal_file)
       journal_file.read(0,nil,true) do |io_stream|
         while !io_stream.eof?
           yield Journal.parse_entry(io_stream)
@@ -101,19 +101,23 @@ module MonoTable
       end
     end
 
-    # compact this journal and all the chunks it is tied to
-    # the end result is the journal is deleted and all the chunk files have been updated
-    # Contains auto-recovery code. If it crashes at any point, just run it again and it will recover assuming the failure was temporary (like a machine crash).
-    # TODO: This assumes the journal and chunk files are not corrupt, if they
-    #   are corrupt, we do not currently handle that. Corruption is currently being detected
-    #   via checksums resulting, currently, in exceptions being thrown out of this
-    #   method. We should trap these exceptions, and re-replicate from other servers where necessary.
-    # TODO: This does not currently handle multitasking where the current in-memory copies of the chunks need to be updated safely
-    def compact
-      journal_manager && journal_manager.freeze_journal(self)
-      @read_only=true
+    def Journal.compaction_dir(journal_filename)
+      journal_filename + COMPACT_DIR_EXT
+    end
+
+    # file is a FileHandle or filename
+    # phase 1 does 99% of the work - it reads the journal, all the effected chunks, and
+    # generates the new versions of the chunks in a temporary directory.
+    def Journal.compact_phase_1(journal_file)
+      journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
+      compacted_chunks_path = Journal.compaction_dir(journal_file.filename)
+      success_filename=File.join(compacted_chunks_path,JOURNAL_COMPACTION_SUCCESS_FILENAME)
+
+      # test to see if this phase is already done
+      return if File.exists? success_filename
+      return unless journal_file.exists? || File.exists?(compacted_chunks_path)
+
       chunks={}
-      compacted_chunks_path = journal_file.filename + COMPACT_DIR_EXT
       base_path=File.dirname(journal_file.filename)
       FileUtils.mkdir compacted_chunks_path unless File.exists?(compacted_chunks_path)
 
@@ -126,8 +130,7 @@ module MonoTable
         # The chunks -may- be OK if there were no further writes to them in the rest of the corrupt journal. We can detect their valididity later or immeidately with replicas on other disks.
         # Perhaps we need a possibly-corrupt directory which implies we need to compare with the replicas to verify integrity... ?
 
-#        journal_file.open_read
-        each_entry do |entry|
+        each_entry(journal_file) do |entry|
           chunk_filename = entry[:chunk_file]
           if ch=chunks[chunk_filename]
             chunk=ch[:chunk]
@@ -147,16 +150,34 @@ module MonoTable
           chunk.save cf
         end
 
-        # TODO: lock all the effected chunks until the end of this block
-        #   Better-yet, as we save each chunk, we should update its in-memory DiskChunk.
-        #   This will point to the file in the compacted_chunk_path, though.
-        #   And then after we delete the journal, we can just update the filename for each chunk to it's normal location
-
-        # this commits the compaction
-        journal_file.delete
+        # "touch" the file: JOURNAL_COMPACTION_SUCCESS_FILENAME
+        File.open(success_filename,"w") {}
       end
+    end
+
+    # file can be a filename, or any object that to_s outputs a filename (e.g. FileHandle)
+    def Journal.compact_phase_2(journal_file)
+      journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
+      compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
+      success_filename=File.join(compacted_chunks_path,JOURNAL_COMPACTION_SUCCESS_FILENAME)
+
+      # check to see if there is anything to do
+      return unless journal_file.exists? || File.exists?(compacted_chunks_path)
+
+      # verify the successfile exists
+      raise "compact_phase_1 did not complete" unless File.exists?(success_filename)
+
+      # TODO: lock all the effected chunks until the end of this block
+      #   Better-yet, as we save each chunk, we should update its in-memory DiskChunk.
+      #   This will point to the file in the compacted_chunk_path, though.
+      #   And then after we delete the journal, we can just update the filename for each chunk to it's normal location
+
+      # this commits the compaction
+      journal_file.delete if journal_file.exists?
+
 
       # move all the compacted files back into position
+      base_path=File.dirname(journal_file.filename)
       Dir.glob(File.join(compacted_chunks_path,"*#{CHUNK_EXT}")).each do |compacted_file|
         chunk_file=File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
@@ -165,9 +186,25 @@ module MonoTable
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
       end
 
+      FileUtils.rm success_filename
 
       # remove compacted_chunks_path
       Dir.rmdir compacted_chunks_path
+    end
+
+    # compact this journal and all the chunks it is tied to
+    # the end result is the journal is deleted and all the chunk files have been updated
+    # Contains auto-recovery code. If it crashes at any point, just run it again and it will recover assuming the failure was temporary (like a machine crash).
+    # TODO: This assumes the journal and chunk files are not corrupt, if they
+    #   are corrupt, we do not currently handle that. Corruption is currently being detected
+    #   via checksums resulting, currently, in exceptions being thrown out of this
+    #   method. We should trap these exceptions, and re-replicate from other servers where necessary.
+    # TODO: This does not currently handle multitasking where the current in-memory copies of the chunks need to be updated safely
+    def compact
+      journal_manager && journal_manager.freeze_journal(self)
+      @read_only=true
+      Journal.compact_phase_1(journal_file)
+      Journal.compact_phase_2(journal_file)
     end
   end
 end
