@@ -30,6 +30,7 @@ def compact(journal_file)
   end
   begin
     Journal.compact_phase_1(journal_file)
+    puts "SUCCESS"
   rescue Exception => e
     $stderr.puts "error: #{e.inspect}"
     $stderr.puts "\t#{e.backtrace.join("\n\t")}"

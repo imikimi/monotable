@@ -106,7 +106,7 @@ module MonoTable
     end
 
     def Journal.successfile_compaction_filename(journal_filename)
-      File.join(journal_filename.to_s + COMPACT_DIR_EXT, JOURNAL_COMPACTION_SUCCESS_FILENAME)
+      File.join Journal.compaction_dir(journal_filename), JOURNAL_COMPACTION_SUCCESS_FILENAME
     end
 
     # file is a FileHandle or filename
@@ -122,8 +122,7 @@ module MonoTable
       success_filename = Journal.successfile_compaction_filename(journal_file)
 
       # test to see if this phase is already done
-      return if File.exists? success_filename
-      return unless journal_file.exists? || File.exists?(compacted_chunks_path)
+      return if Journal.compact_phase_1_succeeded(journal_file)
 
       chunks={}
       base_path=File.dirname(journal_file.filename)
@@ -163,9 +162,33 @@ module MonoTable
       end
     end
 
+    # executes the compaction phase-1 as an external processes
+    def Journal.compact_phase_1_external(journal_file)
+      # test to see if there is actually any phase-1 work
+      return if Journal.compact_phase_1_succeeded(journal_file)
+
+
+      pid=nil
+      ret=nil
+      binary=File.join File.dirname(__FILE__), "../../../bin", "compact.rb"
+      command="#{binary} #{journal_file}"
+      puts "Journal.compact_phase_1_external command: #{command}"
+      begin
+        IO.popen(command) do |pipe|
+          pid=pipe.pid
+          ret=pipe.read
+        end
+      ensure
+        Process.detach pid if pid
+      end
+      raise "Journal.compact_phase_1_external failed (ret=#{ret.inspect})" unless ret.strip=="SUCCESS"
+      true
+    end
+
     def Journal.compact_phase_1_succeeded(journal_file)
       success_filename = Journal.successfile_compaction_filename(journal_file)
-      (!journal_file.exists? && !File.exists?(compacted_chunks_path)) || File.exits?(success_filename)
+      compacted_chunks_path = Journal.compaction_dir(journal_file.filename)
+      (!journal_file.exists? && !File.exists?(compacted_chunks_path)) || File.exists?(success_filename)
     end
 
     # file can be a filename, or any object that to_s outputs a filename (e.g. FileHandle)
