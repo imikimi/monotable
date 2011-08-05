@@ -102,16 +102,24 @@ module MonoTable
     end
 
     def Journal.compaction_dir(journal_filename)
-      journal_filename + COMPACT_DIR_EXT
+      journal_filename.to_s + COMPACT_DIR_EXT
+    end
+
+    def Journal.successfile_compaction_filename(journal_filename)
+      File.join(journal_filename.to_s + COMPACT_DIR_EXT, JOURNAL_COMPACTION_SUCCESS_FILENAME)
     end
 
     # file is a FileHandle or filename
-    # phase 1 does 99% of the work - it reads the journal, all the effected chunks, and
-    # generates the new versions of the chunks in a temporary directory.
+    # phase 1 does 99% of the work:
+    #   * reads the journal
+    #   * reads all the effected chunks
+    #   * generates the new versions of the chunks in a temporary directory.
+    # Phase 1 can safely be run as long as the journal_file is no longer being written to.
+    # It is safe to continue to read from the journal and the effected chunks during Phase 1.
     def Journal.compact_phase_1(journal_file)
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       compacted_chunks_path = Journal.compaction_dir(journal_file.filename)
-      success_filename=File.join(compacted_chunks_path,JOURNAL_COMPACTION_SUCCESS_FILENAME)
+      success_filename = Journal.successfile_compaction_filename(journal_file)
 
       # test to see if this phase is already done
       return if File.exists? success_filename
@@ -155,11 +163,22 @@ module MonoTable
       end
     end
 
+    def Journal.compact_phase_1_succeeded(journal_file)
+      success_filename = Journal.successfile_compaction_filename(journal_file)
+      (!journal_file.exists? && !File.exists?(compacted_chunks_path)) || File.exits?(success_filename)
+    end
+
     # file can be a filename, or any object that to_s outputs a filename (e.g. FileHandle)
+    # Phase 2 is the cleanup phase:
+    #   * deletes old versions of chunks and moves the new versions in place
+    #   * deletes the journal file
+    #   * removes compacted_chunks_path
+    # Exclusive locks on each chunk must be aquired as its old version is deleted and new version is moved in place
+    # TODO: Chunks effected should be "reset" after compaction
     def Journal.compact_phase_2(journal_file)
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
-      success_filename=File.join(compacted_chunks_path,JOURNAL_COMPACTION_SUCCESS_FILENAME)
+      success_filename = Journal.successfile_compaction_filename(journal_file)
 
       # check to see if there is anything to do
       return unless journal_file.exists? || File.exists?(compacted_chunks_path)
