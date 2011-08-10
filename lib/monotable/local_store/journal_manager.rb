@@ -48,9 +48,10 @@ module MonoTable
       end
     end
 
-    def compact
+    # options:    see Journal#compact for more information on options
+    def compact(options={})
       if @current_journal
-        @current_journal.compact
+        @current_journal.compact(options)
         new_journal
       end
       compact_existing_journals

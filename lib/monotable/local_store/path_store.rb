@@ -28,8 +28,9 @@ module MonoTable
       journal_manager.compact
     end
 
-    def compact
-      journal_manager.compact
+    # options: see Journal#compact for more info
+    def compact(options={})
+      journal_manager.compact(options)
     end
 
     def journal

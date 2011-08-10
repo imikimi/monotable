@@ -87,8 +87,9 @@ module MonoTable
       total
     end
 
-    def compact
-      path_stores.each {|path_store| path_store.compact}
+    # options: see Journal#compact
+    def compact(options={})
+      path_stores.each {|path_store| path_store.compact(options)}
     end
 
     def verify_chunk_ranges

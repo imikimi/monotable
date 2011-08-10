@@ -241,12 +241,19 @@ module MonoTable
     #   via checksums resulting, currently, in exceptions being thrown out of this
     #   method. We should trap these exceptions, and re-replicate from other servers where necessary.
     # TODO: This does not currently handle multitasking where the current in-memory copies of the chunks need to be updated safely
-    def compact
+    # option:
+    #   :off_line => true
+    #     if off_line is true, then the phase_1 compaction is run externally and control is returned immediately.
+    #     Be sure to run CompactionManager.singleton.process_queue at some later point to finalize journal processing.
+    def compact(options={})
       journal_manager && journal_manager.freeze_journal(self)
       @read_only=true
-#      Journal.compact_phase_1(journal_file)
-      Journal.compact_phase_1_external(journal_file)
-      Journal.compact_phase_2(journal_file)
+      if options[:off_line]
+        CompactionManager.singleton.compact(journal_file)
+      else
+        Journal.compact_phase_1(journal_file)
+        Journal.compact_phase_2(journal_file)
+      end
     end
   end
 end
