@@ -9,6 +9,8 @@ require File.join(File.dirname(__FILE__),"xbd")
   file_handle
   journal
   journal_manager
+  compaction_manager
+  logger
   record
   chunk
   index_block
