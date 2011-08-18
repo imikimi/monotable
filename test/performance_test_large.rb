@@ -5,7 +5,8 @@ puts "MonoTableHelper.new.reset_temp_dir..."
 MonoTableHelper.new.reset_temp_dir
 
 puts "MonoTable::SoloDaemon.new..."
-solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 64*1024*1024, :max_journal_size => 128*1024*1024, :verbose => true, :async_compactions=>true)
+MonoTable::Journal.async_compaction=true
+solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 64*1024*1024, :max_journal_size => 128*1024*1024, :verbose => true)
 
 
 def stats(mt)
@@ -16,22 +17,24 @@ def stats(mt)
 end
 
 def populate(mt,num)
-puts "populate(#{num})"
-  $last||=0
-  fields={}
-  num.times do |n|
-    str=n.to_s+"|"
-    fields[:data]=str*(1024/str.length)
-    key="key#{'%010d'%$last}"
-    $last+=1
-    mt.set(key,fields)
-    puts "writing #{n}/#{num} #{stats(mt)}" if (n%10000)==0
+  MonoTable::Tools.log_time("populate(#{num})") do
+    puts "populate(#{num})"
+    $last||=0
+    fields={}
+    num.times do |n|
+      str=n.to_s+"|"
+      fields[:data]=str*(1024/str.length)
+      key="key#{'%010d'%$last}"
+      $last+=1
+      mt.set(key,fields)
+      puts "writing #{n}/#{num} #{stats(mt)}" if (n%10000)==0
+    end
+    puts "last compact..."
+    mt.compact
+    puts "CompactionManager.wait_for_compactors..."
+    MiniEventMachine.wait_for_all_tasks
+    puts "done writing #{num} records"
   end
-  puts "last compact..."
-  mt.compact #(:async => true)
-  puts "CompactionManager.wait_for_compactors..."
-  MiniEventMachine.wait_for_all_tasks
-  puts "done writing #{num} records"
 end
 
 populate(solo,160*1024)

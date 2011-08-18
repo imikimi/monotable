@@ -6,6 +6,10 @@ NOT THREADSAFE
 
 module MonoTable
   class Journal
+    class << self
+      # set Journal.async_compaction=true to enable asynchronous compaction
+      attr_accessor :async_compaction
+    end
     attr_accessor :journal_file
     attr_accessor :read_only
     attr_accessor :size
@@ -246,7 +250,7 @@ module MonoTable
     def compact(options={})
       journal_manager && journal_manager.freeze_journal(self)
       @read_only=true
-      if options[:async]
+      if Journal.async_compaction #options[:async]
         CompactionManager.compact(journal_file)
       else
         Journal.compact_phase_1(journal_file)

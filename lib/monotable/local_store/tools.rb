@@ -27,6 +27,16 @@ module MonoTable
       Log << ["Exception: #{except}",#"Logged from: #{caller()[0]}",
         "Info: #{info}","Trace:","\t#{except.backtrace.join("\n\t")}\n"].join("\n")
     end
+
+    def Tools.log_time(message,log_start_line=false)
+      Log << "#{message} starting..." if log_start_line
+      start_time=Time.now
+      r=yield
+      end_time=Time.now
+      Log << "#{message} took #{"%0.3f"%(end_time-start_time)}s"
+      r
+    end
+
     # returns the number of characters s1 and s2 hold in column at the beginning of the strings
     def Tools.longest_common_prefix(s1,s2)
       s1.scan(/./).each_with_index do |c1,i|

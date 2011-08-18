@@ -4,7 +4,6 @@ module MonoTable
     def initialize(options={})
       init_local_store(options)
       @verbose = options[:verbose]
-      @async_compactions = options[:async_compactions]
     end
 
     #*************************************************************
