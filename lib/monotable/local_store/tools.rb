@@ -22,6 +22,11 @@ module MonoTable
   end
 =end
   module Tools
+
+    def Tools.log_error(except,info=nil)
+      Log << ["Exception: #{except}",#"Logged from: #{caller()[0]}",
+        "Info: #{info}","Trace:","\t#{except.backtrace.join("\n\t")}\n"].join("\n")
+    end
     # returns the number of characters s1 and s2 hold in column at the beginning of the strings
     def Tools.longest_common_prefix(s1,s2)
       s1.scan(/./).each_with_index do |c1,i|
