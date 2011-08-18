@@ -19,6 +19,10 @@ module MonoTable
       @filename=fn
     end
 
+    def inspect
+      "FileHandle<#{filename.inspect}>"
+    end
+
     def open(mode=:read,&block)
       case mode
       when :read then open_read(&block)
