@@ -25,20 +25,7 @@ module MonoTable
     # the initial version of the SoloDaemon will immediately take action FullEvents
     # The next version will execute these events in their own threads
     def process_events
-      until EventQueue.empty?
-        case event=EventQueue.pop
-        when ChunkFullEvent then
-          puts "split chunk..." if @verbose
-          time=Time.now
-          event.chunk.split
-          puts "split chunk done in #{(1000*(Time.now-time)).to_i}ms." if @verbose
-        when JournalFullEvent then
-          puts "compact journal..." if @verbose
-          time=Time.now
-          event.journal.compact(:async=>@async_compactions)
-          puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms." if @verbose
-        end
-      end
+      MiniEventMachine.process_queue
     end
 
     def verify_chunk_ranges

@@ -70,11 +70,9 @@ module MonoTable
       save_str=string_array.collect {|str| [str.length.to_asi,str]}.flatten.join
       journal_file.open_append(true)
       MonoTable::Tools.write_asi_checksum_string(journal_file,save_str)
-#      save_str=MonoTable::Tools.to_asi_checksum_string(save_str)
-#      journal_file.append(save_str,true)
       journal_file.flush
       @size+=save_str.length
-      EventQueue << JournalFullEvent.new(self) if full?
+      MiniEventMachine.queue {self.compact} if full?
       save_str
     end
 

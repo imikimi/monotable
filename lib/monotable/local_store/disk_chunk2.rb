@@ -121,7 +121,7 @@ module MonoTable
 
       # rest is same as DiskChunkFileBase
       ret=set_internal(key,journal.set(file_handle,key,columns))
-      EventQueue<<ChunkFullEvent.new(self) if accounting_size > max_chunk_size
+      MiniEventMachine.queue {self.split} if accounting_size > max_chunk_size
       ret
     end
 
