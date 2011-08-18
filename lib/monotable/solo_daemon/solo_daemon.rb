@@ -4,6 +4,7 @@ module MonoTable
     def initialize(options={})
       init_local_store(options)
       @verbose = options[:verbose]
+      @async_compactions = options[:async_compactions]
     end
 
     #*************************************************************
@@ -34,7 +35,7 @@ module MonoTable
         when JournalFullEvent then
           puts "compact journal..." if @verbose
           time=Time.now
-          event.journal.compact
+          event.journal.compact(:async=>@async_compactions)
           puts "compact journal done in #{(1000*(Time.now-time)).to_i}ms." if @verbose
         end
       end
