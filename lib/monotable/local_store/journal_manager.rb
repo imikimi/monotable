@@ -54,14 +54,15 @@ module MonoTable
         @current_journal.compact(options)
         new_journal
       end
-      compact_existing_journals
+      compact_existing_journals(options)
 
       # reset journal number
       @journal_number=0
     end
 
     # compact all existing journals on disk
-    def compact_existing_journals
+    # options:    see Journal#compact for more information on options
+    def compact_existing_journals(options={})
       # make sure we execute the journals in numerical ascending order
 
       # get all the journal filenames and sort them in ascending numerical order
@@ -73,7 +74,7 @@ module MonoTable
       # compact the journals in order
       journals.each do |a|
         num,filename=a
-        Journal.new(filename,:journal_manager=>self,:max_journal_size=>@max_journal_size).compact
+        Journal.new(filename,:journal_manager=>self,:max_journal_size=>@max_journal_size).compact(options)
       end
     end
 

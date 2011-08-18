@@ -118,7 +118,7 @@ module MonoTable
     # It is safe to continue to read from the journal and the effected chunks during Phase 1.
     def Journal.compact_phase_1(journal_file)
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
-      compacted_chunks_path = Journal.compaction_dir(journal_file.filename)
+      compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
       success_filename = Journal.successfile_compaction_filename(journal_file)
 
       # test to see if this phase is already done
@@ -164,9 +164,9 @@ module MonoTable
 
     # executes the compaction phase-1 as an external processes
     def Journal.compact_phase_1_external(journal_file)
+      journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       # test to see if there is actually any phase-1 work
       return if Journal.compact_phase_1_succeeded(journal_file)
-
 
       pid=nil
       ret=nil
@@ -186,7 +186,7 @@ module MonoTable
 
     def Journal.compact_phase_1_succeeded(journal_file)
       success_filename = Journal.successfile_compaction_filename(journal_file)
-      compacted_chunks_path = Journal.compaction_dir(journal_file.filename)
+      compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
       (!journal_file.exists? && !File.exists?(compacted_chunks_path)) || File.exists?(success_filename)
     end
 
@@ -242,14 +242,14 @@ module MonoTable
     #   method. We should trap these exceptions, and re-replicate from other servers where necessary.
     # TODO: This does not currently handle multitasking where the current in-memory copies of the chunks need to be updated safely
     # option:
-    #   :off_line => true
-    #     if off_line is true, then the phase_1 compaction is run externally and control is returned immediately.
+    #   :async => true
+    #     if async is true, then the phase_1 compaction is run externally and control is returned immediately.
     #     Be sure to run CompactionManager.singleton.process_queue at some later point to finalize journal processing.
     def compact(options={})
       journal_manager && journal_manager.freeze_journal(self)
       @read_only=true
-      if options[:off_line]
-        CompactionManager.singleton.compact(journal_file)
+      if options[:async]
+        CompactionManager.compact(journal_file)
       else
         Journal.compact_phase_1(journal_file)
         Journal.compact_phase_2(journal_file)
