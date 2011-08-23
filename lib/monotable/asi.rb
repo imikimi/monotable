@@ -1,4 +1,4 @@
-$ruby_inline=RUBY_ENGINE!="rbx"
+$ruby_inline=true
 require "inline" if $ruby_inline
 require "stringio"
 

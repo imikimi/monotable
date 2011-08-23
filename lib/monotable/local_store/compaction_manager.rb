@@ -2,7 +2,7 @@ module MonoTable
   class CompactionManager
 
     class << self
-      def initialize
+      def init
         @queue=[]
       end
 
@@ -50,5 +50,5 @@ module MonoTable
       end
     end
   end
-  CompactionManager.initialize
+  CompactionManager.init
 end

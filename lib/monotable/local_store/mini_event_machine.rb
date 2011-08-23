@@ -1,6 +1,6 @@
 class MiniEventMachine
   class << self
-    def initialize
+    def init
       @queue=Queue.new
       @threads=[]
     end
@@ -44,5 +44,5 @@ class MiniEventMachine
       end
     end
   end
-  MiniEventMachine.initialize
+  MiniEventMachine.init
 end
