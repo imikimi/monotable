@@ -5,7 +5,7 @@ describe Xbd::Asi do
   def test_asi(n)
     asi1=n.to_asi
     asi2=Xbd::Asi::ASI_INSTANCE.i_to_asi_c(n)
-    raise "asi1!=asi2 (#{asi1.inspect}!=#{asi2.inspect}) n=#{n}" unless asi1==asi2
+    raise "(asi1=n.to_asi)!=asi2 (#{asi1.inspect}!=#{asi2.inspect}) n=#{n} asi1.encoding=#{asi1.encoding} asi2.encoding=#{asi2.encoding}" unless asi1==asi2
     asi1.read_asi[0].should == n
   end
 
@@ -18,7 +18,9 @@ describe Xbd::Asi do
     end
   end
 
+  if $ruby_inline
   it "should fail to convert 2^64 to an asi" do
     lambda {test_asi(2**64)}.should raise_error(RangeError)
+  end
   end
 end
