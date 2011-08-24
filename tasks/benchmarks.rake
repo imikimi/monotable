@@ -1,0 +1,16 @@
+BENCHMARKS = Dir["#{File.dirname(__FILE__)}/../benchmark/*.rb"].map do |path|
+  File.basename(path, '.rb')
+end.select { |x| x != 'benchmark_helper' }
+
+namespace :bench do
+  BENCHMARKS.each do |feature|
+      desc "Run #{feature} benchmarks"
+      task(feature){ ruby "benchmark/#{feature}.rb" }
+  end
+
+  task :all do
+    BENCHMARKS.each do |feature|
+      ruby "benchmark/#{feature}.rb"
+    end
+  end
+end
