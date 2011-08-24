@@ -21,7 +21,7 @@ THREADSAFE (not yet)
   to ensure single access.
 =end
 
-module MonoTable
+module Monotable
   class JournalManager
     attr_accessor :current_journal
     attr_accessor :journal_number

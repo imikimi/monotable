@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
   class SoloDaemon < LocalStore
 
     def initialize(options={})

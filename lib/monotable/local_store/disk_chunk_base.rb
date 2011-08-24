@@ -2,7 +2,7 @@
 require "fileutils"
 require 'digest/md5'
 
-module MonoTable
+module Monotable
 
   class DiskChunkBase < Chunk
     attr_accessor :file_handle

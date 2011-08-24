@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
   class CompactionManager
 
     class << self

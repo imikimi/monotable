@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
   class Log
     class << self
       def <<(level,info=nil)

@@ -1,6 +1,6 @@
 require 'thread'
 
-module MonoTable
+module Monotable
   class EventQueue
 
     class <<self

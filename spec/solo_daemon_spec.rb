@@ -2,18 +2,18 @@ require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 require File.join(File.dirname(__FILE__),"../lib/monotable/solo_daemon/solo_daemon.rb")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
-describe MonoTable::DiskChunk do
-  include MonoTableHelperMethods
+describe Monotable::DiskChunk do
+  include MonotableHelperMethods
 
   it "should be possible to initialize a new SoloDaemon" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
     solo.chunks.length.should == 1
   end
 
   it "should auto-split too-big chunks" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size=4000}
@@ -36,7 +36,7 @@ describe MonoTable::DiskChunk do
 
   it "should auto-split too-big journals" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
 
     # set a small max_journal_size for testing
     start_journal=solo.path_stores[0].journal_manager.current_journal
@@ -64,7 +64,7 @@ describe MonoTable::DiskChunk do
 
   it "should auto-split too-big chunks and auto-compact too-big journals" do
     reset_temp_dir
-    solo=MonoTable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000)
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000)
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size.should == 4000}
@@ -93,10 +93,10 @@ describe MonoTable::DiskChunk do
   end
 
   def test_index_block_structure(max_chunk_size, max_index_block_size, num_records, data_multiplier, expected_chunk_count, expected_depth)
-    MonoTable::Cache.global_cache.reset
+    Monotable::Cache.global_cache.reset
     reset_temp_dir
     options={:store_paths=>[temp_dir],:max_chunk_size => max_chunk_size, :max_index_block_size => max_index_block_size}
-    solo = MonoTable::SoloDaemon.new(options)
+    solo = Monotable::SoloDaemon.new(options)
 
     control_set={}
     (1..num_records).each do |n|
@@ -107,7 +107,7 @@ describe MonoTable::DiskChunk do
     end
     solo.compact
 
-    solo2 = MonoTable::SoloDaemon.new(options)
+    solo2 = Monotable::SoloDaemon.new(options)
 
     solo2.chunks.length.should == expected_chunk_count
     chunk = solo2.get_chunk("")

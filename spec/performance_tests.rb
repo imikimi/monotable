@@ -4,7 +4,7 @@ require "benchmark"
 require "../lib/monotable/monotable"
 require "./mono_table_helper_methods.rb"
 $temp_dir=File.expand_path("tmp")
-file=MonoTable::FileHandle.new(File.join($temp_dir,"/test.tmp"))
+file=Monotable::FileHandle.new(File.join($temp_dir,"/test.tmp"))
 
 def write_min_record_asi(key,record,file)
   command="set"
@@ -14,7 +14,7 @@ def write_min_record_asi(key,record,file)
     key.length.to_asi,
     key,
     ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
-  MonoTable::Tools.write_asi_checksum_string file,str.join
+  Monotable::Tools.write_asi_checksum_string file,str.join
   file.flush
 end
 
@@ -26,7 +26,7 @@ def write_min_record_asi_noflush(key,record,file)
     key.length.to_asi,
     key,
     ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
-  MonoTable::Tools.write_asi_checksum_string file,str.join
+  Monotable::Tools.write_asi_checksum_string file,str.join
 end
 
 # an alternative writing scheme that uses a slitghtly different checksum
@@ -40,7 +40,7 @@ def write_min_record_asi2(key,record,file)
   strs=strs.flatten
   file.open_append(true) do |f|
     f.write strs.length.to_asi
-    f.write MonoTable::Tools.checksum_array(strs)
+    f.write Monotable::Tools.checksum_array(strs)
     strs.each do |str|
       f.write str.length.to_asi
       f.write str
@@ -61,23 +61,23 @@ def write_unchecked_record_asi(key,record,file)
     key,
 #    record.length.to_asi
     ]+record.keys.collect {|k| v=record[k];[k.length.to_asi,k,v.length.to_asi,v]}
-  file.write MonoTable::Tools.to_asi_checksum_string(str.join) #.to_asi_string
+  file.write Monotable::Tools.to_asi_checksum_string(str.join) #.to_asi_string
   file.flush
 end
 
 def write_monotable_entry(k,r,file)
-  entry=MonoTable::Chunk.new
+  entry=Monotable::Chunk.new
   entry.set(k,r)
   file.write entry.to_binary
   file.flush
 end
 
 def read_monotable_entry(file)
-  MonoTable::Chunk.new(file)
+  Monotable::Chunk.new(file)
 end
 
 def read_asi(file)
-  checksum_string=MonoTable::Tools.read_asi_checksum_string_from_file(file)
+  checksum_string=Monotable::Tools.read_asi_checksum_string_from_file(file)
   file = StringIO.new(checksum_string)
   command = file.read_asi_string
   key = file.read_asi_string
@@ -126,8 +126,8 @@ end
 def test_journal(testname,benchmarker,file,records=500000,chunk_name="0000000.mt_chunk")
   file.delete if file.exists?
   file.close
-  MonoTableHelper.new.reset_temp_dir
-  journal=MonoTable::Journal.new(file.filename)
+  MonotableHelper.new.reset_temp_dir
+  journal=Monotable::Journal.new(file.filename)
   journal.journal_file.open_append
   time=benchmarker.report("%-30s"%"#{records}x: #{testname}") {(1..records).each do |a|
     key=a.to_s
@@ -139,7 +139,7 @@ def test_journal(testname,benchmarker,file,records=500000,chunk_name="0000000.mt
 end
 
 def test_mt(testname,benchmarker,records=500000,value="test")
-  MonoTableHelper.new.reset_temp_dir
+  MonotableHelper.new.reset_temp_dir
   mt=yield # create the monotable object AFTER we empty the test dir
   #set max_journal_size >> total bytes we are going to write
   accounting_size_written=0
@@ -171,7 +171,7 @@ end
 def journal_read_test(testname,benchmarker,file,expected_records)
   file.close
   records=0
-  journal=MonoTable::Journal.new(file.filename)
+  journal=Monotable::Journal.new(file.filename)
   time=benchmarker.report("%-30s"%"#{expected_records}x: #{testname}") do
     last_entry=nil
     journal.each_entry do |entry|
@@ -199,11 +199,11 @@ Benchmark.bm do |benchmarker|
   test_journal(:journal_real,benchmarker,file,10000,"/mnt/hgfs/shanebdavis/imikimi/opensource/monotable/test/tmp/test_chunk")
 
 
-  test_mt(:disk_chunk,benchmarker,10000)                  {MonoTable::DiskChunk.new(:filename=>File.join($temp_dir,"test_chunk"))}
+  test_mt(:disk_chunk,benchmarker,10000)                  {Monotable::DiskChunk.new(:filename=>File.join($temp_dir,"test_chunk"))}
                                                           ls_options={:store_paths=>[$temp_dir],:max_journal_size=>1024**4}
-  test_mt(:local_store_small,benchmarker,10000)           {MonoTable::LocalStore.new(ls_options)}
-  test_mt(:local_store_1k,benchmarker,10000,"0"*1024)     {MonoTable::LocalStore.new(ls_options)}
-  test_mt(:local_store_10k,benchmarker,5000,"0"*10240)    {MonoTable::LocalStore.new(ls_options)}
-  test_mt(:local_store_100k,benchmarker,1000,"0"*102400)  {MonoTable::LocalStore.new(ls_options)}
+  test_mt(:local_store_small,benchmarker,10000)           {Monotable::LocalStore.new(ls_options)}
+  test_mt(:local_store_1k,benchmarker,10000,"0"*1024)     {Monotable::LocalStore.new(ls_options)}
+  test_mt(:local_store_10k,benchmarker,5000,"0"*10240)    {Monotable::LocalStore.new(ls_options)}
+  test_mt(:local_store_100k,benchmarker,1000,"0"*102400)  {Monotable::LocalStore.new(ls_options)}
 end
 

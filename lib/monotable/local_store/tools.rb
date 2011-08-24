@@ -1,7 +1,7 @@
 require "rubygems"
 require 'zlib'
 #require "inline"
-module MonoTable
+module Monotable
 =begin
   class FastBitField
     attr_reader :size

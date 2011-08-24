@@ -1,4 +1,4 @@
-module MonoTableHelperMethods
+module MonotableHelperMethods
 
   def load_test_data(filename)
     File.open(File.join(File.dirname(__FILE__),"test_data",filename)) {|f| return f.read.force_encoding("BINARY")}
@@ -24,7 +24,7 @@ module MonoTableHelperMethods
   end
 
   def load_test_data_directory(target=nil,key_prefix=nil)
-    MonoTable::Tools.load_directory(test_data_dir,target,key_prefix)
+    Monotable::Tools.load_directory(test_data_dir,target,key_prefix)
   end
 
   def chunkify_test_data_directory
@@ -32,10 +32,10 @@ module MonoTableHelperMethods
 
     out_file=File.join(temp_dir,"test_data")
 
-    MonoTable::Tools.chunkify_directory(test_data_dir,out_file)
+    Monotable::Tools.chunkify_directory(test_data_dir,out_file)
   end
 end
 
-class MonoTableHelper
-  include MonoTableHelperMethods
+class MonotableHelper
+  include MonotableHelperMethods
 end

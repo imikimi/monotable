@@ -1,12 +1,12 @@
 require "../lib/monotable/monotable.rb"
 require "./mono_table_helper_methods.rb"
 
-puts "MonoTableHelper.new.reset_temp_dir..."
-MonoTableHelper.new.reset_temp_dir
+puts "MonotableHelper.new.reset_temp_dir..."
+MonotableHelper.new.reset_temp_dir
 
-puts "MonoTable::SoloDaemon.new..."
-MonoTable::Journal.async_compaction=true
-solo=MonoTable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 64*1024*1024, :max_journal_size => 128*1024*1024, :verbose => true)
+puts "Monotable::SoloDaemon.new..."
+Monotable::Journal.async_compaction=true
+solo=Monotable::SoloDaemon.new(:store_paths=>["tmp"],:max_chunk_size => 64*1024*1024, :max_journal_size => 128*1024*1024, :verbose => true)
 
 
 def stats(mt)
@@ -17,7 +17,7 @@ def stats(mt)
 end
 
 def populate(mt,num)
-  MonoTable::Tools.log_time("populate(#{num})") do
+  Monotable::Tools.log_time("populate(#{num})") do
     puts "populate(#{num})"
     $last||=0
     fields={}

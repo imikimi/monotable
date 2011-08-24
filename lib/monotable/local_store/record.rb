@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
 
   class Record
     attr_accessor :accounting_size

@@ -2,7 +2,7 @@
 
 # PathStore manages all the storage in one specified path
 
-module MonoTable
+module Monotable
   class PathStore
     attr_accessor :path
 
