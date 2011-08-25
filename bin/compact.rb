@@ -1,9 +1,9 @@
-#!/usr/local/bin/ruby
-require File.join(File.dirname(__FILE__),"..","lib","monotable","monotable")
+#!/usr/bin/env ruby
+require File.expand_path(File.join(File.dirname(__FILE__),"..","lib","monotable","monotable"))
 
 def show_usage(message=nil)
   puts <<ENDUSAGE
-MonoTable Compactor
+Monotable Compactor
 
 Used internally by the deamon to do out-of-processes jounral compaction.
 
@@ -29,7 +29,7 @@ def compact(journal_file)
     return 2
   end
   begin
-    MonoTable::Journal.compact_phase_1(journal_file)
+    Monotable::Journal.compact_phase_1(journal_file)
     puts "SUCCESS"
     return 0
   rescue Exception => e

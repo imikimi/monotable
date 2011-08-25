@@ -1,5 +1,5 @@
-#!/usr/local/bin/ruby
-require File.join(File.dirname(__FILE__),"..","lib","monotable","monotable")
+#!/usr/bin/env ruby
+require File.expand_path(File.join(File.dirname(__FILE__),"..","lib","monotable","monotable"))
 
 #def package_directory(path,filename)
 #  MobiusFS::Packager.package_directory(path,filename)
@@ -10,7 +10,7 @@ class MTTChunk
 
   def initialize(filename)
     #time=Time.now
-    @chunk=MonoTable::DiskChunk.new(:filename=>filename)
+    @chunk=Monotable::DiskChunk.new(:filename=>filename)
     #puts "DiskChunk init: #{Time.now-time}"
   end
 
@@ -67,7 +67,7 @@ end
 
 def show_usage(message=nil)
   puts <<ENDUSAGE
-MonoTable Tool
+Monotable Tool
 
 Usage: #{__FILE__} (mode) (options)
 
