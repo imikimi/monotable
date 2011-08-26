@@ -1,5 +1,5 @@
 # encoding: BINARY
-$ruby_inline=false #true
+$ruby_inline=true
 require "inline" if $ruby_inline
 require "stringio"
 
@@ -70,7 +70,7 @@ module Xbd
           char str[11]; // I think 10 is enough, but just to be safe
           int p=0;
           while(p==0 || num > 0) {
-            int byte = num & 0x7F;
+            int byte = (int)(num & 0x7F);
             num = num >> 7;
             if (num > 0) byte = byte | 0x80;
             str[p++]=byte;
