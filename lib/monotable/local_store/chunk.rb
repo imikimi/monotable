@@ -6,7 +6,7 @@ Chunk is a journalized edit to the master entry. These other entries will each h
 they represent.
 
 Chunk format:
-  Header: "MonoTableChunk"
+  Header: "MonotableChunk"
   ASI:            Major version (major changes are not backward compatible)
   ASI:            Minor version (minor changes are backward compatible)
   ASI-String:     Chunk checksum of the EntryBody
@@ -55,10 +55,10 @@ Data-Block: consist of 0 or more data-records - as many as fit in the length of 
 
 =end
 
-module MonoTable
+module Monotable
 
   class Chunk
-    HEADER_STRING = "MonoTableChunk"
+    HEADER_STRING = "MonotableChunk"
     MAJOR_VERSION = 0
     MINOR_VERSION = 0
     HEADER = HEADER_STRING + MAJOR_VERSION.to_asi + MINOR_VERSION.to_asi
@@ -198,7 +198,7 @@ module MonoTable
     #*************************************************************
     # Write API
     #*************************************************************
-    # value must be a hash or a MonoTable::Record
+    # value must be a hash or a Monotable::Record
     def set(key,fields)
       record=case fields
       when Hash then MemoryRecord.new.init(key,fields)

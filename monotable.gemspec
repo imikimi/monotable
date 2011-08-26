@@ -22,6 +22,8 @@ Gem::Specification.new do |s|
   s.add_dependency 'async_sinatra', '~> 0.5.0'
   s.add_dependency 'thin', '~> 1.2.11'
   
+  s.add_development_dependency 'rspec', '~> 2.6.0'
+  
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 end

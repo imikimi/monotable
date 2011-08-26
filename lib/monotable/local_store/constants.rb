@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
   COMPACT_DIR_EXT=".compact"
   CHUNK_EXT=".mt_chunk"
   JOURNAL_EXT=".mt_journal"

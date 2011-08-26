@@ -5,7 +5,7 @@ This sub-class of Chunk loads the entier chunk into memory, or can work without 
 Write methods only alter the in-memory structure.
 =end
 
-module MonoTable
+module Monotable
 
   class MemoryChunk < Chunk
 

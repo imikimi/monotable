@@ -4,7 +4,7 @@
 # It manages 1 or more local paths
 require "rbtree"
 
-module MonoTable
+module Monotable
   class LocalStore
     attr_accessor :chunks
     attr_accessor :max_index_block_size

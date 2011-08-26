@@ -9,7 +9,7 @@ Currently we just have a problem with the auto-journal-compact-on-init. The jour
 when we open it's write handle, and then it detect there is an existing journal and we try to compact it, and we start going all loopy.
 =end
 
-module MonoTable
+module Monotable
   class FileHandle
     attr_accessor :filename
     attr_accessor :write_handle

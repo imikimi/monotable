@@ -1,8 +1,8 @@
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
-describe MonoTable::Cache do
-  include MonoTableHelperMethods
+describe Monotable::Cache do
+  include MonotableHelperMethods
 
   def validate_cache_list(cache,keys_compare,debug=false)
     keys_visited={}
@@ -22,7 +22,7 @@ describe MonoTable::Cache do
   end
 
   def generate_cache(n,max_size=nil,val="abc")
-    cache=MonoTable::Cache.new(max_size)
+    cache=Monotable::Cache.new(max_size)
     n.times do |key|
       key="key#{key+1}".to_sym
       cache[key]=TestCacheObject.new val
@@ -43,7 +43,7 @@ describe MonoTable::Cache do
   end
 
   it "should be possible to init a Cache" do
-    cache=MonoTable::Cache.new(1000)
+    cache=Monotable::Cache.new(1000)
     cache.max_size.should == 1000
   end
 

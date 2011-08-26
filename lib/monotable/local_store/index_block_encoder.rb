@@ -1,4 +1,4 @@
-module MonoTable
+module Monotable
   class IndexBlockEncoder
     attr_accessor :last_key
     attr_accessor :index_records

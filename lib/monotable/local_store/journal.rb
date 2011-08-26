@@ -4,7 +4,7 @@ NOT THREADSAFE
   Journals will not be threadsafe. Instead, JournalManagers will guarantee serial access to Journals
 =end
 
-module MonoTable
+module Monotable
   class Journal
     class << self
       # set Journal.async_compaction=true to enable asynchronous compaction
@@ -35,7 +35,7 @@ module MonoTable
     end
 
     def Journal.parse_entry(io_stream)
-      entry_string=MonoTable::Tools.read_asi_checksum_string_from_file(io_stream)
+      entry_string=Monotable::Tools.read_asi_checksum_string_from_file(io_stream)
       io_stream = StringIO.new(entry_string)
       strings=[]
       strings<<io_stream.read_asi_string while !io_stream.eof?
@@ -73,7 +73,7 @@ module MonoTable
     def save_entry(string_array)
       save_str=string_array.collect {|str| [str.length.to_asi,str]}.flatten.join
       journal_file.open_append(true)
-      MonoTable::Tools.write_asi_checksum_string(journal_file,save_str)
+      Monotable::Tools.write_asi_checksum_string(journal_file,save_str)
       journal_file.flush
       @size+=save_str.length
       MiniEventMachine.queue {self.compact} if full?

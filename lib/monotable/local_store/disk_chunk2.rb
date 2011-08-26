@@ -30,7 +30,7 @@ DiskChunk's record's structure consists of three sub-structures:
       c) @records (and the journal file) holds the up-to-date version
 =end
 
-module MonoTable
+module Monotable
 
   class DiskChunk < DiskChunkBase
     attr_accessor :index_level_offsets

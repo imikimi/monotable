@@ -7,7 +7,7 @@ This implementation of DiskChunk loads all the leaf IndexBlocks and fully popula
   Writes are journaled.
 =end
 
-module MonoTable
+module Monotable
 
   class DiskChunk < DiskChunkBase
     def parse(io_stream)

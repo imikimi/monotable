@@ -1,33 +1,33 @@
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
-describe MonoTable::LocalStore do
-  include MonoTableHelperMethods
+describe Monotable::LocalStore do
+  include MonotableHelperMethods
 
   it "should be possible to initialize a new LocalStore" do
     reset_temp_dir
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store.chunks.length.should == 1
   end
 
   it "should be possible to init from an existing LocalStore" do
     reset_temp_dir
     #init new localstore
-    MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    Monotable::LocalStore.new(:store_paths=>[temp_dir])
 
     # open existing localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store.chunks.length.should == 1
 
     local_store.chunks.each do |k,v|
-      v.kind_of?(MonoTable::DiskChunk).should == true
+      v.kind_of?(Monotable::DiskChunk).should == true
     end
   end
 
   it "should be possible to add entries to the localstore" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
 
     #load-it-up
     local_store.chunks.length.should == 1
@@ -42,28 +42,28 @@ describe MonoTable::LocalStore do
   it "should be possible to attach a localstore to a path with existing data" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     load_test_data_directory(local_store)
     local_store.get_chunk("").journal.compact
 
     #load LocalStore anew
-    local_store2=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").length.should == 4
-    MonoTable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
   end
 
   it "should be possible to attach a localstore to a path with a non-compacted journal" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     load_test_data_directory(local_store)
 
     #load LocalStore anew
-    local_store2=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
     local_store2.get_chunk("").length.should == 4
-    MonoTable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
 
     #test write
     local_store2.set("testkey",{"field"=>"value"})
@@ -72,7 +72,7 @@ describe MonoTable::LocalStore do
   it "should be possible to compact a journal" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -81,14 +81,14 @@ describe MonoTable::LocalStore do
     local_store.path_stores[0].journal_manager.current_journal.compact
 
     # load the chunk
-    chunk=MonoTable::MemoryChunk.load(local_store.get_chunk("").filename)
+    chunk=Monotable::MemoryChunk.load(local_store.get_chunk("").filename)
     chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png"].sort
   end
 
   it "should be possible to split a chunk" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -104,7 +104,7 @@ describe MonoTable::LocalStore do
   it "should be possible to split a chunk on a specific key" do
     reset_temp_dir
     #init new localstore
-    local_store=MonoTable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -121,7 +121,7 @@ describe MonoTable::LocalStore do
     reset_temp_dir
     test_max_chunk_size = 16 * 1024
     test_max_index_block_size = 256
-    local_store=MonoTable::LocalStore.new(
+    local_store=Monotable::LocalStore.new(
       :store_paths => [temp_dir],
       :max_chunk_size => test_max_chunk_size,
       :max_index_block_size => test_max_index_block_size

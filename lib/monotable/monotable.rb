@@ -1,4 +1,5 @@
 require File.join(File.dirname(__FILE__),"xbd")
+require File.join(File.dirname(__FILE__),"version")
 
 %w{
   mini_event_machine
