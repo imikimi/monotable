@@ -8,7 +8,7 @@ Values in cache should not change their keys nor their memory_size.
 =end
 
 
-module MonoTable
+module Monotable
   # MAX_CACHE_SIZE in bytes
   MAX_CACHE_SIZE=64*(1024**2)
 
