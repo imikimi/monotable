@@ -1,3 +1,4 @@
+require "thread"
 class MiniEventMachine
   class << self
     def init
