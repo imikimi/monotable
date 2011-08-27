@@ -73,22 +73,15 @@ module Monotable
     def sub_index_block(index_record)
       key=index_record.sub_block_key
       key<<@index_depth
-#      recurse_log("IndexBlock#locate(#{key.inspect})") do
-      # currenly I'm keeping in memory every index-block read
-      # in the future this should go through a central cache that only keeps in memory a fixed number of most-recently-used blocks
 
       # Caching note: we need to reset the cache at least for each separate test run (test are failing)
       # How do we want to handle more than one local-store active at a time? In general, this shouldn't happen, but it is good to avoid globals anyway
       # perhaps the "global_cache" should be localized to a local-store.
       # Last, we need to think through how the cache gets reset post compaction when we reset a chunk. We need some way to bulk invalidate entries.
       # Gut: have special memory rev-num for the chunk which get incremented with each compaction. Add that to the key. Let automatic eviction delete the old, unused entries
-      ret=cache.get(key) do
-#      index_record.sub_index_block||=
+      cache.get(key) do
         IndexBlock.new(self,index_record.key,index_record.disk_offset,index_record.disk_length)
       end
-#      puts "sub_index_block key = #{key.inspect} ret=#{ret.inspect}/#{ret.object_id} #{index_record.inspect}"
-      ret
-#      end
     end
 
     def locate(key)

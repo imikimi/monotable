@@ -110,7 +110,7 @@ module Monotable
     # Read API
     #*************************************************************
     def get(key,columns=nil)
-      (record=fetch_record(key)) && record && record.fields(columns)
+      (record=get_record(key)) && record && record.fields(columns)
     end
 
     #*************************************************************
@@ -163,7 +163,7 @@ module Monotable
     #*************************************************************
     # additional useful internal API
     #*************************************************************
-    def fetch_record(key)
+    def get_record(key)
       (@records[key] || locate_index_record(key)) unless @deleted_records[key]
     end
 

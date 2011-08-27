@@ -27,7 +27,7 @@ module Monotable
       def initialize(key,value) @key=key;@value=value; end
 
       # remove the linked list
-      # note, does not clear its own nnode and pnode - assuming they will be overwritten or discarded becore accessed again
+      # NOTE: does not clear its own nnode and pnode - assuming they will be overwritten or discarded becore accessed again
       def remove
         pnode.nnode=nnode
         nnode.pnode=pnode
