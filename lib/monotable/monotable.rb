@@ -5,6 +5,7 @@ require File.join(File.dirname(__FILE__),"version")
   mini_event_machine
   cache
   record_cache
+  index_block_cache
   constants
   tools
   file_handle

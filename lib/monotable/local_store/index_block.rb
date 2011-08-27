@@ -66,10 +66,6 @@ module Monotable
       @index_records
     end
 
-    def cache
-      @cache ||= Cache.global_cache
-    end
-
     def sub_index_block(index_record)
       key=index_record.sub_block_key
       key<<@index_depth
@@ -79,7 +75,7 @@ module Monotable
       # perhaps the "global_cache" should be localized to a local-store.
       # Last, we need to think through how the cache gets reset post compaction when we reset a chunk. We need some way to bulk invalidate entries.
       # Gut: have special memory rev-num for the chunk which get incremented with each compaction. Add that to the key. Let automatic eviction delete the old, unused entries
-      cache.get(key) do
+      IndexBlockCache.get(@chunk,key) do
         IndexBlock.new(self,index_record.key,index_record.disk_offset,index_record.disk_length)
       end
     end

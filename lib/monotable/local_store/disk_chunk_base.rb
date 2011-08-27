@@ -9,6 +9,18 @@ module Monotable
     attr_accessor :path_store
     attr_accessor :journal
 
+    class << self
+      def [](chunk_file)
+        chunk_file=File.expaned_path(chunk_file) # normalize
+        @disk_chunks||={}
+        @disk_chunks[chunk_file]
+      end
+
+      def init(creation_options)
+        @disk_chunks||=DiskChunk.new(creation_options)
+      end
+    end
+
     def initialize(options={})
       init_disk_chunk_base(options)
     end

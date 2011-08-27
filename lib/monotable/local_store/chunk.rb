@@ -56,6 +56,19 @@ Data-Block: consist of 0 or more data-records - as many as fit in the length of 
 =end
 
 module Monotable
+  module ChunkMemoryRevisions
+    def memory_revision
+      @memory_revision||=1
+    end
+
+    def next_memory_revision
+      @memory_revision+=1
+    end
+
+    def reset
+      next_memory_revision
+    end
+  end
 
   class Chunk
     HEADER_STRING = "MonotableChunk"
@@ -76,6 +89,8 @@ module Monotable
 
     attr_accessor :max_chunk_size
     attr_accessor :max_index_block_size
+
+    include ChunkMemoryRevisions
 
     def init_chunk(options={})
       @path_store = options[:path_store]

@@ -227,6 +227,9 @@ module Monotable
         FileUtils.rm [chunk_file] if File.exists?(chunk_file)
         FileUtils.mv compacted_file,chunk_file
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
+        # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
+        #   Then we can just:
+        #     Chunk[chunk_file].reset
       end
 
       FileUtils.rm success_filename
