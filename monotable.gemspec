@@ -19,7 +19,6 @@ Gem::Specification.new do |s|
   
   s.add_dependency 'RubyInline', '~> 3.9.0'  
   s.add_dependency 'rbtree', '~> 0.3.0'
-  s.add_dependency 'thin', '~> 1.2.11'
   s.add_dependency 'eventmachine', '~> 0.12.10'
   s.add_dependency 'eventmachine_httpserver', '~> 0.2.1'
   

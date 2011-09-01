@@ -48,10 +48,11 @@ class Monotable::Daemon < EM::Connection
       @response.content = 'List of records'
       @response.send_response
       nil
-    # elsif key.length == 0 && @http_request_method == 'POST'
-    #   # Create record
-    #   params = CGI.parse(@http_query_string)
-    #   [:create, key, params]
+    elsif key.length == 0 && @http_request_method == 'POST'
+      # Create record
+      # params = CGI.parse(@http_query_string)
+      params = Hash[URI.decode_www_form(@http_post_content)]
+      [:create, key, params]
     elsif key.length > 0 && @http_request_method == 'PUT'
       # Update record
       params = Hash[URI.decode_www_form(@http_post_content)]
