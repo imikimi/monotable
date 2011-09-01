@@ -1,7 +1,6 @@
 require "rubygems"
-#require "inline"
 require "benchmark"
-require "../lib/monotable/asi.rb"
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','asi'))
 
 def bench(benchmarker,val)
   asi=Xbd::Asi.new
