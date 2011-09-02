@@ -38,15 +38,7 @@ class Monotable::Daemon < EM::Connection
     end
   end
   
-  # Extract the params from the request, based upon the mime type and request method
-  def params_from_request
-    # Hash[URI.decode_www_form(@http_post_content)]
-    {'apple' => '1', 'banana' => '2'}
-  end
-    
-
   def handle_record_request(key)
-    puts "Got a call for key #{key}"
     req_call = case @http_request_method
       when 'GET'
         # List or Read, depending on if there is a key specified
@@ -80,6 +72,31 @@ class Monotable::Daemon < EM::Connection
     @response.content = 'Monotable'
     @response.send_response
     
+  end
+
+  # Turns everything in the hash to a string
+  # Does not preserve all the structure we may want; consider tweaking.
+  def deep_to_s(obj)
+    if obj.is_a?(Hash)
+      Hash[obj.map{|k,v| [k.to_s, v.to_s]}]
+    else
+      obj.to_s
+    end
+  end
+
+  # Extract the params from the request, based upon the mime type and request method
+  def params_from_request
+    if headers_hash['Accept'] == 'application/json'
+      deep_to_s(JSON.parse(@http_post_content))
+    end
+    
+    # Hash[URI.decode_www_form(@http_post_content)]
+    # {'apple' => '1', 'banana' => '2'}
+  end
+  
+  # Returns a hash of strings for the http headers
+  def headers_hash
+    @headers_hash ||= Hash[@http_headers.split("\x00").map{|x| x.split(': ',2)}]
   end
   
   

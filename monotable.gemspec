@@ -17,12 +17,14 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   
-  s.add_dependency 'RubyInline', '~> 3.9.0'  
+  s.add_dependency 'RubyInline', '~> 3.9.0'
   s.add_dependency 'rbtree', '~> 0.3.0'
   s.add_dependency 'eventmachine', '~> 0.12.10'
   s.add_dependency 'eventmachine_httpserver', '~> 0.2.1'
+  s.add_dependency 'json'
   
   s.add_development_dependency 'rspec', '~> 2.6.0'
+  s.add_development_dependency 'rest-client'
   
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]

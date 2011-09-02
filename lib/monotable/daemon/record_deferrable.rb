@@ -6,7 +6,6 @@ class Monotable::Daemon::RecordDeferrable
   end
     
   def list
-    puts "List"
     @response.status = '200'
     @response.content_type 'text/plain'    
     @response.content = 'TODO List of records'
@@ -14,11 +13,13 @@ class Monotable::Daemon::RecordDeferrable
   end
   
   def create(key, props)
-    puts "Received create for #{key}"    
+    @response.status = '200'
+    @response.content_type 'text/plain'    
+    @response.content = 'TODO Create record'
+    @response.send_response
   end
     
   def update(key,props)
-    puts "Received update for #{key}"
     self.callback do
       @response.status = '202'
       @response.content_type 'text/plain'    
@@ -26,17 +27,17 @@ class Monotable::Daemon::RecordDeferrable
       @response.send_response    
     end    
     # TODO Add a errback, when the conditions are known for such a failure
-    EM.defer proc { LOCAL_STORE.set(key,props) }, proc {|set_result| succeed }
+    call_p, result_p = proc { Monotable::LOCAL_STORE.set(key,props) }, proc {|set_result| succeed }
+    EM.defer call_p, result_p
+    # result_p.call(call_p.call)
   end
   
   def read(key)
-    puts "Received read for #{key}"    
     self.callback do |content|
       @response.status = '200'
       # @response.content_type 'application/octet-stream'
-      puts "read of key #{key}"
       @response.content_type 'text/plain'          
-      @response.content = content.inspect
+      @response.content = content.to_json
       @response.send_response          
     end    
     self.errback do
@@ -45,13 +46,14 @@ class Monotable::Daemon::RecordDeferrable
       @response.content = 'Record not found'            
       @response.send_response
     end
-    
-    EM.defer proc { LOCAL_STORE.get(key) }, proc {|get_result| get_result ? succeed(get_result) : fail }
+    EM.defer(
+      proc { Monotable::LOCAL_STORE.get(key) },
+      proc {|get_result| get_result ? succeed(get_result) : fail }
+    )
   end
   
-  
   def delete(key)
-    puts "Received delete for #{key}"    
+    EM.defer proc { Monotable::LOCAL_STORE.delete(key) }, proc {|delete_result| succeed }   
   end
   
 end
