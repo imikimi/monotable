@@ -38,6 +38,7 @@ module Monotable
     end
 
     def init_local_store(options={})
+      Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
 

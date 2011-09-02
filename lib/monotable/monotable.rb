@@ -2,6 +2,7 @@ require File.join(File.dirname(__FILE__),"xbd")
 require File.join(File.dirname(__FILE__),"version")
 
 %w{
+  global
   mini_event_machine
   cache
   record_cache

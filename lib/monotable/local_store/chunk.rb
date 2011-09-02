@@ -62,7 +62,7 @@ module Monotable
     end
 
     def next_memory_revision
-      @memory_revision+=1
+      @memory_revision=(@memory_revision||0)+1
     end
 
     def reset
@@ -319,7 +319,7 @@ module Monotable
       to_filename||=path_store.generate_filename
 
       # create new chunk
-      second_chunk_file=DiskChunk.new(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
+      second_chunk_file=DiskChunk.init(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
 
       # do the actual split
       # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.

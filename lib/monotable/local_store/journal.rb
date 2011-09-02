@@ -230,6 +230,7 @@ module Monotable
         # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
         #   Then we can just:
         #     Chunk[chunk_file].reset
+        (cf=DiskChunk[chunk_file]) && cf.reset
       end
 
       FileUtils.rm success_filename
