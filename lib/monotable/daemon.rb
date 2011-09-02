@@ -38,37 +38,34 @@ class Monotable::Daemon < EM::Connection
     end
   end
   
+  # Extract the params from the request, based upon the mime type and request method
+  def params_from_request
+    # Hash[URI.decode_www_form(@http_post_content)]
+    {'apple' => '1', 'banana' => '2'}
+  end
+    
 
   def handle_record_request(key)
-    
-    req_call = if key.length == 0 && @http_request_method == 'GET'
-      # List records
-      @response.status = '200'
-      @response.content_type 'text/html'
-      @response.content = 'List of records'
-      @response.send_response
-      nil
-    elsif key.length == 0 && @http_request_method == 'POST'
-      # Create record
-      # params = CGI.parse(@http_query_string)
-      params = Hash[URI.decode_www_form(@http_post_content)]
-      [:create, key, params]
-    elsif key.length > 0 && @http_request_method == 'PUT'
-      # Update record
-      params = Hash[URI.decode_www_form(@http_post_content)]
-      [:update, key, params]
-    elsif key.length > 0 && @http_request_method == 'GET'
-      # Read record
-      [:read, key]
-    elsif key.length > 0 && @http_request_method == 'DELETE'
-      # Delete record
-      nil
+    puts "Got a call for key #{key}"
+    req_call = case @http_request_method
+      when 'GET'
+        # List or Read, depending on if there is a key specified
+        key.length > 0 ? [:read, key] : [:list]
+      when 'POST'
+        # Create record
+        [:create, key, params_from_request] if key.length == 0
+      when 'PUT'
+        # Update record
+        [:update, key, params_from_request] if key.length > 0        
+      when 'DELETE'
+        # Delete record
+        [:delete, key] if key.length > 0        
     end
-    
-    if req_call
+            
+    if req_call && req_call.any?
       rd = RecordDeferrable.new(@response)
       rd.send(*req_call)
-    else
+    elsif !req_call
       # Unknown request
       @response.status = 406
       @response.content_type 'text/html'

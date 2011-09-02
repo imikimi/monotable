@@ -4,8 +4,17 @@ class Monotable::Daemon::RecordDeferrable
   def initialize(response)
     @response = response    
   end
+    
+  def list
+    puts "List"
+  end
   
+  def create(key, props)
+    puts "Received create for #{key}"    
+  end
+    
   def update(key,props)
+    puts "Received update for #{key}"
     self.callback do
       @response.status = '202'
       @response.content_type 'text/plain'    
@@ -19,9 +28,11 @@ class Monotable::Daemon::RecordDeferrable
   end
   
   def read(key)
+    puts "Received read for #{key}"    
     self.callback do |content|
       @response.status = '200'
-      # @response.content_type 'application/octet-stream'    
+      # @response.content_type 'application/octet-stream'
+      puts "read of key #{key}"
       @response.content_type 'text/plain'          
       @response.content = content.inspect
       @response.send_response          
@@ -40,6 +51,7 @@ class Monotable::Daemon::RecordDeferrable
   
   
   def delete(key)
+    puts "Received delete for #{key}"    
   end
   
 end

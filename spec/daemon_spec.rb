@@ -1,5 +1,5 @@
 require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable'))
-require 'net/http'
+require 'rest_client'
 
 describe Monotable::Daemon do
   PORT = 32100
@@ -12,10 +12,15 @@ describe Monotable::Daemon do
         EM.start_server HOST, PORT,  Monotable::Daemon
       }
     }
+    @record_resource = RestClient::Resource.new "http://localhost:#{PORT}/records"
   end
 
   it "should be accessible via HTTP" do
     Net::HTTP.get(HOST,'/',PORT).should_not be_empty
+  end
+  
+  it "return the JSON we feed it" do
+    @record_resource.get
   end
 
   after(:all) do
