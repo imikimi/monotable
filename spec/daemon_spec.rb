@@ -5,6 +5,7 @@ require 'tmpdir'
 require 'fileutils'
 require 'net/http'
 require 'json'
+require 'uri'
 
 describe Monotable::Daemon do
   PORT = 32100
@@ -31,6 +32,11 @@ describe Monotable::Daemon do
 
   it "should be accessible via HTTP" do
     Net::HTTP.get(HOST,'/',PORT).should_not be_empty
+  end
+  
+  it "returns 404 for a non-existant record" do
+    res = Net::HTTP.get_response(HOST,"/records/missing", PORT)
+    res.code.should == '404'
   end
   
   it "return the JSON we feed it" do
