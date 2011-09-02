@@ -18,3 +18,5 @@ tmp
 _yardoc
 doc/
 
+# Locally created things
+data
