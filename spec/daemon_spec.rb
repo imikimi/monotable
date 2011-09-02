@@ -27,25 +27,22 @@ describe Monotable::Daemon do
       }
     }
     sleep 0.1 # Hack; sleep for a bit while the server starts up
-    # @record_resource = RestClient::Resource.new "http://localhost:#{PORT}/records"
   end
 
   it "should be accessible via HTTP" do
     Net::HTTP.get(HOST,'/',PORT).should_not be_empty
   end
   
-  it "returns 404 for a non-existant record" do
+  it "returns 404 for a non-existent record" do
     res = Net::HTTP.get_response(HOST,"/records/missing", PORT)
     res.code.should == '404'
   end
   
-  it "return the JSON we feed it" do
+  it "return the record we create when using JSON" do
     record_key = 'apple'
     record_value = { 'x' => '1' }.to_json
     RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
     RestClient.get("#{DAEMON_URI}/records/#{record_key}").should == record_value
-    # x = Net::HTTP.put("#{DAEMON_URI}/records/apple", {'abcde' => 'xyzzy'} )
-    # puts Net::HTTP.get(HOST,'/records/apple',PORT).inspect
   end
 
   after(:all) do
