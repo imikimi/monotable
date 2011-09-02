@@ -11,5 +11,6 @@ Dir.mkdir(LOCAL_STORE_PATH) unless File.exists?(LOCAL_STORE_PATH)
 LOCAL_STORE = Monotable::SoloDaemon.new(:store_paths=>[LOCAL_STORE_PATH])
 
 EM.run{
+  EM.threadpool_size = 1 # TODO Increase then when the localstore is thread-safe
   EM.start_server '0.0.0.0', 8080,  Monotable::Daemon
 }

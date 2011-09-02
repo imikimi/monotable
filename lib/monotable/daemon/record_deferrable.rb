@@ -7,6 +7,10 @@ class Monotable::Daemon::RecordDeferrable
     
   def list
     puts "List"
+    @response.status = '200'
+    @response.content_type 'text/plain'    
+    @response.content = 'TODO List of records'
+    @response.send_response    
   end
   
   def create(key, props)
@@ -22,9 +26,7 @@ class Monotable::Daemon::RecordDeferrable
       @response.send_response    
     end    
     # TODO Add a errback, when the conditions are known for such a failure
-    # TODO Put this in a defer
-    LOCAL_STORE.set(key,props)
-    succeed
+    EM.defer proc { LOCAL_STORE.set(key,props) }, proc {|set_result| succeed }
   end
   
   def read(key)
@@ -44,9 +46,7 @@ class Monotable::Daemon::RecordDeferrable
       @response.send_response
     end
     
-    # TODO Do this in a defer
-    content = LOCAL_STORE.get(key) 
-    content ? succeed(content) : fail
+    EM.defer proc { LOCAL_STORE.get(key) }, proc {|get_result| get_result ? succeed(get_result) : fail }
   end
   
   
