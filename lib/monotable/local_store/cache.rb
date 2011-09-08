@@ -96,6 +96,7 @@ module Monotable
 
     def []=(key,value)
       delete(key)
+      return unless value
       ms=value.memory_size
       free ms
       @size+=ms
