@@ -20,6 +20,7 @@ class Monotable::Daemon::RecordDeferrable
   end
     
   def update(key,props)
+    puts "update"
     self.callback do
       @response.status = '202'
       @response.content_type 'text/plain'    
@@ -28,11 +29,12 @@ class Monotable::Daemon::RecordDeferrable
     end    
     # TODO Add a errback, when the conditions are known for such a failure
     call_p, result_p = proc { Monotable::LOCAL_STORE.set(key,props) }, proc {|set_result| succeed }
-    EM.defer call_p, result_p
-    # result_p.call(call_p.call)
+    # EM.defer call_p, result_p
+    result_p.call(call_p.call)
   end
   
   def read(key)
+    puts "read"
     self.callback do |content|
       @response.status = '200'
       # @response.content_type 'application/octet-stream'
@@ -46,14 +48,16 @@ class Monotable::Daemon::RecordDeferrable
       @response.content = 'Record not found'            
       @response.send_response
     end
-    EM.defer(
-      proc { Monotable::LOCAL_STORE.get(key) },
-      proc {|get_result| get_result ? succeed(get_result) : fail }
-    )
+    call_p, result_p = proc { Monotable::LOCAL_STORE.get(key) }, proc {|get_result| get_result ? succeed(get_result) : fail }
+    # EM.defer call_p, result_p
+    result_p.call(call_p.call)    
   end
   
   def delete(key)
-    EM.defer proc { Monotable::LOCAL_STORE.delete(key) }, proc {|delete_result| succeed }   
+    puts "delete"
+    # EM.defer proc { Monotable::LOCAL_STORE.delete(key) }, proc {|delete_result| succeed }   
+    Monotable::LOCAL_STORE.delete(key)
+    succeed
   end
   
 end

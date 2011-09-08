@@ -44,6 +44,17 @@ describe Monotable::Daemon do
     RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
     RestClient.get("#{DAEMON_URI}/records/#{record_key}").should == record_value
   end
+  
+  it "should not return the record after we've deleted it" do
+    record_key = 'apple'
+    record_value = { 'x' => '1' }.to_json
+    RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
+    RestClient.delete("#{DAEMON_URI}/records/#{record_key}")
+    RestClient.get("#{DAEMON_URI}/records/#{record_key}") {|response, request, result|
+      response.code.should == 200
+    }
+    Net::HTTP.get_response(HOST,"/records/missing", PORT)    
+  end
 
   after(:all) do
     # Shut down the daemon
