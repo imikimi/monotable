@@ -93,7 +93,7 @@ describe Monotable::DiskChunk do
   end
 
   def test_index_block_structure(max_chunk_size, max_index_block_size, num_records, data_multiplier, expected_chunk_count, expected_depth)
-    Monotable::Cache.global_cache.reset
+    Monotable::Global.reset
     reset_temp_dir
     options={:store_paths=>[temp_dir],:max_chunk_size => max_chunk_size, :max_index_block_size => max_index_block_size}
     solo = Monotable::SoloDaemon.new(options)

@@ -18,6 +18,7 @@ module MonotableHelperMethods
   end
 
   def reset_temp_dir
+    Monotable::Global.reset
     `rm -rf #{temp_dir}/*`
     `mkdir -p #{temp_dir}`
     temp_dir

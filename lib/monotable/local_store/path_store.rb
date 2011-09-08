@@ -44,7 +44,7 @@ module Monotable
       when MemoryChunk then
         filename=generate_filename
         chunk.save(filename)
-        chunks[filename]=DiskChunk.new(:filename=>filename,:journal=>journal_manager,:path_store=>self)
+        chunks[filename]=DiskChunk.init(:filename=>filename,:journal=>journal_manager,:path_store=>self)
       when DiskChunk then
         raise "DiskChunk attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
         chunk.path_store=self
@@ -64,7 +64,7 @@ module Monotable
         chunk_number=$1.to_i
         @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
 
-        chunks[f]=DiskChunk.new(:filename=>f,:journal=>journal_manager,:path_store=>self)
+        chunks[f]=DiskChunk.init(:filename=>f,:journal=>journal_manager,:path_store=>self)
       end
     end
 

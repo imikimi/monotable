@@ -5,8 +5,11 @@ require File.join(File.dirname(__FILE__),'daemon')
 require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
 
 %w{
+  global
   mini_event_machine
   cache
+  record_cache
+  index_block_cache
   constants
   tools
   file_handle

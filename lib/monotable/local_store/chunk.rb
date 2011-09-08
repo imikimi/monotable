@@ -56,6 +56,19 @@ Data-Block: consist of 0 or more data-records - as many as fit in the length of 
 =end
 
 module Monotable
+  module ChunkMemoryRevisions
+    def memory_revision
+      @memory_revision||=1
+    end
+
+    def next_memory_revision
+      @memory_revision=(@memory_revision||0)+1
+    end
+
+    def reset
+      next_memory_revision
+    end
+  end
 
   class Chunk
     HEADER_STRING = "MonotableChunk"
@@ -76,6 +89,8 @@ module Monotable
 
     attr_accessor :max_chunk_size
     attr_accessor :max_index_block_size
+
+    include ChunkMemoryRevisions
 
     def init_chunk(options={})
       @path_store = options[:path_store]
@@ -304,7 +319,7 @@ module Monotable
       to_filename||=path_store.generate_filename
 
       # create new chunk
-      second_chunk_file=DiskChunk.new(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
+      second_chunk_file=DiskChunk.init(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
 
       # do the actual split
       # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.

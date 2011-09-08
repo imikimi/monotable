@@ -15,6 +15,7 @@ module Monotable
     def accounting_size
       @accounting_size||=calculate_accounting_size
     end
+    alias :memory_size :accounting_size
 
     def [](key) fields[key] end
 

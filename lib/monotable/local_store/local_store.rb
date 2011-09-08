@@ -5,11 +5,31 @@
 require "rbtree"
 
 module Monotable
+  module LocalStoreUserApi
+    #*************************************************************
+    # Read API
+    #*************************************************************
+    def get(key,field_names=nil)
+      record=RecordCache.get(key) do
+        get_chunk(key).get_record(key)
+      end
+      record && record.fields(field_names)
+    end
+
+    #*************************************************************
+    # Write API
+    #*************************************************************
+    def set(key,fields)     RecordCache[key]=get_chunk(key).set(key,fields) end
+    def update(key,fields)  RecordCache[key]=get_chunk(key).update(key,fields) end
+    def delete(key)         get_chunk(key).delete(key);RecordCache.delete(key) end
+  end
+
   class LocalStore
     attr_accessor :chunks
     attr_accessor :max_index_block_size
     attr_accessor :max_chunk_size
     attr_accessor :path_stores
+    include LocalStoreUserApi
 
     #options
     #   :store_paths
@@ -18,6 +38,7 @@ module Monotable
     end
 
     def init_local_store(options={})
+      Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
 
@@ -40,13 +61,6 @@ module Monotable
     end
 
     #*************************************************************
-    # Read API
-    #*************************************************************
-    def get(key,field_names=nil)
-      get_chunk(key).get(key,field_names)
-    end
-
-    #*************************************************************
     # MemoryChunk API
     #*************************************************************
     # Throws errors if chunk for key not present
@@ -64,12 +78,6 @@ module Monotable
       @chunks.lower_bound(chunk.range_end)[1]
     end
 
-    #*************************************************************
-    # Write API
-    #*************************************************************
-    def set(key,fields)     get_chunk(key).set(key,fields) end
-    def update(key,fields)  get_chunk(key).update(key,fields) end
-    def delete(key)         get_chunk(key).delete(key) end
 
     #*************************************************************
     # Internal API

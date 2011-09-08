@@ -9,6 +9,36 @@ module Monotable
     attr_accessor :path_store
     attr_accessor :journal
 
+    class << self
+      def reset_disk_chunks
+        @disk_chunks={}
+      end
+
+      def debug_chunks(info=nil)
+        puts "DiskChunkBase(#{info.inspect}).disk_chunks: #{(@disk_chunks && @disk_chunks.keys).inspect}"
+      end
+
+      def disk_chunks
+        @disk_chunks||={}
+      end
+
+      def [](chunk_file)
+        chunk_file=File.expand_path(chunk_file) # normalize
+        disk_chunks[chunk_file]
+      end
+
+      def []=(chunk_file,chunk)
+        chunk_file=File.expand_path(chunk_file) # normalize
+        raise "chunk already created" if disk_chunks[chunk_file]
+        disk_chunks[chunk_file]=chunk
+      end
+
+      def init(options)
+        self[options[:filename]]=
+        DiskChunk.new(options)
+      end
+    end
+
     def initialize(options={})
       init_disk_chunk_base(options)
     end
