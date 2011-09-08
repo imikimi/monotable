@@ -20,7 +20,6 @@ class Monotable::Daemon::RecordDeferrable
   end
     
   def update(key,props)
-    puts "update"
     self.callback do
       @response.status = '202'
       @response.content_type 'text/plain'    
@@ -34,7 +33,6 @@ class Monotable::Daemon::RecordDeferrable
   end
   
   def read(key)
-    puts "read"
     self.callback do |content|
       @response.status = '200'
       # @response.content_type 'application/octet-stream'
@@ -54,7 +52,13 @@ class Monotable::Daemon::RecordDeferrable
   end
   
   def delete(key)
-    puts "delete"
+    self.callback do |content|
+      @response.status = '204'
+      # @response.content_type 'application/octet-stream'
+      @response.content_type 'text/plain'          
+      # @response.content = content.to_json
+      @response.send_response          
+    end
     # EM.defer proc { Monotable::LOCAL_STORE.delete(key) }, proc {|delete_result| succeed }   
     Monotable::LOCAL_STORE.delete(key)
     succeed
