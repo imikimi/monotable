@@ -48,12 +48,16 @@ describe Monotable::Daemon do
   it "should not return the record after we've deleted it" do
     record_key = 'apple'
     record_value = { 'x' => '1' }.to_json
+    # First write the record, and make sure it is there
     RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
-    RestClient.delete("#{DAEMON_URI}/records/#{record_key}")
     RestClient.get("#{DAEMON_URI}/records/#{record_key}") {|response, request, result|
       response.code.should == 200
     }
-    Net::HTTP.get_response(HOST,"/records/missing", PORT)    
+    # Then delete the record, and make sure it is not there
+    RestClient.delete("#{DAEMON_URI}/records/#{record_key}")
+    RestClient.get("#{DAEMON_URI}/records/#{record_key}") {|response, request, result|
+      response.code.should == 404
+    }
   end
 
   after(:all) do
