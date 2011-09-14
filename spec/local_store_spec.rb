@@ -137,4 +137,19 @@ describe Monotable::LocalStore do
     chunk1.max_chunk_size.should == test_max_chunk_size
     chunk1.max_index_block_size.should == test_max_index_block_size
   end
+
+  it "should not return the record after we've deleted it" do
+    reset_temp_dir
+    #init new localstore
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+
+    record_key = 'apple'
+    record_value = { 'x' => '1' }
+    local_store.set(record_key,record_value)
+
+    local_store.get(record_key).should_not==nil
+
+    local_store.delete(record_key)
+    local_store.get(record_key).should==nil
+  end
 end

@@ -9,6 +9,7 @@ module Monotable
     #*************************************************************
     # Read API
     #*************************************************************
+    # returns nil if the record does not exist
     def get(key,field_names=nil)
       record=RecordCache.get(key) do
         get_chunk(key).get_record(key)
@@ -24,12 +25,33 @@ module Monotable
     def delete(key)         get_chunk(key).delete(key);RecordCache.delete(key) end
   end
 
+  module LocalStoreChunkApi
+    #*************************************************************
+    # MemoryChunk API
+    #*************************************************************
+    # Throws errors if chunk for key not present
+    def get_chunk(key) # rename chunk_for_record
+      chunk_key,chunk=@chunks.upper_bound(key)
+      raise "local chunks do not cover the key #{key.inspect}" unless chunk && chunk.in_range?(key)
+      chunk
+    end
+
+    def chunk_keys
+      @chunks.keys
+    end
+
+    def next_chunk(chunk)
+      @chunks.lower_bound(chunk.range_end)[1]
+    end
+  end
+
   class LocalStore
     attr_accessor :chunks
     attr_accessor :max_index_block_size
     attr_accessor :max_chunk_size
     attr_accessor :path_stores
     include LocalStoreUserApi
+    include LocalStoreChunkApi
 
     #options
     #   :store_paths
@@ -58,24 +80,6 @@ module Monotable
       chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
       chunk_file=@path_stores[0].add(chunk)
       chunks[chunk_file.range_start]=chunk_file
-    end
-
-    #*************************************************************
-    # MemoryChunk API
-    #*************************************************************
-    # Throws errors if chunk for key not present
-    def get_chunk(key) # rename chunk_for_record
-      chunk_key,chunk=@chunks.upper_bound(key)
-      raise "local chunks do not cover the key #{key.inspect}" unless chunk && chunk.in_range?(key)
-      chunk
-    end
-
-    def chunk_keys
-      @chunks.keys
-    end
-
-    def next_chunk(chunk)
-      @chunks.lower_bound(chunk.range_end)[1]
     end
 
 

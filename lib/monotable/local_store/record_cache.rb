@@ -14,7 +14,7 @@ module Monotable
       def []=(key,value) @cache[cache_key(key)]=value end
 
       def get(key,&block) @cache.get(cache_key(key),&block) end
-      def delete(key)     @cache.delete(key) end
+      def delete(key)     @cache.delete(cache_key(key)) end
     end
   end
   RecordCache.init
