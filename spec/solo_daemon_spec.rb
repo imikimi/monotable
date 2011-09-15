@@ -7,13 +7,13 @@ describe Monotable::DiskChunk do
 
   it "should be possible to initialize a new SoloDaemon" do
     reset_temp_dir
-    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
     solo.chunks.length.should == 1
   end
 
   it "should auto-split too-big chunks" do
     reset_temp_dir
-    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size=4000}
@@ -36,7 +36,7 @@ describe Monotable::DiskChunk do
 
   it "should auto-split too-big journals" do
     reset_temp_dir
-    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     # set a small max_journal_size for testing
     start_journal=solo.path_stores[0].journal_manager.current_journal
@@ -64,7 +64,7 @@ describe Monotable::DiskChunk do
 
   it "should auto-split too-big chunks and auto-compact too-big journals" do
     reset_temp_dir
-    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000)
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000,:initialize_new_store=>true)
 
     # set a small max_chunk_size for testing
     solo.chunks.each {|key,chunk| chunk.max_chunk_size.should == 4000}
@@ -96,7 +96,7 @@ describe Monotable::DiskChunk do
     Monotable::Global.reset
     reset_temp_dir
     options={:store_paths=>[temp_dir],:max_chunk_size => max_chunk_size, :max_index_block_size => max_index_block_size}
-    solo = Monotable::SoloDaemon.new(options)
+    solo = Monotable::SoloDaemon.new(options.merge(:initialize_new_store=>true))
 
     control_set={}
     (1..num_records).each do |n|
@@ -125,4 +125,10 @@ describe Monotable::DiskChunk do
   it "should work to have 2 index level" do test_index_block_structure(64*1024,64,32,2,1,2) end
   it "should work to have 3 index level" do test_index_block_structure(64*1024,64,128,2,1,3) end
   it "should work to have 4 index level" do test_index_block_structure(64*1024,64,512,2,1,4) end
+
+  it "should work to create a multi-store" do
+    reset_temp_dir
+    solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir])
+    solo.initialize_new_multi_store
+  end
 end

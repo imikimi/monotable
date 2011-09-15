@@ -97,8 +97,8 @@ module Monotable
       @max_chunk_size = options[:max_chunk_size] || ((ps=options[:path_store]) && ps.max_chunk_size) || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || ((ps=options[:path_store]) && ps.max_index_block_size) ||  DEFAULT_MAX_INDEX_BLOCK_SIZE
 
-      @range_start=""
-      @range_end=:infinity
+      @range_start=options[:range_start] || ""
+      @range_end=options[:range_end] || :infinity
       @records=options[:records] || {}
       @accounting_size=0
       @loaded_record_count=0

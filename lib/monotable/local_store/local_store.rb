@@ -32,7 +32,7 @@ module Monotable
     # Throws errors if chunk for key not present
     def get_chunk(key) # rename chunk_for_record
       chunk_key,chunk=@chunks.upper_bound(key)
-      raise "local chunks do not cover the key #{key.inspect}" unless chunk && chunk.in_range?(key)
+      raise "local chunks do not cover the key #{key.inspect}\nchunks: #{@chunks.keys.inspect}" unless chunk && chunk.in_range?(key)
       chunk
     end
 
@@ -73,13 +73,28 @@ module Monotable
         end
         ps
       end
-      initialize_new_store if chunks.length==0
+      initialize_new_store if options[:initialize_new_store]
+    end
+
+    def initialize_new_multi_store
+      @multi_store=true
+      [
+      "",
+      INDEX_KEY_PREFIX*3+FIRST_DATA_KEY,  # for 64meg chunks approx 2^16 records max at this index level
+      INDEX_KEY_PREFIX*2+FIRST_DATA_KEY,  # for 64meg chunks approx 2^32 records max at this index level
+      INDEX_KEY_PREFIX*1+FIRST_DATA_KEY,  # for 64meg chunks approx 2^48 records max at this index level
+      FIRST_DATA_KEY                      # for 64meg chunks approx 2^74 bytes max at this index level
+      ].each do |range_start|
+        chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size,:range_start=>range_start)
+        chunk_file=@path_stores[0].add(chunk)
+        add chunk_file
+      end
     end
 
     def initialize_new_store
       chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
       chunk_file=@path_stores[0].add(chunk)
-      chunks[chunk_file.range_start]=chunk_file
+      add chunk_file
     end
 
 
@@ -88,7 +103,14 @@ module Monotable
     #*************************************************************
     def add(chunk)
       case chunk
-      when DiskChunk then chunks[chunk.range_start]=chunk
+      when DiskChunk then
+        chunks[chunk.range_start]=chunk
+        if @multi_store && chunk.range_start>""
+          index_key,index_record=GlobalIndex.create_record_for_chunk(chunk)
+          #puts "initialize_new_multi_store; adding chunk #{chunk.range_start.inspect}; index-record's key: #{[index_key,index_record].inspect}"
+          # this should eventually call .set on the "router", not on self
+          set(index_key,index_record)
+        end
       else raise "unknown type #{chunk.class}"
       end
     end

@@ -6,14 +6,14 @@ describe Monotable::LocalStore do
 
   it "should be possible to initialize a new LocalStore" do
     reset_temp_dir
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
     local_store.chunks.length.should == 1
   end
 
   it "should be possible to init from an existing LocalStore" do
     reset_temp_dir
     #init new localstore
-    Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     # open existing localstore
     local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
@@ -27,7 +27,7 @@ describe Monotable::LocalStore do
   it "should be possible to add entries to the localstore" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     #load-it-up
     local_store.chunks.length.should == 1
@@ -42,7 +42,7 @@ describe Monotable::LocalStore do
   it "should be possible to attach a localstore to a path with existing data" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
     load_test_data_directory(local_store)
     local_store.get_chunk("").journal.compact
 
@@ -56,7 +56,7 @@ describe Monotable::LocalStore do
   it "should be possible to attach a localstore to a path with a non-compacted journal" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
     load_test_data_directory(local_store)
 
     #load LocalStore anew
@@ -72,7 +72,7 @@ describe Monotable::LocalStore do
   it "should be possible to compact a journal" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -88,7 +88,7 @@ describe Monotable::LocalStore do
   it "should be possible to split a chunk" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -104,7 +104,7 @@ describe Monotable::LocalStore do
   it "should be possible to split a chunk on a specific key" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     #load-it-up
     load_test_data_directory(local_store)
@@ -124,7 +124,8 @@ describe Monotable::LocalStore do
     local_store=Monotable::LocalStore.new(
       :store_paths => [temp_dir],
       :max_chunk_size => test_max_chunk_size,
-      :max_index_block_size => test_max_index_block_size
+      :max_index_block_size => test_max_index_block_size,
+      :initialize_new_store => true
     )
 
     # split the chunk
@@ -141,7 +142,7 @@ describe Monotable::LocalStore do
   it "should not return the record after we've deleted it" do
     reset_temp_dir
     #init new localstore
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
 
     record_key = 'apple'
     record_value = { 'x' => '1' }

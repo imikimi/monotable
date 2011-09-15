@@ -11,6 +11,7 @@ require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
   record_cache
   index_block_cache
   constants
+  global_index
   tools
   file_handle
   journal
