@@ -5,6 +5,7 @@ require File.join(File.dirname(__FILE__),'daemon')
 require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
 
 %w{
+  string
   global
   mini_event_machine
   cache

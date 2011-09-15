@@ -5,7 +5,7 @@
 require "rbtree"
 
 module Monotable
-  module LocalStoreUserApi
+  module LocalStoreClientAPI
     #*************************************************************
     # Read API
     #*************************************************************
@@ -50,7 +50,7 @@ module Monotable
     attr_accessor :max_index_block_size
     attr_accessor :max_chunk_size
     attr_accessor :path_stores
-    include LocalStoreUserApi
+    include LocalStoreClientAPI
     include LocalStoreChunkApi
 
     #options

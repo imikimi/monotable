@@ -70,6 +70,106 @@ module Monotable
     end
   end
 
+  module ChunkClientAPI
+    #*************************************************************
+    # Read API
+    #*************************************************************
+    def get(key,columns=nil)
+      (record=@records[key]) && record.fields(columns)
+    end
+
+    # returns array in format: [[key,record],...]
+    # get_first :gte => key
+    # options
+    #   :limit => #
+    #   :gte => key
+    #   :gt => key
+    #   :lt => key
+    #   :lte => key
+    #   :with_prefix => key
+    #   :columns => nil / {...}
+    def get_first(options={})
+      records=self.records
+      n=DEFAULT_MAX_KEY_LENGTH
+      if key=options[:with_prefix]
+        gte_key=key
+        lte_key=key+"\xff"*(n-key.length)
+      end
+      lte_key=options[:lt].binary_prev(n) if options[:lt]
+      lte_key=options[:lte] if options[:lte]
+      gte_key=options[:gt].binary_next(n) if options[:gt]
+      gte_key=options[:gte] if options[:gte]
+
+      gte_key||=""
+      lte_key||="\xff"*n
+
+      res=[]
+      limit=options[:limit]||1
+      each_key do |k|
+        break if res.length>=limit || k > lte_key
+        res << [k,records[k]] if k>=gte_key
+      end
+      res
+    end
+
+    # returns array in format: [[key,record],...]
+    # options
+    #   :limit => #
+    #   :gte => key
+    #   :gt => key
+    #   :lt => key
+    #   :lte => key
+    #   :with_prefix => key
+    #   :columns => nil / {...}
+    def get_last(options={})
+      records=self.records
+      n=DEFAULT_MAX_KEY_LENGTH
+      if key=options[:with_prefix]
+        gte_key=key
+        lte_key=key+"\xff"*(n-key.length)
+      end
+      lte_key=options[:lt].binary_prev(n) if options[:lt]
+      lte_key=options[:lte] if options[:lte]
+      gte_key=options[:gt].binary_next(n) if options[:gt]
+      gte_key=options[:gte] if options[:gte]
+
+      gte_key||=""
+      lte_key||="\xff"*n
+
+      res=[]
+      limit=options[:limit]||1
+      reverse_each_key do |k|
+        break if res.length>=limit || k < gte_key
+        res << [k,records[k]] if k<=lte_key
+      end
+      res.reverse
+    end
+
+    #*************************************************************
+    # Write API
+    #*************************************************************
+    # value must be a hash or a Monotable::Record
+    def set(key,fields)
+      record=case fields
+      when Hash then MemoryRecord.new.init(key,fields)
+      when Record then fields
+      else raise "value must be a Hash or Record"
+      end
+      set_internal(key,record)
+    end
+
+    def update(key,columns)
+      fields = get(key) || {}
+      fields.update(columns)
+      set(key,fields) # call set so DiskChunk can override it
+      fields
+    end
+
+    def delete(key)
+      delete_internal(key)
+    end
+  end
+
   class Chunk
     HEADER_STRING = "MonotableChunk"
     MAJOR_VERSION = 0
@@ -91,6 +191,7 @@ module Monotable
     attr_accessor :max_index_block_size
 
     include ChunkMemoryRevisions
+    include ChunkClientAPI
 
     def init_chunk(options={})
       @path_store = options[:path_store]
@@ -140,6 +241,11 @@ module Monotable
     # yields each key in the chunk in sorted order
     def each_key
       keys.sort.each {|key| yield key}
+    end
+
+    # yields each key in the chunk in reverse sorted order
+    def reverse_each_key
+      keys.sort.reverse_each {|key| yield key}
     end
 
     # yields each key in the chunk, not necessarilly in sorted order
@@ -203,36 +309,6 @@ module Monotable
       records[key]
     end
 
-    #*************************************************************
-    # Read API
-    #*************************************************************
-    def get(key,columns=nil)
-      (record=@records[key]) && record.fields(columns)
-    end
-
-    #*************************************************************
-    # Write API
-    #*************************************************************
-    # value must be a hash or a Monotable::Record
-    def set(key,fields)
-      record=case fields
-      when Hash then MemoryRecord.new.init(key,fields)
-      when Record then fields
-      else raise "value must be a Hash or Record"
-      end
-      set_internal(key,record)
-    end
-
-    def update(key,columns)
-      fields = get(key) || {}
-      fields.update(columns)
-      set(key,fields) # call set so DiskChunk can override it
-      fields
-    end
-
-    def delete(key)
-      delete_internal(key)
-    end
 
     #################################
     # maintain @accounting_size

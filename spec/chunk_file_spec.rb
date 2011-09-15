@@ -146,4 +146,13 @@ describe Monotable::DiskChunk do
     chunk["plato.jpeg"].should == nil
   end
 
+  it "should work to get_first" do
+    file=chunkify_test_data_directory
+
+    chunkfile = Monotable::DiskChunk.new(:filename=>file)
+
+    result=chunkfile.get_first(:gte=>"plato.jpeg", :limit=>2)
+    result.collect{|a|a[0]}.should == ["plato.jpeg","simple.png"]
+  end
+
 end

@@ -160,12 +160,14 @@ class String
 
   # Ruby 1.8 patch to ignore force_encoding
   if !"".respond_to?(:force_encoding)
+    def to_binary; self end
     def force_encoding(a) self end
     def byte(index)
       self[index]
     end
   else
   # Ruby 1.9
+    def to_binary; self.force_encoding("BINARY") end
     def byte(index)
       char=self[index]
       char && char.bytes.next

@@ -8,4 +8,5 @@ describe Monotable::Tools do
     out_file=chunkify_test_data_directory
     File.exist?(out_file).should == true
   end
+
 end
