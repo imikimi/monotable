@@ -22,6 +22,39 @@ module Monotable
   end
 =end
   module Tools
+    #Input options:
+    #   :gte => key
+    #   :gt => key
+    #   :lt => key
+    #   :lte => key
+    #   :with_prefix => key
+    #   :limit => nil/# (limit||=1
+    #Output options:
+    #   :normalized_lte => key
+    #   :normalized_gte => key
+    def Tools.normalize_range_options(options)
+      options[:limit]||=1
+      return if options[:lte] && options[:gte]
+      n=DEFAULT_MAX_KEY_LENGTH
+
+      lte_key=options[:lte]
+      gte_key=options[:gte]
+
+      if key=options[:with_prefix]
+        gte_key||=key
+        lte_key||=key+"\xff"*(n-key.length)
+      end
+
+      gte_key||=options[:gt].binary_next(n) if options[:gt]
+      lte_key||=options[:lt].binary_prev(n) if options[:lt]
+
+      gte_key||=""
+      lte_key||="\xff"*n
+
+      options[:lte]=lte_key
+      options[:gte]=gte_key
+      options
+    end
 
     def Tools.log_error(except,info=nil)
       Log << ["Exception: #{except}",#"Logged from: #{caller()[0]}",

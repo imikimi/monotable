@@ -78,7 +78,7 @@ module Monotable
       (record=@records[key]) && record.fields(columns)
     end
 
-    # returns array in format: [[key,record],...]
+    # returns array in format: {:records=>[[key,record],...],:next_options}
     # get_first :gte => key
     # options
     #   :limit => #
@@ -90,26 +90,22 @@ module Monotable
     #   :columns => nil / {...}
     def get_first(options={})
       records=self.records
-      n=DEFAULT_MAX_KEY_LENGTH
-      if key=options[:with_prefix]
-        gte_key=key
-        lte_key=key+"\xff"*(n-key.length)
-      end
-      lte_key=options[:lt].binary_prev(n) if options[:lt]
-      lte_key=options[:lte] if options[:lte]
-      gte_key=options[:gt].binary_next(n) if options[:gt]
-      gte_key=options[:gte] if options[:gte]
-
-      gte_key||=""
-      lte_key||="\xff"*n
+      Tools.normalize_range_options(options)
+      gte_key=options[:gte]
+      lte_key=options[:lte]
+      limit=options[:limit]
 
       res=[]
-      limit=options[:limit]||1
       each_key do |k|
         break if res.length>=limit || k > lte_key
         res << [k,records[k]] if k>=gte_key
       end
-      res
+      if range_end!=:infinity && lte_key >= range_end && res.length < limit
+        next_options=options.clone
+        next_options[:limit]-=res.length
+        next_options[:gte]=range_end
+      end
+      {:records=>res,:next_options=>next_options}
     end
 
     # returns array in format: [[key,record],...]
@@ -123,26 +119,22 @@ module Monotable
     #   :columns => nil / {...}
     def get_last(options={})
       records=self.records
-      n=DEFAULT_MAX_KEY_LENGTH
-      if key=options[:with_prefix]
-        gte_key=key
-        lte_key=key+"\xff"*(n-key.length)
-      end
-      lte_key=options[:lt].binary_prev(n) if options[:lt]
-      lte_key=options[:lte] if options[:lte]
-      gte_key=options[:gt].binary_next(n) if options[:gt]
-      gte_key=options[:gte] if options[:gte]
-
-      gte_key||=""
-      lte_key||="\xff"*n
+      Tools.normalize_range_options(options)
+      gte_key=options[:gte]
+      lte_key=options[:lte]
+      limit=options[:limit]
 
       res=[]
-      limit=options[:limit]||1
       reverse_each_key do |k|
         break if res.length>=limit || k < gte_key
         res << [k,records[k]] if k<=lte_key
       end
-      res.reverse
+      if gte_key < range_start && res.length < limit
+        next_options=options.clone
+        next_options[:limit]-=res.length
+        next_options[:lte]=range_start.binary_prev(DEFAULT_MAX_KEY_LENGTH)
+      end
+      {:records=>res.reverse,:next_options=>next_options}
     end
 
     #*************************************************************

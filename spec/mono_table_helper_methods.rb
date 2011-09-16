@@ -1,5 +1,17 @@
 module MonotableHelperMethods
 
+  def add_test_keys(store,prefix,num_records)
+    num_records.times do |i|
+      k="#{prefix}#{i}"
+      store.set(k,{"data"=>k})
+    end
+    store
+  end
+
+  def setup_store_with_test_keys(num_records=5)
+    add_test_keys(setup_store,"key",num_records)
+  end
+
   def load_test_data(filename)
     File.open(File.join(File.dirname(__FILE__),"test_data",filename)) {|f| return f.read.force_encoding("BINARY")}
     nil

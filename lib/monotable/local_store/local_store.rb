@@ -17,6 +17,18 @@ module Monotable
       record && record.fields(field_names)
     end
 
+    def get_first(options={})
+      Tools.normalize_range_options(options)
+      gte_key=options[:gte]
+      get_chunk(gte_key).get_first(options)
+    end
+
+    def get_last(options={})
+      Tools.normalize_range_options(options)
+      gte_key=options[:gte]
+      get_chunk(gte_key).get_last(options)
+    end
+
     #*************************************************************
     # Write API
     #*************************************************************

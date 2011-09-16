@@ -152,7 +152,100 @@ describe Monotable::DiskChunk do
     chunkfile = Monotable::DiskChunk.new(:filename=>file)
 
     result=chunkfile.get_first(:gte=>"plato.jpeg", :limit=>2)
-    result.collect{|a|a[0]}.should == ["plato.jpeg","simple.png"]
+    result[:records].collect{|a|a[0]}.should == ["plato.jpeg","simple.png"]
+  end
+
+  def setup_store
+    reset_temp_dir
+    Monotable::DiskChunk.new(:filename=>File.join(temp_dir,"test#{Monotable::CHUNK_EXT}"))
+  end
+
+  #*******************************************************
+  # test get_first and get_last
+  #*******************************************************
+
+  it "should work to get_first :gte" do
+    result=setup_store_with_test_keys.get_first(:gte=>"key2")
+    result[:records].collect{|a|a[0]}.should == ["key2"]
+  end
+
+  it "should work to get_first :gt" do
+    result=setup_store_with_test_keys.get_first(:gt=>"key2")
+    result[:records].collect{|a|a[0]}.should == ["key3"]
+  end
+
+  it "should work to get_first :with_prefix" do
+    chunk=setup_store_with_test_keys
+    add_test_keys(chunk,"apple",3)
+    add_test_keys(chunk,"legos",3)
+    add_test_keys(chunk,"zoo",3)
+
+    result=chunk.get_first(:with_prefix=>"legos", :limit=>2)
+    result[:records].collect{|a|a[0]}.should == ["legos0","legos1"]
+  end
+
+  it "should work to get_first with limits" do
+    chunk=setup_store_with_test_keys
+    result=chunk.get_first(:gte=>"key2", :limit=>2)
+    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
+
+    result=chunk.get_first(:gte=>"key2", :limit=>3)
+    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
+
+    result=chunk.get_first(:gte=>"key2", :limit=>4)
+    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
+  end
+
+  it "should work to get_last :lte" do
+    result=setup_store_with_test_keys.get_last(:lte=>"key2")
+    result[:records].collect{|a|a[0]}.should == ["key2"]
+  end
+
+  it "should work to get_last :lt" do
+    result=setup_store_with_test_keys.get_last(:lt=>"key2")
+    result[:records].collect{|a|a[0]}.should == ["key1"]
+  end
+
+  it "should work to get_last :lte, :gte" do
+    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>10)
+    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
+  end
+
+  it "should work to get_last :lte, :gte, :limit=>2" do
+    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>2)
+    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
+  end
+
+  it "should work to get_first :lte, :gte" do
+    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>10)
+    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
+  end
+
+  it "should work to get_first :lte, :gte, :limit=>2" do
+    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>2)
+    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
+  end
+
+  it "should work to get_last with limits" do
+    chunk=setup_store_with_test_keys
+    result=chunk.get_last(:lte=>"key2",:limit => 2)
+    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
+
+    result=chunk.get_last(:lte=>"key2",:limit => 3)
+    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
+
+    result=chunk.get_last(:lte=>"key2",:limit => 4)
+    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
+  end
+
+  it "should work to get_last :with_prefix" do
+    chunk=setup_store_with_test_keys
+    add_test_keys(chunk,"apple",3)
+    add_test_keys(chunk,"legos",3)
+    add_test_keys(chunk,"zoo",3)
+
+    result=chunk.get_last(:with_prefix=>"legos", :limit=>2)
+    result[:records].collect{|a|a[0]}.should == ["legos1","legos2"]
   end
 
 end
