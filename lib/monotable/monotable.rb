@@ -25,7 +25,7 @@ require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
   index_block_encoder
   memory_chunk
   disk_chunk_base
-  disk_chunk2
+  disk_chunk
   path_store
   local_store
   }.each do |file|
