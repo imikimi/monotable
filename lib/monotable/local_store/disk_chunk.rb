@@ -10,11 +10,5 @@ This implementation of DiskChunk loads all the leaf IndexBlocks and fully popula
 module Monotable
 
   class DiskChunk < DiskChunkBase
-    def parse(io_stream)
-      parse_base(io_stream)
-      # parse the index-block, and optionally, load the data
-      @data_loaded = false
-      @records = parse_index_block(io_stream,DiskRecord)
-    end
   end
 end

@@ -4,6 +4,19 @@ require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 describe Monotable::DiskChunk do
   include MonotableHelperMethods
 
+  #***************************************
+  # helpers
+  #***************************************
+  def setup_store
+    reset_temp_dir
+    filename=File.join(temp_dir,"test#{Monotable::CHUNK_EXT}")
+    Monotable::MemoryChunk.new().save(filename)
+    Monotable::DiskChunk.init(:filename=>filename)
+  end
+
+  #***************************************
+  # tests
+  #***************************************
   it "should be possible to read chunkified directory" do
     file=chunkify_test_data_directory
 
@@ -146,6 +159,41 @@ describe Monotable::DiskChunk do
     chunk["plato.jpeg"].should == nil
   end
 
+  it "each_key should return valid keys matched to record" do
+    file=chunkify_test_data_directory
+
+    chunkfile = Monotable::DiskChunk.new(:filename=>file)
+
+    chunkfile.each_key do |k|
+      record=chunkfile.get_record(k)
+      record.should_not == nil
+    end
+  end
+
+  it "each_key should work and records should be fetchable if there data is in the journal" do
+    result=setup_store_with_test_keys(5)
+    result.each_key do |k|
+      record=result.get_record(k)
+      record.class.should==Monotable::JournalDiskRecord
+      record.should_not == nil
+    end
+  end
+
+  it "each_key should work and records should be fetchable if there data is in the chunkfile" do
+    result=setup_store_with_test_keys(5)
+    result.journal.compact
+    result.each_key do |k|
+      record=result.get_record(k)
+      record.class.should==Monotable::DiskRecord
+      record.keys.should==["data"]
+      record.should_not == nil
+    end
+  end
+
+  #*******************************************************
+  # test get_first and get_last
+  #*******************************************************
+
   it "should work to get_first" do
     file=chunkify_test_data_directory
 
@@ -155,14 +203,6 @@ describe Monotable::DiskChunk do
     result[:records].collect{|a|a[0]}.should == ["plato.jpeg","simple.png"]
   end
 
-  def setup_store
-    reset_temp_dir
-    Monotable::DiskChunk.new(:filename=>File.join(temp_dir,"test#{Monotable::CHUNK_EXT}"))
-  end
-
-  #*******************************************************
-  # test get_first and get_last
-  #*******************************************************
 
   it "should work to get_first :gte" do
     result=setup_store_with_test_keys.get_first(:gte=>"key2")

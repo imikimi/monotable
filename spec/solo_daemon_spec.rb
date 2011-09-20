@@ -66,7 +66,7 @@ describe Monotable::DiskChunk do
     reset_temp_dir
     solo=Monotable::SoloDaemon.new(:store_paths=>[temp_dir],:max_chunk_size => 4000,:initialize_new_store=>true)
 
-    # set a small max_chunk_size for testing
+    # verify small max_chunk_size is propagated
     solo.chunks.each {|key,chunk| chunk.max_chunk_size.should == 4000}
 
     # set a small max_journal_size for testing

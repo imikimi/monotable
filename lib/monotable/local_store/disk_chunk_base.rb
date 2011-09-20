@@ -43,6 +43,11 @@ module Monotable
       init_disk_chunk_base(options)
     end
 
+    def reset
+      super
+      init_from_disk
+    end
+
     # options
     #   :filename => required
     def init_disk_chunk_base(options={})
@@ -51,6 +56,10 @@ module Monotable
       @file_handle=FileHandle.new(options[:filename])
       @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
+      init_from_disk
+    end
+
+    def init_from_disk
       # parse the file on disk
       # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
       file_handle.read {|f|parse(f)} if file_handle.exists?
@@ -100,6 +109,17 @@ module Monotable
       # load the index-block
       index_block_length = io_stream.read_asi
       @data_block_offset = io_stream.pos + index_block_length
+    end
+
+    # Parses the chunk-file from byte-0 on.
+    # This parser loads the entire file into memory.
+    #
+    # initializes @records
+    def parse(io_stream)
+      parse_base(io_stream)
+      # parse the index-block, and optionally, load the data
+      @data_loaded = false
+      @records = parse_index_block(io_stream,DiskRecord)
     end
   end
 end

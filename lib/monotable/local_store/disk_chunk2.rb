@@ -73,7 +73,6 @@ module Monotable
 
     # yields every record in the chunk in sorted Key-order
     def each_record
-
       # if each_record is used much, we should store @records in a sorted data structure to avoid the .sort
       mem_record_keys = @records.keys.sort
       mrk_index = 0
@@ -136,8 +135,10 @@ module Monotable
     #***************************************************
     # parsing
     #***************************************************
-    def partially_parse_index(io_stream)
 
+    # Loads just the top index-block from the stream.
+    # Initializes just enough so we can load the other index-blocks on demand.
+    def partially_parse_index(io_stream)
       # load index level
       num_index_levels=io_stream.read_asi
       @index_level_lengths=[]
@@ -155,9 +156,18 @@ module Monotable
       @top_index_block = IndexBlock.new(self,"",0,@index_level_lengths[0],:io_stream=>io_stream)
     end
 
+    # Parses the chunk-file from byte-0 on.
+    # This parser doesn't load the whole file.
+    # Only the first headers and the first index-block are loaded.
+    # Sub-index-blocks and records are loaded on demand.
+    #
+    # This replaces DiskChunkBase#parse which loads the entire chunk into memory.
+    #
+    # initializes @records
     def parse(io_stream)
       parse_base(io_stream)
       partially_parse_index(io_stream)
+      @records = {}
     end
 
     #*************************************************************

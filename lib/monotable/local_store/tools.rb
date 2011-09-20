@@ -111,10 +111,11 @@ module Monotable
 
     def Tools.write_asi_checksum_string(file,string)
       checksum=Tools.checksum(string)
-      file.write checksum.length.to_asi
-      file.write checksum
-      file.write string.length.to_asi
-      file.write string
+      bytes=0
+      bytes+=file.write checksum.length.to_asi
+      bytes+=file.write checksum
+      bytes+=file.write string.length.to_asi
+      bytes+=file.write string
     end
 
     def Tools.to_asi_checksum_string(string)
