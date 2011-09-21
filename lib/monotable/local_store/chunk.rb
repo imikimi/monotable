@@ -361,8 +361,9 @@ module Monotable
     end
 
     def delete_internal(key)
-      sub_size(key)
+      sub_delta = sub_size(key)
       records.delete(key)
+      {:result=> sub_delta!=0 ? :deleted : :noop, :size_delta=>-sub_delta}
     end
 
     def bulk_set(records)     records.each {|k,v| set_internal(k,v)} end

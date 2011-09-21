@@ -51,8 +51,9 @@ module Monotable
     end
 
     def delete(key)
-      get_chunk(key).delete(key)
+      ret=get_chunk(key).delete(key)
       RecordCache.delete(key)
+      ret
     end
   end
 

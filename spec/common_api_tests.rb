@@ -53,6 +53,7 @@ def api_tests
     store.set("key1", {"field1" => "value1"}).should=={:result=>:created, :size_delta=>16, :size=>16}
     store.set("key1", {"field2" => "value2"}).should=={:result=>:replaced, :size_delta=>0, :size=>16}
     store.get("key1").should=={:record=>{"field2" => "value2"},:size=>16,:num_fields=>1}
+    store.set("key1", {"field2" => "vv"}).should=={:result=>:replaced, :size_delta=>-4, :size=>12}
   end
 
 
@@ -61,7 +62,20 @@ def api_tests
     store.update("key1", {"field1" => "value1"}).should=={:result=>:created, :size_delta=>16, :size=>16}
     store.update("key1", {"field2" => "value2"}).should=={:result=>:updated, :size_delta=>12, :size=>28}
     store.get("key1").should=={:record=>{"field1" => "value1", "field2" => "value2"},:size=>28,:num_fields=>2}
+    store.update("key1", {"field2" => "v"}).should=={:result=>:updated, :size_delta=>-5, :size=>23}
   end
+
+  #*******************************************************
+  # test delete
+  #*******************************************************
+  it "should get_record existing" do
+    store=setup_store_with_test_keys
+    store.get_record("key1").should_not==nil
+    store.delete("key1").should=={:result=>:deleted, :size_delta=>-12}
+    store.get_record("key1").should==nil
+    store.delete("key1").should=={:result=>:noop, :size_delta=>0}
+  end
+
 
   #*******************************************************
   # test get_first and get_last
