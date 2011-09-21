@@ -25,7 +25,7 @@ module Monotable
 
     def length() fields.length end
     def keys() fields.keys end
-    def ==(other) other && length==other.length && fields.each {|k,v| v==other[k]} end
+    def ==(other) other && length==other.length && keys.each {|k| return false unless self[k]==other[k]} end
 
     def Record.parse_record(data,column_dictionary,column_hash=nil)
       fields={}

@@ -9,6 +9,7 @@ require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
   global
   mini_event_machine
   cache
+  api
   record_cache
   index_block_cache
   constants

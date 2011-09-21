@@ -13,7 +13,7 @@ module MonotableHelperMethods
   end
 
   def setup_store_with_test_keys(num_records=5)
-    add_test_keys(setup_store,"key",num_records)
+    add_test_keys(blank_store,"key",num_records)
   end
 
   def load_test_data(filename)

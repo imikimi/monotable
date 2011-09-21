@@ -106,30 +106,16 @@ module Monotable
     def index_depth; -1; end
 
     #*************************************************************
-    # Read API
-    #*************************************************************
-    def get(key,columns=nil)
-      (record=get_record(key)) && record.fields(columns)
-    end
-
-    #*************************************************************
     # Write API
     #*************************************************************
     def set(key,columns)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
-
-      # rest is same as DiskChunkFileBase
-      ret=set_internal(key,journal.set(file_handle,key,columns))
-      MiniEventMachine.queue {self.split} if accounting_size > max_chunk_size
-      ret
+      super
     end
 
     def delete(key)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
-
-      # rest is same as DiskChunkFileBase
-      journal.delete(file_handle,key)
-      delete_internal(key)
+      super
     end
 
     #***************************************************
@@ -176,11 +162,11 @@ module Monotable
     def get_record(key)
       (@records[key] || locate_index_record(key)) unless @deleted_records[key]
     end
+    alias :record :get_record
 
     def locate_index_record(key)
       @top_index_block && @top_index_block.locate(key)
     end
-    alias :record :locate_index_record
 
     def exists_on_disk?(key)
       locate_index_record(key) && true

@@ -70,12 +70,11 @@ module Monotable
     end
   end
 
-  module ChunkClientAPI
-    #*************************************************************
-    # Read API
-    #*************************************************************
-    def get(key,columns=nil)
-      (record=@records[key]) && record.fields(columns)
+  module ChunkReadAPI
+    include ReadAPI
+
+    def get_record(key)
+      @records[key]
     end
 
     # returns array in format: {:records=>[[key,record],...],:next_options}
@@ -139,11 +138,12 @@ module Monotable
       end
       {:records=>res.reverse,:next_options=>next_options}
     end
+  end
 
-    #*************************************************************
-    # Write API
-    #*************************************************************
+  module ChunkWriteAPI
+    include WriteAPI
     # value must be a hash or a Monotable::Record
+    # returns {:result=>:replaced} or {:result=>:created}
     def set(key,fields)
       record=case fields
       when Hash then MemoryRecord.new.init(key,fields)
@@ -153,11 +153,15 @@ module Monotable
       set_internal(key,record)
     end
 
+    # returns {:result=>:updated} or {:result=>:created}
+    # we should be able to able to actually return a list of the fields that were replaced.
+    # We have all the info we need, and since we have to track accounting_size, we will always have to fetch this info to perform update.
     def update(key,columns)
-      fields = get(key) || {}
+      fields = ((record=get_record(key)) && record.fields) || {}
       fields.update(columns)
-      set(key,fields) # call set so DiskChunk can override it
-      fields
+      ret=set(key,fields) # call set so DiskChunk can override it
+      ret[:result]=:updated if ret[:result]==:replaced
+      ret
     end
 
     def delete(key)
@@ -186,7 +190,8 @@ module Monotable
     attr_accessor :max_index_block_size
 
     include ChunkMemoryRevisions
-    include ChunkClientAPI
+    include ChunkReadAPI
+    include ChunkWriteAPI
 
     def init_chunk(options={})
       @path_store = options[:path_store]
@@ -206,7 +211,6 @@ module Monotable
 
     def info; @info||=Xbd::Tag.new("info") end
 
-    def [](key) get(key); end
     def []=(key,value) set(key,value); end
 
     # options:
@@ -300,21 +304,23 @@ module Monotable
       sci["max_index_block_size"] = @max_index_block_size
     end
 
-    def record(key)
-      records[key]
-    end
-
-
     #################################
     # maintain @accounting_size
     #################################
+    # (self.record(key) || record) must exist
+    # returns the new size delta
     def add_size(key,record=nil)
-      @accounting_size+=(record || record(key)).accounting_size
+      delta=(record || get_record(key)).accounting_size
+      @accounting_size+=delta
+      delta
     end
 
+    # returns the new size delta
     def sub_size(key,record=nil)
-      record||=record(key)
-      @accounting_size-=record.accounting_size if record
+      record||=get_record(key)
+      delta=(record && record.accounting_size) || 0
+      @accounting_size-=delta
+      delta
     end
 
     def calculate_accounting_size
@@ -346,11 +352,12 @@ module Monotable
     #################################
     # bulk edits
     #################################
+    # returns {:result => :replaced} or {:result => :created}
     def set_internal(key,record)
-      sub_size(key)
+      sub_delta = sub_size(key)
       @records[key]=record
-      add_size(key,record)
-      record
+      add_delta = add_size(key,record)
+      {:result=> sub_delta!=0 ? :replaced : :created, :size_delta=>add_delta-sub_delta, :size=>record.accounting_size}
     end
 
     def delete_internal(key)

@@ -1,12 +1,14 @@
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"common_api_tests")
 
 describe Monotable::MemoryChunk do
   include MonotableHelperMethods
 
-  it "should be possible to create an in-memory chunk from scratch" do
-    chunk=Monotable::MemoryChunk.new
-    chunk.should_not == nil
+  def blank_store
+    Monotable::MemoryChunk.new
   end
+
+  api_tests
 
   it "should be possible to serialize and deserialize a chunk with one record, one column" do
     chunk=Monotable::MemoryChunk.new
@@ -50,96 +52,5 @@ describe Monotable::MemoryChunk do
     chunk2["test_key"]["test_column"].should == data
   end
 
-  def setup_store
-    Monotable::MemoryChunk.new
-  end
-
-  #*******************************************************
-  # test get_first and get_last
-  #*******************************************************
-
-  it "should work to get_first :gte" do
-    result=setup_store_with_test_keys.get_first(:gte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
-  end
-
-  it "should work to get_first :gt" do
-    result=setup_store_with_test_keys.get_first(:gt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key3"]
-  end
-
-  it "should work to get_first :with_prefix" do
-    chunk=setup_store_with_test_keys
-    add_test_keys(chunk,"apple",3)
-    add_test_keys(chunk,"legos",3)
-    add_test_keys(chunk,"zoo",3)
-
-    result=chunk.get_first(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos0","legos1"]
-  end
-
-  it "should work to get_first with limits" do
-    chunk=setup_store_with_test_keys
-    result=chunk.get_first(:gte=>"key2", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
-
-    result=chunk.get_first(:gte=>"key2", :limit=>3)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
-
-    result=chunk.get_first(:gte=>"key2", :limit=>4)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
-  end
-
-  it "should work to get_last :lte" do
-    result=setup_store_with_test_keys.get_last(:lte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
-  end
-
-  it "should work to get_last :lt" do
-    result=setup_store_with_test_keys.get_last(:lt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key1"]
-  end
-
-  it "should work to get_last :lte, :gte" do
-    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
-  end
-
-  it "should work to get_last :lte, :gte, :limit=>2" do
-    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
-  end
-
-  it "should work to get_first :lte, :gte" do
-    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
-  end
-
-  it "should work to get_first :lte, :gte, :limit=>2" do
-    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
-  end
-
-  it "should work to get_last with limits" do
-    chunk=setup_store_with_test_keys
-    result=chunk.get_last(:lte=>"key2",:limit => 2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
-
-    result=chunk.get_last(:lte=>"key2",:limit => 3)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
-
-    result=chunk.get_last(:lte=>"key2",:limit => 4)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
-  end
-
-  it "should work to get_last :with_prefix" do
-    chunk=setup_store_with_test_keys
-    add_test_keys(chunk,"apple",3)
-    add_test_keys(chunk,"legos",3)
-    add_test_keys(chunk,"zoo",3)
-
-    result=chunk.get_last(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos1","legos2"]
-  end
 
 end

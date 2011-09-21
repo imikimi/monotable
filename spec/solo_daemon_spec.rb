@@ -114,7 +114,7 @@ describe Monotable::DiskChunk do
 
     solo2.length.should == control_set.length
     control_set.each do |key,record|
-      solo2.get(key).should == record
+      solo2.get(key)[:record].should == record
     end
     [solo2,control_set]
   end

@@ -5,42 +5,58 @@
 require "rbtree"
 
 module Monotable
-  module LocalStoreClientAPI
-    #*************************************************************
-    # Read API
-    #*************************************************************
-    # returns nil if the record does not exist
-    def get(key,field_names=nil)
-      record=RecordCache.get(key) do
-        get_chunk(key).get_record(key)
+  # external facing Read API
+  module LocalStoreReadAPI
+    include ReadAPI
+
+    # returns: record where record.kind_of?(Record)
+    def get_record(key)
+      RecordCache.get(key) do
+        chunk=get_chunk(key)
+        chunk && chunk.get_record(key)
       end
-      record && record.fields(field_names)
     end
 
+    # Returns: {:records=>[...], :next_options=>{...}}
     def get_first(options={})
       Tools.normalize_range_options(options)
       gte_key=options[:gte]
       get_chunk(gte_key).get_first(options)
     end
 
+    # Returns: {:records=>[...], :next_options=>{...}}
     def get_last(options={})
       Tools.normalize_range_options(options)
       gte_key=options[:gte]
       get_chunk(gte_key).get_last(options)
     end
+  end
 
-    #*************************************************************
-    # Write API
-    #*************************************************************
-    def set(key,fields)     RecordCache[key]=get_chunk(key).set(key,fields) end
-    def update(key,fields)  RecordCache[key]=get_chunk(key).update(key,fields) end
-    def delete(key)         get_chunk(key).delete(key);RecordCache.delete(key) end
+  # external facing Write API
+  module LocalStoreWriteAPI
+    include WriteAPI
+
+    def set(key,fields)
+      chunk=get_chunk(key)
+      ret=chunk.set(key,fields)
+      RecordCache[key]=chunk.get_record(key)
+      ret
+    end
+
+    def update(key,fields)
+      chunk=get_chunk(key)
+      ret=chunk.update(key,fields)
+      RecordCache[key]=chunk.get_record(key)
+      ret
+    end
+
+    def delete(key)
+      get_chunk(key).delete(key)
+      RecordCache.delete(key)
+    end
   end
 
   module LocalStoreChunkApi
-    #*************************************************************
-    # MemoryChunk API
-    #*************************************************************
     # Throws errors if chunk for key not present
     def get_chunk(key) # rename chunk_for_record
       chunk_key,chunk=@chunks.upper_bound(key)
@@ -68,7 +84,8 @@ module Monotable
     attr_accessor :max_index_block_size
     attr_accessor :max_chunk_size
     attr_accessor :path_stores
-    include LocalStoreClientAPI
+    include LocalStoreReadAPI
+    include LocalStoreWriteAPI
     include LocalStoreChunkApi
 
     #options

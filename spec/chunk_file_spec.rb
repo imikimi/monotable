@@ -1,4 +1,5 @@
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"common_api_tests")
 
 describe Monotable::DiskChunk do
   include MonotableHelperMethods
@@ -6,12 +7,14 @@ describe Monotable::DiskChunk do
   #***************************************
   # helpers
   #***************************************
-  def setup_store
+  def blank_store
     reset_temp_dir
     filename=File.join(temp_dir,"test#{Monotable::CHUNK_EXT}")
     Monotable::MemoryChunk.new().save(filename)
     Monotable::DiskChunk.init(:filename=>filename)
   end
+
+  api_tests
 
   #***************************************
   # tests
@@ -60,7 +63,7 @@ describe Monotable::DiskChunk do
     chunkfile.set("foo",{"bar" => "June"})
 
     # test get after set with DiskChunk
-    chunkfile.get("foo").should =={"bar" => "June"}
+    chunkfile["foo"].should == {"bar"=>"June"}
   end
 
   it "should work to 'get' using Monotable::MemoryChunk from a journaled entry" do
@@ -83,14 +86,14 @@ describe Monotable::DiskChunk do
     chunkfile = Monotable::DiskChunk.new(:filename=>file)
 
     chunkfile.set("foo",{"bar" => "June"})
-    chunkfile.get("foo").should == {"bar" => "June"}
+    chunkfile["foo"].should == {"bar" => "June"}
 
     # compact the chunkfile
     chunkfile.journal.compact
 
     # test partial loading with DiskChunk
     chunkfile2 = Monotable::DiskChunk.new(:filename=>file)
-    chunkfile2.get("foo").should =={"bar" => "June"}
+    chunkfile2["foo"].should =={"bar" => "June"}
   end
 
   it "should work to 'delete' using Monotable::MemoryChunk and a journaled entry" do
@@ -103,7 +106,7 @@ describe Monotable::DiskChunk do
 
     # test partial loading with DiskChunk
     chunkfile2 = Monotable::MemoryChunk.load(file)
-    chunkfile2.get("declaration_of_independence.txt").should == nil
+    chunkfile2["declaration_of_independence.txt"].should == nil
   end
 
   it "should work to 'delete' using Monotable::DiskChunk and a journaled entry" do
@@ -111,16 +114,16 @@ describe Monotable::DiskChunk do
 
     chunkfile = Monotable::DiskChunk.new(:filename=>file)
 
-    chunkfile.get("declaration_of_independence.txt")["file_data"].length.should == 407
+    chunkfile["declaration_of_independence.txt"]["file_data"].length.should == 407
     chunkfile.delete("declaration_of_independence.txt")
-    chunkfile.get("declaration_of_independence.txt").should == nil
+    chunkfile["declaration_of_independence.txt"].should == nil
 
     # compact the chunkfile
     chunkfile.journal.compact
 
     # test partial loading with DiskChunk
     chunkfile2 = Monotable::DiskChunk.new(:filename=>file)
-    chunkfile2.get("declaration_of_independence.txt").should == nil
+    chunkfile2["declaration_of_independence.txt"].should == nil
   end
 
   it "should work to journal an 'update' to a DiskChunk" do
@@ -187,104 +190,6 @@ describe Monotable::DiskChunk do
       record.keys.should==["data"]
       record.should_not == nil
     end
-  end
-
-  #*******************************************************
-  # test get_first and get_last
-  #*******************************************************
-
-  it "should work to get_first" do
-    file=chunkify_test_data_directory
-
-    chunkfile = Monotable::DiskChunk.new(:filename=>file)
-
-    result=chunkfile.get_first(:gte=>"plato.jpeg", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["plato.jpeg","simple.png"]
-  end
-
-
-  it "should work to get_first :gte" do
-    result=setup_store_with_test_keys.get_first(:gte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
-  end
-
-  it "should work to get_first :gt" do
-    result=setup_store_with_test_keys.get_first(:gt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key3"]
-  end
-
-  it "should work to get_first :with_prefix" do
-    chunk=setup_store_with_test_keys
-    add_test_keys(chunk,"apple",3)
-    add_test_keys(chunk,"legos",3)
-    add_test_keys(chunk,"zoo",3)
-
-    result=chunk.get_first(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos0","legos1"]
-  end
-
-  it "should work to get_first with limits" do
-    chunk=setup_store_with_test_keys
-    result=chunk.get_first(:gte=>"key2", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
-
-    result=chunk.get_first(:gte=>"key2", :limit=>3)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
-
-    result=chunk.get_first(:gte=>"key2", :limit=>4)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
-  end
-
-  it "should work to get_last :lte" do
-    result=setup_store_with_test_keys.get_last(:lte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
-  end
-
-  it "should work to get_last :lt" do
-    result=setup_store_with_test_keys.get_last(:lt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key1"]
-  end
-
-  it "should work to get_last :lte, :gte" do
-    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
-  end
-
-  it "should work to get_last :lte, :gte, :limit=>2" do
-    result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
-  end
-
-  it "should work to get_first :lte, :gte" do
-    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
-  end
-
-  it "should work to get_first :lte, :gte, :limit=>2" do
-    result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
-  end
-
-  it "should work to get_last with limits" do
-    chunk=setup_store_with_test_keys
-    result=chunk.get_last(:lte=>"key2",:limit => 2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
-
-    result=chunk.get_last(:lte=>"key2",:limit => 3)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
-
-    result=chunk.get_last(:lte=>"key2",:limit => 4)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
-  end
-
-  it "should work to get_last :with_prefix" do
-    chunk=setup_store_with_test_keys
-    add_test_keys(chunk,"apple",3)
-    add_test_keys(chunk,"legos",3)
-    add_test_keys(chunk,"zoo",3)
-
-    result=chunk.get_last(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos1","legos2"]
   end
 
 end
