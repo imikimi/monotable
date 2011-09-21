@@ -1,4 +1,3 @@
-require File.join(File.dirname(__FILE__),"../lib/monotable/local_store/mini_event_machine.rb")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
 describe MiniEventMachine do

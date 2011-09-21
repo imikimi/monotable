@@ -1,6 +1,5 @@
-require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
-require File.join(File.dirname(__FILE__),"../lib/monotable/solo_daemon/solo_daemon.rb")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"../lib/monotable/solo_daemon/solo_daemon.rb")
 
 describe Monotable::DiskChunk do
   include MonotableHelperMethods

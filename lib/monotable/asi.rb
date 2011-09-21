@@ -10,17 +10,6 @@ module Xbd
   #
   # Read and Generate ASI strings
   class Asi
-    module AsiIO
-      def read_asi(index=0)
-        Xbd::Asi.read_asi_from_file(self)
-      end
-
-      # read an asi and then read the next N bytes, where N is the asi value
-      # index's value is ignored
-      def read_asi_string(index=0)
-        read(Xbd::Asi.read_asi_from_file(self))
-      end
-    end
 
     # read an ASI from a string, returning an integer
     # optionally starts and the specified offset index.
@@ -107,70 +96,85 @@ module Xbd
     def Asi.asi_length(num)
       count=1
       while num>=0x80
-        num>>7
+        num>>=7
         count+=1
       end
       count
     end
-  end
-end
 
-#*********************************
-# Enable ASI reading and writing
-# in standard objects.
-#*********************************
-class Fixnum
-  ASI_INSTANCE = Xbd::Asi.new
-  def to_asi
-#    Xbd::Asi.i_to_asi(self)
-    ASI_INSTANCE.i_to_asi_c(self)
-  end
-end
+  #*********************************
+  # Enable ASI reading and writing
+  # in standard objects.
+  #*********************************
+    module IO
+      def read_asi(index=0)
+        Asi.read_asi_from_file(self)
+      end
 
-class File
-  include Xbd::Asi::AsiIO
-end
-
-class StringIO
-  include Xbd::Asi::AsiIO
-end
-
-class Bignum
-    def to_asi
-        Xbd::Asi.i_to_asi(self)
+      # read an asi and then read the next N bytes, where N is the asi value
+      # index's value is ignored
+      def read_asi_string(index=0)
+        read(Asi.read_asi_from_file(self))
+      end
     end
+
+    module Fixnum
+      ASI_INSTANCE = Asi.new
+      def to_asi
+        ASI_INSTANCE.i_to_asi_c(self)
+      end
+      def asi_length
+        Xbd::Asi.asi_length(self)
+      end
+    end
+
+    module Bignum
+      def to_asi
+        Asi.i_to_asi(self)
+      end
+      def asi_length
+        Xbd::Asi.asi_length(self)
+      end
+    end
+
+    module String
+      def from_asi
+        Asi.asi_to_i(self)
+      end
+
+      def to_asi_string
+        self.length.to_asi+self
+      end
+
+      def read_asi(index=0)
+        Asi.read_asi(self,index)
+      end
+
+      def read_asi_string(index=0)
+        Asi.read_asi_string(self,index)
+      end
+
+      # Ruby 1.8 patch to ignore force_encoding
+      if !"".respond_to?(:force_encoding)
+        def to_binary; self end
+        def force_encoding(a) self end
+        def byte(index)
+          self[index]
+        end
+      else
+      # Ruby 1.9
+        def to_binary; self.force_encoding("BINARY") end
+        def byte(index)
+          char=self[index]
+          char && char.bytes.next
+        end
+      end
+    end
+  end
 end
 
-class String
-  def from_asi
-      Xbd::Asi.asi_to_i(self)
-  end
-
-  def to_asi_string
-    self.length.to_asi+self
-  end
-
-  def read_asi(index=0)
-    Xbd::Asi.read_asi(self,index)
-  end
-
-  def read_asi_string(index=0)
-    Xbd::Asi.read_asi_string(self,index)
-  end
-
-  # Ruby 1.8 patch to ignore force_encoding
-  if !"".respond_to?(:force_encoding)
-    def to_binary; self end
-    def force_encoding(a) self end
-    def byte(index)
-      self[index]
-    end
-  else
-  # Ruby 1.9
-    def to_binary; self.force_encoding("BINARY") end
-    def byte(index)
-      char=self[index]
-      char && char.bytes.next
-    end
-  end
-end
+class Fixnum  ; include Xbd::Asi::Fixnum   ; end
+class File    ; include Xbd::Asi::IO       ; end
+class StringIO; include Xbd::Asi::IO       ; end
+class Bignum  ; include Xbd::Asi::Bignum   ; end
+class String  ; include Xbd::Asi::String   ; end

@@ -88,6 +88,9 @@ module Monotable
     #   :lte => key
     #   :with_prefix => key
     #   :columns => nil / {...}
+    #
+    # Returns
+    #  {:records=>[...], :next_options=>{...}}
     def get_first(options={})
       records=self.records
       Tools.normalize_range_options(options)

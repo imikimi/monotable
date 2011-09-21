@@ -1,3 +1,7 @@
+require 'simplecov'
+SimpleCov.start
+require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
+
 module MonotableHelperMethods
 
   def add_test_keys(store,prefix,num_records)

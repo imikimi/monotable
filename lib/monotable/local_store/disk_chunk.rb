@@ -109,7 +109,7 @@ module Monotable
     # Read API
     #*************************************************************
     def get(key,columns=nil)
-      (record=get_record(key)) && record && record.fields(columns)
+      (record=get_record(key)) && record.fields(columns)
     end
 
     #*************************************************************

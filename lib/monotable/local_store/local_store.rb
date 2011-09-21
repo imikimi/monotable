@@ -48,6 +48,12 @@ module Monotable
       chunk
     end
 
+    # Returns "true" if a local chunk covers the key-range for a given key.
+    # There may or may-not be an actuall record for that key, but a "get(key)" will return an authoritative answer.
+    def local?(key)
+      get_chunk(key) && true
+    end
+
     def chunk_keys
       @chunks.keys
     end

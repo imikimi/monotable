@@ -1,5 +1,4 @@
 # encoding: BINARY
-require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
 describe Monotable::StringBinaryEnumeration do
