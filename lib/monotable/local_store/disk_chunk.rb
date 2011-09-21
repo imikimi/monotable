@@ -106,13 +106,25 @@ module Monotable
     def index_depth; -1; end
 
     #*************************************************************
+    # read API
+    #*************************************************************
+
+    # see ReadAPI
+    def get_record(key)
+      (@records[key] || locate_index_record(key)) unless @deleted_records[key]
+    end
+
+    #*************************************************************
     # Write API
     #*************************************************************
+
+    # see WriteAPI
     def set(key,columns)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
       super
     end
 
+    # see WriteAPI
     def delete(key)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
       super
@@ -159,10 +171,6 @@ module Monotable
     #*************************************************************
     # additional useful internal API
     #*************************************************************
-    def get_record(key)
-      (@records[key] || locate_index_record(key)) unless @deleted_records[key]
-    end
-    alias :record :get_record
 
     def locate_index_record(key)
       @top_index_block && @top_index_block.locate(key)

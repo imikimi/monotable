@@ -5,11 +5,11 @@
 require "rbtree"
 
 module Monotable
-  # external facing Read API
+  # see ReadAPI
   module LocalStoreReadAPI
     include ReadAPI
 
-    # returns: record where record.kind_of?(Record)
+    # see ReadAPI
     def get_record(key)
       RecordCache.get(key) do
         chunk=get_chunk(key)
@@ -17,14 +17,14 @@ module Monotable
       end
     end
 
-    # Returns: {:records=>[...], :next_options=>{...}}
+    # see ReadAPI
     def get_first(options={})
       Tools.normalize_range_options(options)
       gte_key=options[:gte]
       get_chunk(gte_key).get_first(options)
     end
 
-    # Returns: {:records=>[...], :next_options=>{...}}
+    # see ReadAPI
     def get_last(options={})
       Tools.normalize_range_options(options)
       gte_key=options[:gte]

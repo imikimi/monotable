@@ -75,12 +75,15 @@ module Monotable
     # Write API
     #*************************************************************
     # NOTE: The "update" method inherited from Chunk works. No need to re-implement.
+
+    # see WriteAPI
     def set(key,columns)
       ret=set_internal(key,journal.set(file_handle,key,columns))
       MiniEventMachine.queue {self.split} if accounting_size > max_chunk_size
       ret
     end
 
+    # see WriteAPI
     def delete(key)
       journal.delete(file_handle,key)
       delete_internal(key)

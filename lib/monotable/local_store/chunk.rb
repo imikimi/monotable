@@ -70,26 +70,16 @@ module Monotable
     end
   end
 
+  # see ReadAPI
   module ChunkReadAPI
     include ReadAPI
 
+    # see ReadAPI
     def get_record(key)
       @records[key]
     end
 
-    # returns array in format: {:records=>[[key,record],...],:next_options}
-    # get_first :gte => key
-    # options
-    #   :limit => #
-    #   :gte => key
-    #   :gt => key
-    #   :lt => key
-    #   :lte => key
-    #   :with_prefix => key
-    #   :columns => nil / {...}
-    #
-    # Returns
-    #  {:records=>[...], :next_options=>{...}}
+    # see ReadAPI
     def get_first(options={})
       records=self.records
       Tools.normalize_range_options(options)
@@ -110,15 +100,7 @@ module Monotable
       {:records=>res,:next_options=>next_options}
     end
 
-    # returns array in format: [[key,record],...]
-    # options
-    #   :limit => #
-    #   :gte => key
-    #   :gt => key
-    #   :lt => key
-    #   :lte => key
-    #   :with_prefix => key
-    #   :columns => nil / {...}
+    # see ReadAPI
     def get_last(options={})
       records=self.records
       Tools.normalize_range_options(options)
@@ -140,10 +122,11 @@ module Monotable
     end
   end
 
+  # see WriteAPI
   module ChunkWriteAPI
     include WriteAPI
-    # value must be a hash or a Monotable::Record
-    # returns {:result=>:replaced} or {:result=>:created}
+
+    # see WriteAPI
     def set(key,fields)
       record=case fields
       when Hash then MemoryRecord.new.init(key,fields)
@@ -153,9 +136,7 @@ module Monotable
       set_internal(key,record)
     end
 
-    # returns {:result=>:updated} or {:result=>:created}
-    # we should be able to able to actually return a list of the fields that were replaced.
-    # We have all the info we need, and since we have to track accounting_size, we will always have to fetch this info to perform update.
+    # see WriteAPI
     def update(key,columns)
       fields = ((record=get_record(key)) && record.fields) || {}
       fields.update(columns)
@@ -164,6 +145,7 @@ module Monotable
       ret
     end
 
+    # see WriteAPI
     def delete(key)
       delete_internal(key)
     end
