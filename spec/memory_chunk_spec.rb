@@ -41,16 +41,14 @@ describe Monotable::MemoryChunk do
     chunk2["key2"].should == {"col2"=>"val3","col3"=>"val4"}
   end
 
-  it "should be possible to store binary data in a chunk column" do
-    chunk=Monotable::MemoryChunk.new
+  it "should serialize with binary column data" do
+    store=blank_store
     data=load_test_data "0-255.binary"
 
-    chunk["test_key"]= {"test_column"=>data}
-    chunk_str=chunk.to_binary
+    store["test_key"]= {"test_column"=>data}
+    chunk_str=store.to_binary
 
     chunk2=Monotable::MemoryChunk.new(:data=>chunk_str)
     chunk2["test_key"]["test_column"].should == data
   end
-
-
 end

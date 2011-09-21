@@ -4,6 +4,11 @@ require 'digest/md5'
 
 module Monotable
 
+  # DiskChunkBase will usually only be used as a superclass for DiskChunk.
+  #
+  # However, it can be used instead of DiskChunk. If functions identically externally.
+  # Internally, it will load the entire chunk into memory on Init.
+  # This is obviously much slower, but it is simpler and useful for testing.
   class DiskChunkBase < Chunk
     attr_accessor :file_handle
     attr_accessor :path_store

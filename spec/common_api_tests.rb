@@ -56,6 +56,13 @@ def api_tests
     store.set("key1", {"field2" => "vv"}).should=={:result=>:replaced, :size_delta=>-4, :size=>12}
   end
 
+  it "should set binary data" do
+    store=blank_store
+    data=load_test_data "0-255.binary"
+
+    store["test_key"]= {"test_column"=>data}
+    store["test_key"]["test_column"].should == data
+  end
 
   it "should update" do
     store=blank_store #Monotable::MemoryChunk.new
