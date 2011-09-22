@@ -34,9 +34,12 @@ require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
 end
 
 %w{
-  solo_daemon
+  exceptions/exceptions
+  solo_daemon/solo_daemon
+  router/server_client
+  router/router
   }.each do |file|
-    require File.join(File.dirname(__FILE__),"solo_daemon",file)
+    require File.join(File.dirname(__FILE__),file)
 end
 
 module Monotable

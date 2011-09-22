@@ -90,7 +90,7 @@ module Monotable
       res=[]
       each_key do |k|
         break if res.length>=limit || k > lte_key
-        res << [k,records[k]] if k>=gte_key
+        res << [k,get_record(k).fields] if k>=gte_key
       end
       if range_end!=:infinity && lte_key >= range_end && res.length < limit
         next_options=options.clone

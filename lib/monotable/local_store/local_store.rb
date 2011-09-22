@@ -27,8 +27,8 @@ module Monotable
     # see ReadAPI
     def get_last(options={})
       Tools.normalize_range_options(options)
-      gte_key=options[:gte]
-      get_chunk(gte_key).get_last(options)
+      lte_key=options[:lte]
+      get_chunk(lte_key).get_last(options)
     end
   end
 

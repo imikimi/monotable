@@ -1,4 +1,20 @@
-def api_tests
+module TestingHash
+  # self contains at least all the keys in other, and their values match
+  def >=(other)
+    other.each do |k,v|
+      return false unless self[k]==v
+    end
+    true
+  end
+end
+class Hash
+  include TestingHash
+end
+
+def api_tests(options={})
+  key_prefix_size=options[:key_prefix_size]||0
+  dont_test_get_record=options[:dont_test_get_record]
+
   it "should initialize as a blank store" do
     blank_store.should_not==nil
   end
@@ -15,17 +31,18 @@ def api_tests
   #*******************************************************
   it "should get existing records" do
     store=setup_store_with_test_keys
-    store.get("key1").should=={:record=>{"data"=>"key1"}, :size=>12, :num_fields=>1}
+    store.get("key1").should>={:record=>{"data"=>"key1"}, :size=>12+key_prefix_size, :num_fields=>1}
   end
 
   it "should get missing records" do
     store=setup_store_with_test_keys
-    store.get("missing").should=={:record=>nil}
+    store.get("missing").should>={:record=>nil}
   end
 
   #*******************************************************
   # test get_record
   #*******************************************************
+  unless dont_test_get_record
   it "should get_record existing" do
     store=setup_store_with_test_keys
     store.get_record("key1").kind_of?(Monotable::Record).should==true
@@ -35,12 +52,13 @@ def api_tests
     store=setup_store_with_test_keys
     store.get_record("missing").kind_of?(NilClass).should==true
   end
+  end
 
   #*******************************************************
   # test []=
   #*******************************************************
   it "should set via []=" do
-    store=blank_store #Monotable::MemoryChunk.new
+    store=blank_store
     a=store["key1"]={"field1" => "value1"}; store["key1"].should==a
     a=store["key1"]={"field2" => "value2"}; store["key1"].should==a
   end
@@ -49,11 +67,11 @@ def api_tests
   # test set and update
   #*******************************************************
   it "should set" do
-    store=blank_store #Monotable::MemoryChunk.new
-    store.set("key1", {"field1" => "value1"}).should=={:result=>:created, :size_delta=>16, :size=>16}
-    store.set("key1", {"field2" => "value2"}).should=={:result=>:replaced, :size_delta=>0, :size=>16}
-    store.get("key1").should=={:record=>{"field2" => "value2"},:size=>16,:num_fields=>1}
-    store.set("key1", {"field2" => "vv"}).should=={:result=>:replaced, :size_delta=>-4, :size=>12}
+    store=blank_store
+    store.set("key1", {"field1" => "value1"}).should>={:result=>:created, :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
+    store.set("key1", {"field2" => "value2"}).should>={:result=>:replaced, :size_delta=>0, :size=>16+key_prefix_size}
+    store.get("key1").should>={:record=>{"field2" => "value2"},:size=>16+key_prefix_size,:num_fields=>1}
+    store.set("key1", {"field2" => "vv"}).should>={:result=>:replaced, :size_delta=>-4, :size=>12+key_prefix_size}
   end
 
   it "should set binary data" do
@@ -66,10 +84,10 @@ def api_tests
 
   it "should update" do
     store=blank_store #Monotable::MemoryChunk.new
-    store.update("key1", {"field1" => "value1"}).should=={:result=>:created, :size_delta=>16, :size=>16}
-    store.update("key1", {"field2" => "value2"}).should=={:result=>:updated, :size_delta=>12, :size=>28}
-    store.get("key1").should=={:record=>{"field1" => "value1", "field2" => "value2"},:size=>28,:num_fields=>2}
-    store.update("key1", {"field2" => "v"}).should=={:result=>:updated, :size_delta=>-5, :size=>23}
+    store.update("key1", {"field1" => "value1"}).should>={:result=>:created, :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
+    store.update("key1", {"field2" => "value2"}).should>={:result=>:updated, :size_delta=>12, :size=>28+key_prefix_size}
+    store.get("key1").should>={:record=>{"field1" => "value1", "field2" => "value2"},:size=>28+key_prefix_size,:num_fields=>2}
+    store.update("key1", {"field2" => "v"}).should>={:result=>:updated, :size_delta=>-5, :size=>23+key_prefix_size}
   end
 
   #*******************************************************
@@ -77,10 +95,10 @@ def api_tests
   #*******************************************************
   it "should get_record existing" do
     store=setup_store_with_test_keys
-    store.get_record("key1").should_not==nil
-    store.delete("key1").should=={:result=>:deleted, :size_delta=>-12}
-    store.get_record("key1").should==nil
-    store.delete("key1").should=={:result=>:noop, :size_delta=>0}
+    store.get("key1")[:record].should_not==nil
+    store.delete("key1").should>={:result=>:deleted, :size_delta=>-12-key_prefix_size}
+    store.get("key1")[:record].should==nil
+    store.delete("key1").should>={:result=>:noop, :size_delta=>0}
   end
 
 
@@ -90,7 +108,7 @@ def api_tests
 
   it "should work to get_first :gte" do
     result=setup_store_with_test_keys.get_first(:gte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
+    result[:records].should == [["key2",{"data"=>"key2"}]]
   end
 
   it "should work to get_first :gt" do

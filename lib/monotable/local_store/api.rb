@@ -1,16 +1,15 @@
-module Monotable
-  module ReadAPI
+module Monotable  module ReadAPI
 
     # returns:
     #   exists: {hash-of-fields}
     #   !exists: nil
-    def [](key) (record=get_record(key)) && record.fields; end
+    def [](key) get(key)[:record]; end
 
     # returns:
     #   exists: Record object
     #   !exists: nil
     def get_record(key)
-      raise :stub
+      raise "stub"
     end
 
     # returns:
@@ -39,7 +38,7 @@ module Monotable
     # Returns
     #  {:records=>[...], :next_options=>{...}}
     def get_first(options={})
-      raise :stub
+      raise "stub"
     end
 
     # returns array in format: [[key,record],...]
@@ -55,7 +54,7 @@ module Monotable
     # Returns
     #  {:records=>[...], :next_options=>{...}}
     def get_last(options={})
-      raise :stub
+      raise "stub"
     end
   end
 
@@ -71,7 +70,7 @@ module Monotable
     # :size is the byte-size of the record afterward
     #
     def set(key,fields)
-      raise :stub
+      raise "stub"
     end
 
     # returns
@@ -85,7 +84,7 @@ module Monotable
     #   We should be able to able to actually return a list of the fields that were replaced.
     #   We have all the info we need, and since we have to track accounting_size, we will always have to fetch this info to perform update.
     def update(key,columns)
-      raise :stub
+      raise "stub"
     end
 
     # returns
@@ -94,7 +93,7 @@ module Monotable
     #
     # :size_delta is the change in byte-size to the store. It will be <0 or 0.
     def delete(key)
-      raise :stub
+      raise "stub"
     end
   end
 end
