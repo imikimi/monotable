@@ -1,10 +1,6 @@
 # encoding: BINARY
 =begin
 
-Chunks consists of one or more Entries, append to each other. The first entry is considered the Master. Every subsequent
-Chunk is a journalized edit to the master entry. These other entries will each have an "action" specified for the kind of edit
-they represent.
-
 Chunk format:
   Header: "MonotableChunk"
   ASI:            Major version (major changes are not backward compatible)
@@ -15,33 +11,32 @@ Chunk format:
 EntryBody format:
   ASI-String:     Info-Block
   XBD-Dictionary: Column-name Dictionary
-  ASI-String:     Index-Block
+  ASI-String:     Index
   (special):      Data-Block
 
-Info-Block
+Info-Block:
   XBD:            Info-Block data
 
+Index:
+  Index-Pre-Block
+  Index-Block(s)
 
-**********TODO - implement this new Index-Block-Format
-It is optimized such that we don't need to load the entire index in memory and yet can do random reads reasonably efficiently.
-We are expecting to need to have to manage some 130,000 chunks. The in-memory object-size for each chunk needs to be reasonable and constant.
-This should achieve that.
-
-Index-Pre-Block format:
+Index-Pre-Block:
   ASI:            N Index-Block-Levels
   N-ASIs:         Byte-size of each index-level
 
-  Index-Blocks:
-    Can be any size, but are expected to be close to by <= some max block-size which is targeted to be 64k.
-    Consists of 0 or more index records, in alpha-ascending order
+Index-Block:
+  Can be any size, but are expected to be close to DEFAULT_MAX_INDEX_BLOCK_SIZE.
+  The size of the index-block is known based on the Index-Pre-Block or the index-block's parent index-block.
+  Consists of 0 or more index records, in alpha-ascending order
 
-    Index-Block-Record(IBR) Common
-      ASI:            # of characters from the previous key to prepend to this Key
-                      The first record in a block references the key in the parent Index-Block-Record that pointed to this block.
-                      If this is the top-most Index-Block, then this value should always be 0.
-      ASI-String:     the rest of the Key
-      ASI:            offset of the sub-index-block/record-data in the next-index-level/data-block (0 == first byte of next-index-level or data-block)
-      ASI:            length of the sub-index-block/record-data in the next-index-level/data-block
+  Index-Block-Record(IBR) Common
+    ASI:            # of characters from the previous key to prepend to this Key
+                    The first record in a block references the key in the parent Index-Block-Record that pointed to this block.
+                    If this is the top-most Index-Block, then this value should always be 0.
+    ASI-String:     the rest of the Key
+    ASI:            offset of the sub-index-block/record-data in the next-index-level/data-block (0 == first byte of next-index-level or data-block)
+    ASI:            length of the sub-index-block/record-data in the next-index-level/data-block
 
   Notes:  Keys in non-leaf index blocks are the last key of the PREVIOUS
   sub-index-block. In other words, all entries in THIS index-record's sub-block
@@ -50,6 +45,10 @@ Index-Pre-Block format:
   is a user-record with the key "".
 
 Data-Block: consist of 0 or more data-records - as many as fit in the length of the record as specified in the index
+  The records are just 0 or more fields. The number of fields per record is known because the index-block-entry for
+  the record specifies its byte-size.
+
+Record-Field:
   ASI:            column-ID
   ASI-String:     column-data
 
