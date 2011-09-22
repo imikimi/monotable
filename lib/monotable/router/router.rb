@@ -116,13 +116,19 @@ module Monotable
     # yields store, key
     #   store => store to route to
     #   key => use this key instead of the key passed to route
+    # TODO - should allow a block to be passed in which is the "what to do with the result" block
     def route(key)
       ikey=Router.internalize_key(key)
       work_log=[]
       ret=if router.local_store.local?(ikey)
+        # TODO
+        # should defer to the EventMachine thread-pool
         work_log<<"processed locally"
         yield router.local_store,ikey
       else
+        # TODO
+        # is it possible for the server_client to set up the evented remote call sequence, return an object, and then, here, attach
+        # they post-operation of finalizing the HTTP response?
         sc=router.server_client(ikey)
         work_log<<"forwarding request to: #{sc}"
         yield sc,ikey
