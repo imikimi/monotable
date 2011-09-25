@@ -73,7 +73,7 @@ module Monotable
   module ChunkReadAPI
     include ReadAPI
 
-    # see ReadAPI
+    # see ReadAPI#get_record
     def get_record(key)
       @records[key]
     end

@@ -93,7 +93,7 @@ module Monotable
 
     def initialize(router)
       @router=router
-      raise ArgumentError,"router.kind_of?(Router) required" unless router.kind_of?(Router)
+      raise ArgumentError,"router.kind_of?(Router) required (router.class==#{router.class})" unless router.kind_of?(Router)
       raise InternalError,"router.local_store not set" unless router.local_store
     end
 

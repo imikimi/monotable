@@ -1,15 +1,18 @@
 require File.join(File.dirname(__FILE__),"xbd")
 require File.join(File.dirname(__FILE__),"version")
 
-require File.join(File.dirname(__FILE__),'daemon')
-require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
+def mt_require(relative_path,modules)
+  modules.each do |mod|
+    require File.join(File.dirname(__FILE__),relative_path.to_s,mod)
+  end
+end
 
-%w{
+mt_require :local_store, %w{
+  api
   string
   global
   mini_event_machine
   cache
-  api
   record_cache
   index_block_cache
   constants
@@ -29,18 +32,22 @@ require File.join(File.dirname(__FILE__),'daemon', 'record_deferrable')
   disk_chunk
   path_store
   local_store
-  }.each do |file|
-    require File.join(File.dirname(__FILE__),"local_store",file)
-end
+}
 
-%w{
+mt_require '', %w{
   exceptions/exceptions
   solo_daemon/solo_daemon
   router/server_client
   router/router
-  }.each do |file|
-    require File.join(File.dirname(__FILE__),file)
-end
+}
+
+
+mt_require :daemon, %w{
+  daemon
+  http_request_handler
+  http_record_request_handler
+  http_internal_request_handler
+}
 
 module Monotable
   # Your code goes here...

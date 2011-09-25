@@ -14,9 +14,11 @@ module Monotable
     attr_accessor :filename
     attr_accessor :write_handle
     attr_accessor :read_handle
+    attr_accessor :write_mutex
 
     def initialize(fn)
       @filename=fn
+      @write_mutex=Mutex.new
     end
 
     def inspect
@@ -53,6 +55,19 @@ module Monotable
       yield @write_handle if block
     ensure
       close_write unless hold_open
+    end
+
+    # same as FileHandl#open_append except the block gets exclusive access to the append stream.
+    #
+    # NOTE: this only works if all appendrs use open_exclusive_append.
+    def open_exclusive_append(hold_open=false,&block)
+      hold_open||=@append_handle # if already open, keep open
+      @append_handle=File.open(filename,"wb") unless @append_handle
+      @write_mutex.synchronize do
+        yield @append_handle if block
+      end
+    ensure
+      close_append unless hold_open
     end
 
     def open_append(hold_open=false,&block)
@@ -100,7 +115,7 @@ module Monotable
     end
 
     def flush
-      write_handle.flush if write_handle
+      write_handle.fsync if write_handle
     end
 
     def length

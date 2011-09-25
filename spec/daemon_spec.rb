@@ -11,21 +11,19 @@ describe Monotable::Daemon do
   PORT = 32100
   HOST = '127.0.0.1'
   DAEMON_URI = "http://#{HOST}:#{PORT}"
+  LOCAL_STORE_PATH = Dir.mktmpdir
 
   before(:all) do
-    # Set up the local store
-    Monotable::LOCAL_STORE_PATH = Dir.mktmpdir
-    Monotable::LOCAL_STORE = Monotable::SoloDaemon.new(
-      :store_paths => [Monotable::LOCAL_STORE_PATH],
-      :verbose => true,
-      :initialize_new_store => true
-    )
 
     # Start up the daemon
     @server_pid = fork {
-      EM.run {
-        EM.start_server HOST, PORT,  Monotable::Daemon
-      }
+      Monotable::Daemon::Server.start(
+        :port=>PORT,
+        :host=>HOST,
+        :store_paths => [LOCAL_STORE_PATH],
+#        :verbose => true,
+        :initialize_new_store => true
+      )
     }
     sleep 0.1 # Hack; sleep for a bit while the server starts up
   end
@@ -41,9 +39,10 @@ describe Monotable::Daemon do
 
   it "return the record we create when using JSON" do
     record_key = 'apple'
-    record_value = { 'x' => '1' }.to_json
-    RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
-    RestClient.get("#{DAEMON_URI}/records/#{record_key}").should == record_value
+    record_value = { 'x' => '1' }
+    RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value.to_json, :content_type => :json, :accept => :json)
+    response = JSON.parse(RestClient.get("#{DAEMON_URI}/records/#{record_key}"))
+    response["record"].should==record_value
   end
 
   it "should not return the record after we've deleted it" do
@@ -66,6 +65,6 @@ describe Monotable::Daemon do
     Process.kill 'HUP', @server_pid
 
     # Remove the test local store
-    FileUtils.rm_rf Monotable::LOCAL_STORE_PATH
+    FileUtils.rm_rf LOCAL_STORE_PATH
   end
 end

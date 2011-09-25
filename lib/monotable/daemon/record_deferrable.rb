@@ -1,67 +1,51 @@
-class Monotable::Daemon::RecordDeferrable
+module Monotable
+module Daemon
+
+module DeferrableReadAPI
+  def get(key)
+    content=Monotable.local_store.get(key)
+    json_response(content[:record] ? 200 : 404, content)
+  end
+end
+
+module DeferrableWriteAPI
+
+  # see WriteAPI#set
+  def set(key, fields)
+    content=Monotable.local_store.set(key,fields)
+    json_response(200,content)
+  end
+
+  # see WriteAPI#update
+  def update(key,fields)
+    content=Monotable.local_store.update(key,fields)
+    json_response(202,content)
+  end
+
+  # see WriteAPI#delete
+  def delete(key)
+    content=Monotable.local_store.delete(key)
+    json_response(200,content)
+  end
+end
+
+class RecordDeferrable
   include EM::Deferrable
+  include DeferrableReadAPI
+  include DeferrableWriteAPI
 
   def initialize(response)
     @response = response
   end
 
-  def list
-    @response.status = '200'
-    @response.content_type 'text/plain'
-    @response.content = 'TODO List of records'
+  def json_response(status,content)
+    @response.status = status.to_s
+    @response.content_type 'application/json'
+    @response.content = content.to_json
     @response.send_response
   end
 
-  def create(key, props)
-    @response.status = '200'
-    @response.content_type 'text/plain'
-    @response.content = 'TODO Create record'
-    @response.send_response
-  end
+end
 
-  def update(key,props)
-    self.callback do
-      @response.status = '202'
-      @response.content_type 'text/plain'
-      @response.content = 'Record written'
-      @response.send_response
-    end
-    # TODO Add a errback, when the conditions are known for such a failure
-    call_p, result_p = proc { Monotable::LOCAL_STORE.set(key,props) }, proc {|set_result| succeed }
-    # EM.defer call_p, result_p
-    result_p.call(call_p.call)
-  end
-
-  def read(key)
-    self.callback do |content|
-      @response.status = '200'
-      # @response.content_type 'application/octet-stream'
-      @response.content_type 'text/plain'
-      @response.content = content.to_json
-      @response.send_response
-    end
-    self.errback do
-      @response.status = '404'
-      @response.content_type 'text/plain'
-      @response.content = 'Record not found'
-      @response.send_response
-    end
-    call_p, result_p = proc { Monotable::LOCAL_STORE.get(key)[:record] }, proc {|get_result| get_result ? succeed(get_result) : fail }
-    # EM.defer call_p, result_p
-    result_p.call(call_p.call)
-  end
-
-  def delete(key)
-    self.callback do |content|
-      @response.status = '204'
-      # @response.content_type 'application/octet-stream'
-      @response.content_type 'text/plain'
-      # @response.content = content.to_json
-      @response.send_response
-    end
-    # EM.defer proc { Monotable::LOCAL_STORE.delete(key) }, proc {|delete_result| succeed }
-    Monotable::LOCAL_STORE.delete(key)
-    succeed
-  end
-
+end
 end

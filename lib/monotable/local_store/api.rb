@@ -1,4 +1,5 @@
-module Monotable  module ReadAPI
+module Monotable
+module ReadAPI
 
     # returns:
     #   exists: {hash-of-fields}
@@ -27,7 +28,7 @@ module Monotable  module ReadAPI
     # returns array in format: {:records=>[[key,record],...],:next_options}
     # get_first :gte => key
     # options
-    #   :limit => #
+    #   :limit => # (default = 1)
     #   :gte => key
     #   :gt => key
     #   :lt => key
@@ -36,14 +37,14 @@ module Monotable  module ReadAPI
     #   :columns => nil / {...}
     #
     # Returns
-    #  {:records=>[...], :next_options=>{...}}
+    #   {:records=>[[key,{fields_hash}],[...],...], :next_options=>{...}}
     def get_first(options={})
       raise "stub"
     end
 
     # returns array in format: [[key,record],...]
     # options
-    #   :limit => #
+    #   :limit => # (default = 1)
     #   :gte => key
     #   :gt => key
     #   :lt => key
@@ -52,7 +53,17 @@ module Monotable  module ReadAPI
     #   :columns => nil / {...}
     #
     # Returns
-    #  {:records=>[...], :next_options=>{...}}
+    #   {:records=>[[key,{fields_hash}],[...],...], :next_options=>{...}}
+    #
+    # Examples
+    #   store.get_first(:gte=>"key2") => {:records=>[["key2",{"field"=>"value"}]], ...}
+    #   store.get_first(:gt=>"key2") => {:records=>[["key3",{"field"=>"value"}]], ...}
+    #   store.get_first(:with_prefix=>"key2") => {:records=>[["key3",{"field"=>"value"}]], ...}
+    #   store.get_first(:gt=>"key2", :limit=>3) => {:records=>[
+    #     ["key3",{"field"=>"value"}],
+    #     ["key4",{"field"=>"value"}],
+    #     ["key5",{"field"=>"value"}]
+    #   ],...}
     def get_last(options={})
       raise "stub"
     end
@@ -83,7 +94,7 @@ module Monotable  module ReadAPI
     # Notes:
     #   We should be able to able to actually return a list of the fields that were replaced.
     #   We have all the info we need, and since we have to track accounting_size, we will always have to fetch this info to perform update.
-    def update(key,columns)
+    def update(key,fields)
       raise "stub"
     end
 
@@ -96,4 +107,10 @@ module Monotable  module ReadAPI
       raise "stub"
     end
   end
+
+# See the ReadAPI and WriteAPI for details on the API
+module API
+  include ReadAPI
+  include WriteAPI
+end
 end
