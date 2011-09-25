@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'rubygems'
-require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 require 'optparse'
 require 'ostruct'
 
@@ -26,6 +25,7 @@ class OptionsParser
       opts.on("-q", "--quiet", "Silence output") {|p| options[:verbose]=false}
       opts.on("-p", "--port #", "Port number to listen to") {|p| options[:port]=p.to_i}
       opts.on("-h", "--host address", "Host address to listen to") {|h| options[:host]=h}
+      opts.on("-i", "Initialize new store") {|h| options[:initialize_new_multi_store]=true}
 
       opts.on_tail("--version", "Show version") do
         puts Monotable::VERSION
@@ -68,4 +68,5 @@ options[:store_paths].each do |path|
   Dir.mkdir(path) unless File.exists?(path)
 end
 
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 Monotable::Daemon::Server.start(options)

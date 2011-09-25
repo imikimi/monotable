@@ -5,9 +5,9 @@ module HTTP
 class InternalRequestHandler < RequestHandler
 #  include EM::Deferrable
 
-  def get_root_record(key,fields={})
-    content=Monotable::Daemon.local_store.get(key)
-    respond(content[:record] ? 200 : 404, content)
+  def chunks()
+    content={:chunks=>Monotable::Daemon::Server.local_store.chunks.keys}
+    respond(200, content)
   end
 end
 

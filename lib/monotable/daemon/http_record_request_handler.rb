@@ -12,6 +12,18 @@ class RecordRequestHandler < RequestHandler
       content=@store.get(key)
       respond(content[:record] ? 200 : 404, content)
     end
+
+    # see Monotable::ReadAPI#get_first
+    def get_first(options={})
+      content=@store.get_first(options)
+      respond(200,content)
+    end
+
+    # see Monotable::ReadAPI#get_last
+    def get_last(options={})
+      content=@store.get_last(options)
+      respond(200,content)
+    end
   end
 
   # see Monotable::WriteAPI

@@ -47,9 +47,9 @@ describe Monotable::Daemon do
 
   it "should not return the record after we've deleted it" do
     record_key = 'apple'
-    record_value = { 'x' => '1' }.to_json
+    record_value = { 'x' => '1' }
     # First write the record, and make sure it is there
-    RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value, :content_type => :json, :accept => :json)
+    RestClient.put("#{DAEMON_URI}/records/#{record_key}", record_value.to_json, :content_type => :json, :accept => :json)
     RestClient.get("#{DAEMON_URI}/records/#{record_key}") {|response, request, result|
       response.code.should == 200
     }
@@ -58,6 +58,27 @@ describe Monotable::Daemon do
     RestClient.get("#{DAEMON_URI}/records/#{record_key}") {|response, request, result|
       response.code.should == 404
     }
+  end
+
+  it "should first_records" do
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte")).should==
+      {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    RestClient.put("#{DAEMON_URI}/records/key1", {'x' => '1'}.to_json, :content_type => :json, :accept => :json)
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte")).should==
+      {"records"=>[["key1", {"x"=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    RestClient.put("#{DAEMON_URI}/records/key2", {'y' => '2'}.to_json, :content_type => :json, :accept => :json)
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>1})).should==
+      {"records"=>[["key1", {"x"=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {"x"=>"1"}], ["key2", {"y"=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key2", :params => {:limit=>10})).should==
+      {"records"=>[["key2", {"y"=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
   end
 
   after(:all) do
