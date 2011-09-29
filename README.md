@@ -1,4 +1,4 @@
-# Monotable
+![Monotable](https://github.com/imikimi/monotable/raw/gh-pages/images/monotable.png)
 
 ## What is it?
 
