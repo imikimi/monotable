@@ -19,56 +19,56 @@ module Xbd
     # return String given an ID, or ID given a String
     def [](i) @hash[i] end
 
-    # add a String to the dictionary
-    def <<(name)
-      name=case name
-      when String then "#{name}".force_encoding("BINARY")
-      else name.to_s.force_encoding("BINARY")
+    def Dictionary.sanitize_string(str)
+      case str
+      when String then  "#{str}".force_encoding("BINARY")
+      else              str.to_s.force_encoding("BINARY")
       end
-      return @hash[name] if @hash[name] # dont add if already exists
-      new_id=@array.length
-      @array<<name
-      @hash[new_id]=name
-      @hash[name]=new_id
-      name
+    end
+
+    # add a String to the dictionary
+    def <<(str)
+      str = Dictionary.sanitize_string str
+      @hash[str] ||= begin
+        new_id = @array.length
+        @array << @hash[new_id] = str
+        new_id
+      end
     end
 
     # convert to binary string
     def to_binary
-      data=@array.length.to_asi + @array.collect {|v| v.length.to_asi}.join + @array.join
-      data.length.to_asi + data
+      encoded_dictionary = [@array.length.to_asi, @array.collect{|v| v.length.to_asi}, @array].join
+      encoded_dictionary.to_asi_string
     end
 
-    # parses dictionary data from a "source" string at offset "index"
-    # returns the parsed Dictionary object and the first "index" after the data read
-    def Dictionary.parse(source,index=0)
-      start_index=index
-      dict_length,index=source.read_asi(index)
-      end_dict_index=index+dict_length
-      dict_data=source[index..(index+dict_length)-1]
-      raise "Invalid Dictionary Data Length (dict_data.length=#{dict_data.length}, dict_length=#{dict_length})" if dict_data.length!=dict_length
-
-      # read num_entries
-      num_entries,index=dict_data.read_asi
-
-      # read dictionary string lengths
-      lengths=[]
-      (0..num_entries-1).each do
-        len,index=dict_data.read_asi(index)
-        lengths<<len
+    class <<self
+      def read_encoded_dictionary(source,index)
+        encoded_dictionary, index = source.read_asi_string index
+        [StringIO.new(encoded_dictionary), index]
       end
 
-      # read dictionary strings
-      # NOTE: first string has ID=0, second has ID=1, etc...
-      data=[]
-      lengths.each do |len|
-        entry=dict_data[index..(index+len-1)]
-        data<<entry
-        index+=len
+      def read_num_entries(encoded_dictionary)
+        encoded_dictionary.read_asi
       end
 
-      # return Dictinary and next start index
-      return Dictionary.new(data),end_dict_index
+      def read_string_lengths(encoded_dictionary,num_entries)
+        num_entries.times.collect {encoded_dictionary.read_asi}
+      end
+
+      def read_strings(encoded_dictionary,lengths)
+        lengths.collect {|len| encoded_dictionary.read len}
+      end
+
+      # parses dictionary data from a "source" string at offset "index"
+      # returns the parsed Dictionary object and the first "index" after the data read
+      def parse(source,index=0)
+        encoded_dictionary,index = read_encoded_dictionary(source,index)
+        num_entries = read_num_entries encoded_dictionary
+        lengths = read_string_lengths encoded_dictionary, num_entries
+        strings = read_strings encoded_dictionary, lengths
+        [Dictionary.new(strings), index]
+      end
     end
   end
 end
