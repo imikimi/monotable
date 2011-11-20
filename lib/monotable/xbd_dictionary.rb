@@ -1,4 +1,3 @@
-
 module Xbd
   #*********************************
   # Xbd::Dictionary
@@ -38,37 +37,16 @@ module Xbd
 
     # convert to binary string
     def to_binary
-      encoded_dictionary = [@array.length.to_asi, @array.collect{|v| v.length.to_asi}, @array].join
-      encoded_dictionary.to_asi_string
+      [@array.length.to_asi, @array.collect{|v| v.length.to_asi}, @array].join.to_asi_string
     end
 
-    class <<self
-      def read_encoded_dictionary(source,index)
-        encoded_dictionary, index = source.read_asi_string index
-        [StringIO.new(encoded_dictionary), index]
-      end
-
-      def read_num_entries(encoded_dictionary)
-        encoded_dictionary.read_asi
-      end
-
-      def read_string_lengths(encoded_dictionary,num_entries)
-        num_entries.times.collect {encoded_dictionary.read_asi}
-      end
-
-      def read_strings(encoded_dictionary,lengths)
-        lengths.collect {|len| encoded_dictionary.read len}
-      end
-
-      # parses dictionary data from a "source" string at offset "index"
-      # returns the parsed Dictionary object and the first "index" after the data read
-      def parse(source,index=0)
-        encoded_dictionary,index = read_encoded_dictionary(source,index)
-        num_entries = read_num_entries encoded_dictionary
-        lengths = read_string_lengths encoded_dictionary, num_entries
-        strings = read_strings encoded_dictionary, lengths
-        [Dictionary.new(strings), index]
-      end
+    def Dictionary.parse(source,index=0)
+      encoded_dictionary, index = source.read_asi_string index
+      encoded_dictionary = StringIO.new(encoded_dictionary)
+      num_entries = encoded_dictionary.read_asi
+      lengths = num_entries.times.collect {encoded_dictionary.read_asi}
+      strings = lengths.collect {|len| encoded_dictionary.read len}
+      [Dictionary.new(strings), index]
     end
   end
 end
