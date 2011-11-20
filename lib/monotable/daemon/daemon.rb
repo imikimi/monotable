@@ -49,8 +49,8 @@ class Server < EM::Connection
   INTERNAL_REQUEST_PATTERN = /^\/internal\/(.*)$/
   RECORDS_REQUEST_PATTERN = /^\/records(?:\/?(.*))$/
   SERVER_REQUEST_PATTERN = /^\/server\/([a-zA-Z]+)\/?(.*)$/
-  FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(?:\/?(.*))$/
-  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(lt|lte|with_prefix)(?:\/?(.*))$/
+  FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.*))?$/
+  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(lt|lte|with_prefix)(\/(.*))?$/
   def process_http_request
     # the http request details are available via the following instance variables:
     #   @http_protocol
@@ -77,8 +77,8 @@ class Server < EM::Connection
 
     case request_uri
     when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
-    when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$2))
-    when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$2))
+    when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>($3||"")))
+    when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>($3||"")))
     when SERVER_REQUEST_PATTERN         then handle_server_request($1.downcase,$2)
     else                                     handle_default_request
     end
