@@ -33,11 +33,14 @@ describe Monotable::StringBinaryEnumeration do
   end
 
   it "should fail to call binary_prev(10) on the empty string. This is the minimum string." do
-    lambda { "".binary_prev(10) }.should raise_error(ArgumentError)
+    "".binary_prev(10).should== ""
+    #lambda { "".binary_prev(10) }.should raise_error(ArgumentError)
   end
 
   it "should fail to call binary_next(10) on 10 \\0xffs. This is the maximum string." do
-    lambda { ("\xff"*10).binary_next(10) }.should raise_error(ArgumentError)
+    str=("\xff"*10)
+    str.binary_next(10).should==str
+    #lambda { ("\xff"*10).binary_next(10) }.should raise_error(ArgumentError)
   end
 
   it "should work to str.binary_next(10).binary_prev(10)" do

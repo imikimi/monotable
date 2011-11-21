@@ -71,7 +71,8 @@ and therefor provide the guarantees at the top.
 module Monotable
   module StringBinaryEnumeration
     def binary_next(max_string_length=100)
-      raise ArgumentError.new("No next exists. Either max_string_length==0 or the input string is all \\xFFs up to max_string_length") if max_string_length==0
+#      raise ArgumentError.new("No next exists. Either max_string_length==0 or the input string is all \\xFFs up to max_string_length")
+      return "" if max_string_length==0
       binself=self.to_binary
       if binself.length<max_string_length
         binself.clone<<"\x00"
@@ -80,14 +81,16 @@ module Monotable
         binself[0..-2]<<b+1
       else
         # carry the 1
-        binself[0..-2].binary_next(max_string_length-1)
+        nxt=binself[0..-2].binary_next(max_string_length-1)
+        nxt=self if nxt==binself[0..-2]
+        nxt
       end
     end
 
     def binary_prev(max_string_length=100)
-      raise ArgumentError.new("No prev exists. The string is empty") if length==0
+#      raise ArgumentError.new("No prev exists. The string is empty") if length==0
       binself=self.to_binary
-      if binself=="\x00"
+      if binself=="" || binself=="\x00"
         ""
       elsif binself.byte(-1)==0
         binself[0..-2]
