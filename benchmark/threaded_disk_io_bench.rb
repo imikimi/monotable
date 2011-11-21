@@ -9,9 +9,10 @@ class ThreadedDiskIOBench
     @filename="test.tmp"
 
 
-    @ratio_a=128
-    @ratio_b=1024/@ratio_a
-    @str="a"*(64*1024*@ratio_a)
+    @write_size=1 * 1024 * 1024
+    @total_written = 512 * 1024 * 1024
+    @num_writes=@total_written / @write_size
+    @str="a"*@write_size
     puts "write block size: #{@str.length}\n"
   end
 
@@ -30,7 +31,7 @@ class ThreadedDiskIOBench
     start_time=Time.now
     written=0
     open do |file|
-      (5*@ratio_b).times do
+      (@num_writes).times do
         pip "["
         file.write @str
         file.fsync if fsync
@@ -41,6 +42,9 @@ class ThreadedDiskIOBench
     delta=Time.now-start_time
     pip "\n(#{written/(1024*1024)} mB written - #{"%.2f"%((written/(delta*1024*1024)))} mB/s)"
     @sleepwritesleep_done=true
+  rescue
+    pip "!"
+    raise
   end
 
   def dostuff

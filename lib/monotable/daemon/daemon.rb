@@ -49,8 +49,9 @@ class Server < EM::Connection
   INTERNAL_REQUEST_PATTERN = /^\/internal\/(.*)$/
   RECORDS_REQUEST_PATTERN = /^\/records(?:\/?(.*))$/
   SERVER_REQUEST_PATTERN = /^\/server\/([a-zA-Z]+)\/?(.*)$/
-  FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.*))?$/
-  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(lt|lte|with_prefix)(\/(.*))?$/
+  FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.+)?)?$/
+  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(lt|lte|with_prefix)(\/(.+)?)?$/
+  ROOT_REQUEST_PATTERN = /^\/?$/
   def process_http_request
     # the http request details are available via the following instance variables:
     #   @http_protocol
@@ -77,10 +78,11 @@ class Server < EM::Connection
 
     case request_uri
     when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
-    when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>($3||"")))
-    when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>($3||"")))
+    when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$3))
+    when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$3))
     when SERVER_REQUEST_PATTERN         then handle_server_request($1.downcase,$2)
-    else                                     handle_default_request
+    when ROOT_REQUEST_PATTERN           then handle_default_request
+    else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
     end
     if Server.verbose
       puts "#{@http_request_method}:#{@http_request_uri}(#{params.inspect})"
@@ -136,7 +138,7 @@ class Server < EM::Connection
     p||=params
     count=0
     valid_params.each do |kstr|
-      count+=1 if p[kstr]
+      count+=1 if p.has_key? kstr
     end
     if count!=p.length
       handle_invalid_request "Query-string parameters must be one of: #{valid_params.inspect}"
@@ -157,8 +159,10 @@ class Server < EM::Connection
   end
 
   def handle_last_records_request(request_router,options)
+    puts "handle_last_records_request options=#{options.inspect}" if Server.verbose
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
+    puts "handle_last_records_request options=#{options.inspect}" if Server.verbose
     request_router||=Monotable::ExternalRequestRouter.new(Server.router)
     return handle_unknown_request unless @http_request_method=='GET'
     HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_first(options)

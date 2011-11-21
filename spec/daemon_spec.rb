@@ -60,25 +60,92 @@ describe Monotable::Daemon do
     }
   end
 
-  it "should first_records" do
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte")).should==
-      {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
+  def clear_store
+    records=JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte",:params => {:limit=>100}))["records"]
+    records.each do |k,v|
+      RestClient.delete("#{DAEMON_URI}/records/#{k}")
+    end
+  end
 
-    RestClient.put("#{DAEMON_URI}/records/key1", {'x' => '1'}.to_json, :content_type => :json, :accept => :json)
+  def setup_store(num_keys)
+    clear_store
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte")).should==
-      {"records"=>[["key1", {"x"=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    num_keys.times do |v|
+      v=(v+1).to_s
+      RestClient.put("#{DAEMON_URI}/records/key#{v}", {'field' => v}.to_json, :content_type => :json, :accept => :json)
+    end
+  end
 
-    RestClient.put("#{DAEMON_URI}/records/key2", {'y' => '2'}.to_json, :content_type => :json, :accept => :json)
+  it "should be possible to delete all records in the store" do
+    setup_store(2)
+    clear_store
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte"))["records"].length.should == 0
+  end
+
+  it "should respond to /first_records/gte" do
+    setup_store(2)
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>1})).should==
-      {"records"=>[["key1", {"x"=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+      {"records"=>[["key1", {'field'=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>10})).should==
-      {"records"=>[["key1", {"x"=>"1"}], ["key2", {"y"=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+      {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key2", :params => {:limit=>10})).should==
-      {"records"=>[["key2", {"y"=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+      {"records"=>[["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key1", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+  end
+
+  it "should respond to /first_records/ge" do
+    setup_store(2)
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt/key1", :params => {:limit=>10})).should==
+      {"records"=>[["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+  end
+
+  it "should respond to /last_records/lte" do
+    setup_store(2)
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key0", :params => {:limit=>10})).should==
+      {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key1", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key2", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key3", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+  end
+
+  it "should respond to /last_records/lt" do
+    setup_store(2)
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key0", :params => {:limit=>10})).should==
+      {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key1", :params => {:limit=>10})).should==
+      {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key2", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key3", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/", :params => {:limit=>10})).should==
+      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+  end
+
+  it "should respond to 406 to invalide requests" do
+    expect{RestClient.get("#{DAEMON_URI}/first_records/lte/key1")}.to raise_error(RestClient::NotAcceptable)
   end
 
   after(:all) do
