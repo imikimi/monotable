@@ -84,33 +84,33 @@ describe Monotable::Daemon do
   end
 
   it "should respond to /first_records/gte" do
-    setup_store(2)
+    setup_store(9)
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>1})).should==
       {"records"=>[["key1", {'field'=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>10})).should==
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte", :params => {:limit=>2})).should==
       {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key2", :params => {:limit=>10})).should==
-      {"records"=>[["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key2", :params => {:limit=>2})).should==
+      {"records"=>[["key2", {'field'=>"2"}],["key3", {'field'=>"3"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key1", :params => {:limit=>10})).should==
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gte/key1", :params => {:limit=>2})).should==
       {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
   end
 
   it "should respond to /first_records/ge" do
-    setup_store(2)
+    setup_store(9)
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt/key1", :params => {:limit=>10})).should==
-      {"records"=>[["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt/key1", :params => {:limit=>2})).should==
+      {"records"=>[["key2", {'field'=>"2"}],["key3", {'field'=>"3"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt", :params => {:limit=>10})).should==
+    JSON.parse(RestClient.get("#{DAEMON_URI}/first_records/gt", :params => {:limit=>2})).should==
       {"records"=>[["key1", {'field'=>"1"}], ["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
   end
 
   it "should respond to /last_records/lte" do
-    setup_store(2)
+    setup_store(9)
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key0", :params => {:limit=>10})).should==
       {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
@@ -121,12 +121,12 @@ describe Monotable::Daemon do
     JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key2", :params => {:limit=>10})).should==
       {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key3", :params => {:limit=>10})).should==
-      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lte/key3", :params => {:limit=>2})).should==
+      {"records"=>[["key2", {'field'=>"2"}],["key3", {'field'=>"3"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
   end
 
   it "should respond to /last_records/lt" do
-    setup_store(2)
+    setup_store(9)
 
     JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key0", :params => {:limit=>10})).should==
       {"records"=>[], "next_options"=>nil, "work_log"=>["processed locally"]}
@@ -137,11 +137,11 @@ describe Monotable::Daemon do
     JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key2", :params => {:limit=>10})).should==
       {"records"=>[["key1", {'field'=>"1"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key3", :params => {:limit=>10})).should==
-      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/key5", :params => {:limit=>2})).should==
+      {"records"=>[["key3", {'field'=>"3"}],["key4", {'field'=>"4"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
 
-    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/", :params => {:limit=>10})).should==
-      {"records"=>[["key1", {'field'=>"1"}],["key2", {'field'=>"2"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
+    JSON.parse(RestClient.get("#{DAEMON_URI}/last_records/lt/", :params => {:limit=>2})).should==
+      {"records"=>[["key8", {'field'=>"8"}],["key9", {'field'=>"9"}]], "next_options"=>nil, "work_log"=>["processed locally"]}
   end
 
   it "should respond to 406 to invalide requests" do
