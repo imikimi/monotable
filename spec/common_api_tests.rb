@@ -140,12 +140,12 @@ def api_tests(options={})
 
   it "should work to get_last :lte" do
     result=setup_store_with_test_keys.get_last(:lte=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key2"]
+    result[:records].should == [["key2", {"data"=>"key2"}]]
   end
 
   it "should work to get_last :lt" do
     result=setup_store_with_test_keys.get_last(:lt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key1"]
+    result[:records].should == [["key1", {"data"=>"key1"}]]
   end
 
   it "should work to get_last :lte, :gte" do

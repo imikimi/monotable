@@ -110,7 +110,7 @@ module Monotable
       res=[]
       reverse_each_key do |k|
         break if res.length>=limit || k < gte_key
-        res << [k,records[k]] if k<=lte_key
+        res << [k,records[k].fields] if k<=lte_key
       end
       if gte_key < range_start && res.length < limit
         next_options=options.clone

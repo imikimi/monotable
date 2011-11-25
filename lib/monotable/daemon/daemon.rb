@@ -26,7 +26,7 @@ class Server < EM::Connection
 
       puts "Initializing LocalStore. Stores:\n\t#{options[:store_paths].join("\n\t")}" if verbose
       @local_store = Monotable::LocalStore.new(options)
-      @router=Monotable::Router.new :local_store=>@local_store
+      @router = Monotable::Router.new :local_store=>@local_store
 
       @port = options[:port] || 8080
       @host = options[:host] || 'localhost'
@@ -149,23 +149,19 @@ class Server < EM::Connection
   end
 
   def handle_first_records_request(request_router,options)
-    puts "handle_first_records_request options=#{options.inspect}" if Server.verbose
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
-    puts "handle_first_records_request options=#{options.inspect}" if Server.verbose
     request_router||=Monotable::ExternalRequestRouter.new(Server.router)
     return handle_unknown_request unless @http_request_method=='GET'
     HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_first(options)
   end
 
   def handle_last_records_request(request_router,options)
-    puts "handle_last_records_request options=#{options.inspect}" if Server.verbose
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
-    puts "handle_last_records_request options=#{options.inspect}" if Server.verbose
     request_router||=Monotable::ExternalRequestRouter.new(Server.router)
     return handle_unknown_request unless @http_request_method=='GET'
-    HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_first(options)
+    HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_last(options)
   end
 
   def handle_unknown_request
