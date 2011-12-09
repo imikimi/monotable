@@ -50,10 +50,14 @@ module Xbd
       return nil
     end
 
-    # iterate over all tags with matching names
-    def each_tag(name)
+    def each_attribute
+      @attrs.each {|k,v| yield k,v}
+    end
+
+    # iterate over all tags or only with matching names
+    def each_tag(name=nil)
       tags.each do |tag|
-        yield tag if tag.name==name
+        yield tag if !name || tag.name==name
       end
     end
 
@@ -115,13 +119,15 @@ module Xbd
       tags.each {|tag| tag.populate_dictionaries(tagsd,attrsd,valuesd)} # recurse on sub-tags
     end
 
-    def to_binary(tagsd,attrsd,valuesd)
+    # encode just this tag in binary
+    # Note this returned value alone is not parsable
+    def to_binary_partial(tagsd,attrsd,valuesd)
       # build attrs_data string: all attr name-value pairs as ASIs concatinated
       attrs_data=attrs.keys.sort.collect {|key| attrsd[key].to_asi + valuesd[attrs[key]].to_asi}.join
 
       data=tagsd[name].to_asi +                                         # name asi
         attrs_data.length.to_asi + attrs_data +                         # attrs length asi and attrs
-        tags.collect {|tag| tag.to_binary(tagsd,attrsd,valuesd)}.join   # sub-tags
+        tags.collect {|tag| tag.to_binary_partial(tagsd,attrsd,valuesd)}.join   # sub-tags
       data.to_asi_string                                                # tag data pre-pended with tag-data length asi
     end
 
@@ -129,9 +135,9 @@ module Xbd
     # to binary XBD (to_xbd)
     #************************************************************
     # use this to convert an xbd tag structure into a saveable xbd file-string
-    def to_xbd
+    def to_binary
       populate_dictionaries(tagsd=Dictionary.new, attrsd=Dictionary.new, valuesd=Dictionary.new)
-      Xbd::SBDXML_HEADER + tagsd.to_binary + attrsd.to_binary + valuesd.to_binary + to_binary(tagsd,attrsd,valuesd)
+      Xbd::SBDXML_HEADER + tagsd.to_binary + attrsd.to_binary + valuesd.to_binary + to_binary_partial(tagsd,attrsd,valuesd)
     end
 
     #**********************************************************

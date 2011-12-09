@@ -23,6 +23,7 @@ mt_require :local_store, %w{
   journal_manager
   compaction_manager
   logger
+  columns
   record
   chunk
   index_block

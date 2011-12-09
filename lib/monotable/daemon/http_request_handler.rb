@@ -24,6 +24,7 @@ class RequestHandler
 
   def respond_with_json(status,content)
     @response.content_type 'application/json'
+    content = Tools.force_encoding(content,"UTF-8")
     @response.content = content.to_json
   end
 

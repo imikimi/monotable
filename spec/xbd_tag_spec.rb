@@ -59,15 +59,15 @@ describe Tag do
 
   it "should work to convert to xbd" do
     tag=full_test_tag
-    xbd=tag.to_xbd
+    xbd=tag.to_binary
     tag2=Xbd.parse(xbd)
     tag.to_s.should==tag2.to_s
   end
 
   it "should work to store binaries" do
     tag1=full_test_tag
-    tag1["nested_xbd"]=full_test_tag.to_xbd
-    tag2=Xbd.parse(tag1.to_xbd)
+    tag1["nested_xbd"]=full_test_tag.to_binary
+    tag2=Xbd.parse(tag1.to_binary)
     tag2["nested_xbd"].should==tag1["nested_xbd"]
     Xbd.parse(tag2["nested_xbd"]).should==full_test_tag
   end
@@ -100,7 +100,7 @@ describe Tag do
     begin
       filename=File.join(File.dirname(__FILE__),"xbd_test_file.xbd")
       tag=full_test_tag
-      File.open(filename,"wb") {|file| file.write(tag.to_xbd)}
+      File.open(filename,"wb") {|file| file.write(tag.to_binary)}
       File.exists?(filename).should==true
       tag2=Xbd.load_from_file(filename)
       tag2.should==tag
@@ -115,7 +115,7 @@ describe Tag do
     valuesd=Dictionary.new
     tag=full_test_tag
     tag.populate_dictionaries(tagsd,attrsd,valuesd)
-    bin=tag.to_binary(tagsd,attrsd,valuesd)
+    bin=tag.to_binary_partial(tagsd,attrsd,valuesd)
     tag2,index=Tag.parse(bin,0,tagsd,attrsd,valuesd)
     index.should==bin.length
     tag.to_s.should==tag2.to_s

@@ -22,6 +22,24 @@ module Monotable
   end
 =end
   module Tools
+    def Tools.force_encoding(obj,encoding)
+      case obj
+      when String then
+        if obj.encoding!=encoding
+          "#{obj}".force_encoding(encoding)
+        else
+          obj
+        end
+      when Array then obj.map{|a| Tools.force_encoding(a,encoding)}
+      when Hash then
+        hash={}
+        obj.each{|k,v| hash[Tools.force_encoding(k,encoding)]=Tools.force_encoding(v,encoding)}
+        hash
+      when Symbol,nil,Fixnum then obj
+      else raise "unknown type: #{obj.inspect}"
+      end
+    end
+
     #Input options:
     #   :gte => key
     #   :gt => key

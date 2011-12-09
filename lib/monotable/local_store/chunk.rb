@@ -498,7 +498,7 @@ module Monotable
       disk_records = return_disk_records || {}
       # encode info-block
       save_saved_chunk_info
-      info_block_string = info.to_xbd.to_asi_string
+      info_block_string = info.to_binary.to_asi_string
 
       # encode column-dictionary
       self.columns=Xbd::Dictionary.new

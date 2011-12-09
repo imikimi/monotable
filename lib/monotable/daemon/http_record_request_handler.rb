@@ -31,14 +31,16 @@ class RecordRequestHandler < RequestHandler
 
     # see Monotable::WriteAPI#set
     def set(key,fields)
+      fields=Tools.force_encoding(fields,"ASCII-8BIT")
       content=@store.set(key,fields)
       respond(200,content)
     end
 
     # see Monotable::WriteAPI#update
     def update(key,fields)
+      fields=Tools.force_encoding(fields,"ASCII-8BIT")
       content=@store.update(key,fields)
-      respond(202,content)
+      respond(200,content)
     end
 
     # see Monotable::WriteAPI#delete
