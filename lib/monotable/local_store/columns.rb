@@ -14,14 +14,15 @@ module Monotable
         tag.each_attribute do |k,v|
           col_info[k]=v
         end
-        add col_info
+        self << col_info
       end
     end
 
-    def add(column_properties)
-      @columns[column_properties]||= begin
+    def <<(column_properties)
+      column = Column.new column_properties
+      @columns[column.properties]||= begin
         id = @columns_by_id.length
-        @columns_by_id<<column_properties
+        @columns_by_id<<column
         id
       end
     end
@@ -39,9 +40,9 @@ module Monotable
 
     def xbd_tag
       Xbd::Tag.new("columns") do |tag|
-        each do |col_info|
+        each do |column|
           tag<<Xbd::Tag.new("column") do |col_tag|
-            col_info.each {|k,v| col_tag[k]=v}
+            column.properties.each {|k,v| col_tag[k]=v}
           end
         end
       end
