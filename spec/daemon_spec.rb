@@ -21,11 +21,11 @@ describe Monotable::Daemon do
   end
 
   it "should be accessible via HTTP" do
-    Net::HTTP.get(HOST,'/',PORT).should_not be_empty
+    Net::HTTP.get(host,'/',port).should_not be_empty
   end
 
   it "returns 404 for a non-existent record" do
-    res = Net::HTTP.get_response(HOST,"/records/missing", PORT)
+    res = Net::HTTP.get_response(host,"/records/missing", port)
     res.code.should == '404'
   end
 

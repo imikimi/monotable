@@ -5,12 +5,35 @@ module Monotable
     include ReadAPI
 
     private
-    def generate_get_range_request(first_last,options)
-      [:gte,:gt,:lte,:lt,:with_prefix].each do |kind|
-        if key=options[kind]
-          return "#{server}/#{first_last}_records/#{kind}/#{key}"
-        end
+
+    # return all values for "keys" in h as a hash
+    def hash_select(h,keys)
+      ret={}
+      keys.each {|k|ret[k]=h[k] if h[k]}
+      ret
+    end
+
+    # return the first key-value pair that exists from the list of "keys" in "h"
+    def hash_first(h,keys)
+      keys.each do |k|
+        return k,h[k] if h[k]
       end
+    end
+
+    # return the uri,params for a given get-first request
+    def prepare_get_first_request(options)
+      kind,key = hash_first options, [:gte,:gt,:with_prefix]
+      uri="#{server}/first_records/#{kind}/#{key}"
+      params = hash_select options, [:limit,:lte,:lt]
+      return uri,params
+    end
+
+    # return the uri,params for a given get-last request
+    def prepare_get_last_request(options)
+      kind,key = hash_first options, [:lte,:lt,:with_prefix]
+      uri="#{server}/last_records/#{kind}/#{key}"
+      params = hash_select options, [:limit,:gte,:gt]
+      return uri,params
     end
     public
 
@@ -31,9 +54,8 @@ module Monotable
 
     # see ReadAPI
     def get_first(options={})
-      request=generate_get_range_request(:first,options)
-      limit_options = {:limit => options[:limit]} if options[:limit]
-      RestClient.get(request, :params=>limit_options, :accept=>:json) do |response, request, result|
+      request,params = prepare_get_first_request(options)
+      RestClient.get(request, :params=>params, :accept=>:json) do |response, request, result|
         return Tools.force_encoding(symbolize_keys(JSON.parse(response.body)),"ASCII-8BIT") if response.code == 200 || response.code == 404
         raise NetworkError.new("invalid response code: #{response.code.inspect} for GET request: #{request.inspect}. Result: #{result.inspect}")
       end
@@ -41,9 +63,8 @@ module Monotable
 
     # see ReadAPI
     def get_last(options={})
-      request=generate_get_range_request(:last,options)
-      limit_options = {:limit => options[:limit]} if options[:limit]
-      RestClient.get(request, :params=>limit_options, :accept=>:json) do |response, request, result|
+      request,params = prepare_get_last_request(options)
+      RestClient.get(request, :params=>params, :accept=>:json) do |response, request, result|
         return Tools.force_encoding(symbolize_keys(JSON.parse(response.body)),"ASCII-8BIT") if response.code == 200 || response.code == 404
         raise NetworkError.new("invalid response code: #{response.code.inspect} for GET request: #{request.inspect}. Result: #{result.inspect}")
       end

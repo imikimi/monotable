@@ -50,7 +50,7 @@ class Server < EM::Connection
   RECORDS_REQUEST_PATTERN = /^\/records(?:\/?(.*))$/
   SERVER_REQUEST_PATTERN = /^\/server\/([a-zA-Z]+)\/?(.*)$/
   FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.+)?)?$/
-  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(lt|lte|with_prefix)(\/(.+)?)?$/
+  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(gt|gte|lt|lte|with_prefix)(\/(.+)?)?$/
   ROOT_REQUEST_PATTERN = /^\/?$/
   def process_http_request
     # the http request details are available via the following instance variables:
