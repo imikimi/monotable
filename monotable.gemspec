@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'OptionParser'
   s.add_dependency 'addressable'
 
+  s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec', '~> 2.6.0'
   s.add_development_dependency 'rest-client'
   s.add_development_dependency 'simplecov'
