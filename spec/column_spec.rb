@@ -25,5 +25,19 @@ describe Monotable::Column do
     col1.should_not==col2
   end
 
+  it "should be possible to use as a Hash-key; any different property means a different hash-key" do
+    hash = {}
+    hash[Column.new("name"=>"col1", "Content-Type" => "image/jpeg")]="val1"
+    hash[Column.new("name"=>"col1", "Content-Type" => "image/img")]="val2"
+
+    hash[Column.new("name"=>"col1", "Content-Type" => "image/jpeg")].should=="val1"
+    hash[Column.new("name"=>"col1", "Content-Type" => "image/img")].should=="val2"
+  end
+
+  it "should be comparable to a matching Hash of properties" do
+    Column.new("name"=>"col1", "Content-Type" => "image/jpeg").should == {"name"=>"col1", "Content-Type" => "image/jpeg"}
+    Column.new("name"=>"col1", "Content-Type" => "image/jpeg").should_not == {"name"=>"col1", "Content-Type" => "image/png"}
+  end
+
 end
 end

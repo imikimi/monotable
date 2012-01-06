@@ -20,7 +20,7 @@ module Monotable
 
     def <<(column_properties)
       column = Column.new column_properties
-      @columns[column.properties]||= begin
+      @columns[column]||= begin
         id = @columns_by_id.length
         @columns_by_id<<column
         id
@@ -42,7 +42,7 @@ module Monotable
       Xbd::Tag.new("columns") do |tag|
         each do |column|
           tag<<Xbd::Tag.new("column") do |col_tag|
-            column.properties.each {|k,v| col_tag[k]=v}
+            column.each {|k,v| col_tag[k]=v}
           end
         end
       end

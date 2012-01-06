@@ -9,7 +9,7 @@ describe Monotable::Columns do
     col_info = {"name" => "col_nam", "Content-Type" => "image/jpeg"}
     cols << col_info
     cols.length.should == 1
-    cols[0].properties.should == col_info
+    cols[0].should == col_info
     cols[col_info].should == 0
   end
 
