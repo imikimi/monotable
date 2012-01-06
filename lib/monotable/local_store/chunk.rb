@@ -385,7 +385,7 @@ module Monotable
       # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.
       self.split_into(on_key,second_chunk_file)
 
-      # update the path_store (which will also update the local_store
+      # update the path_store (which will also update the local_store)
       path_store.add(second_chunk_file) if path_store
 
       # set entry

@@ -11,6 +11,16 @@ module Monotable
         return key,record
       end
 
+      def update_root_index(chunk,router)
+        # TODO update the root index record
+      end
+
+      def update_index(chunk,router)
+        return update_root_index(chunk,router) if chunk.range_start==""
+
+        index_key,index_record=create_record_for_chunk(chunk)
+        router.set(index_key,index_record)
+      end
     end
   end
 end

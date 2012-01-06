@@ -116,7 +116,7 @@ module Monotable
 
     def initialize_new_multi_store
       puts "Initializing new multi-store..." if @options[:verbose]
-      @multi_store=true
+      @multi_store=self
       [
       "",
       INDEX_KEY_PREFIX*3+FIRST_DATA_KEY,  # for 64meg chunks approx 2^16 records max at this index level
@@ -144,12 +144,7 @@ module Monotable
       case chunk
       when DiskChunk then
         chunks[chunk.range_start]=chunk
-        if @multi_store && chunk.range_start>""
-          index_key,index_record=GlobalIndex.create_record_for_chunk(chunk)
-          #puts "initialize_new_multi_store; adding chunk #{chunk.range_start.inspect}; index-record's key: #{[index_key,index_record].inspect}"
-          # this should eventually call .set on the "router", not on self
-          set(index_key,index_record)
-        end
+        GlobalIndex.update_index(chunk,@multi_store) if @multi_store
       else raise "unknown type #{chunk.class}"
       end
     end
