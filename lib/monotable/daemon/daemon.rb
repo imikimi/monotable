@@ -1,12 +1,3 @@
-require 'yaml'
-require 'cgi'
-require 'fileutils'
-require 'json'
-require 'rubygems'
-require 'eventmachine'
-require 'evma_httpserver'
-require 'uri'
-require "addressable/uri"
 
 module Monotable
 module Daemon
@@ -15,21 +6,26 @@ class Server < EM::Connection
   include EM::HttpServer
 
   class <<self
-    attr_accessor :local_store,:port,:host,:router,:verbose
+    attr_accessor :local_store,:port,:host,:router,:verbose,:cluster_manager
 
     # options
     #   :store_paths=>["path",...]
     #   :port => Fixnum - TCP port to listen on, default 8080
     #   :host => host to listen on - default "localhost"
+    #   :cluster => {} => params for initializing the cluster-manager
     def start(options={})
       @verbose=options[:verbose]
+      puts "#{self} start options=#{options.inspect}" if verbose
 
       puts "Initializing LocalStore. Stores:\n\t#{options[:store_paths].join("\n\t")}" if verbose
       @local_store = Monotable::LocalStore.new(options)
       @router = Monotable::Router.new :local_store=>@local_store
+      @cluster_manager = Monotable::ClusterManager.new(options[:cluster])
 
       @port = options[:port] || 8080
       @host = options[:host] || 'localhost'
+
+      @cluster_manager.add("#{@host}:#{@port}")
 
       puts "Starting Monotable on: #{@host}:#{@port}" if verbose
 
@@ -48,7 +44,7 @@ class Server < EM::Connection
 
   INTERNAL_REQUEST_PATTERN = /^\/internal\/(.*)$/
   RECORDS_REQUEST_PATTERN = /^\/records(?:\/?(.*))$/
-  SERVER_REQUEST_PATTERN = /^\/server\/([a-zA-Z]+)\/?(.*)$/
+  SERVER_REQUEST_PATTERN = /^\/server\/(.*)$/
   FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.+)?)?$/
   LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(gt|gte|lt|lte|with_prefix)(\/(.+)?)?$/
   ROOT_REQUEST_PATTERN = /^\/?$/
@@ -75,17 +71,22 @@ class Server < EM::Connection
       request_router=Monotable::InternalRequestRouter.new(Server.router)
     end
 
+    @request_options = {
+      :params => params,
+      :method => @http_request_method,
+      :uri => request_uri,
+    }
 
     case request_uri
     when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
     when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$3))
     when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$3))
-    when SERVER_REQUEST_PATTERN         then handle_server_request($1.downcase,$2)
+    when SERVER_REQUEST_PATTERN         then Monotable::Daemon::HTTP::ServerController.new(@response,@request_options).handle
     when ROOT_REQUEST_PATTERN           then handle_default_request
     else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
     end
     if Server.verbose
-      puts "#{@http_request_method}:#{@http_request_uri}(#{params.inspect})"
+      puts "#{@http_request_method}:#{@http_request_uri.inspect} params: #{params.inspect}"
       puts "  post_content: #{post_content.inspect}"
       puts "  response_content: #{@response.content.inspect}"
     end
@@ -99,24 +100,13 @@ class Server < EM::Connection
 /last_records/with_prefix/
 =end
 
-  def handle_server_request(action,key)
-    case @http_request_method
-    when 'GET' then
-      case action
-      when 'chunks' then HTTP::InternalRequestHandler.new(@response).chunks
-      else handle_unknown_request
-      end
-    else handle_unknown_request
-    end
-  end
-
   def handle_record_request(request_router,key)
-    request_router||=Monotable::ExternalRequestRouter.new(Server.router)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
     case @http_request_method
-    when 'GET'    then HTTP::RecordRequestHandler.new(@response,:store=>request_router).get(key)
-    when 'POST'   then HTTP::RecordRequestHandler.new(@response,:store=>request_router).set(key,post_content)
-    when 'PUT'    then HTTP::RecordRequestHandler.new(@response,:store=>request_router).update(key,post_content)
-    when 'DELETE' then HTTP::RecordRequestHandler.new(@response,:store=>request_router).delete(key)
+    when 'GET'    then HTTP::RecordRequestHandler.new(@response,@request_options).get(key)
+    when 'POST'   then HTTP::RecordRequestHandler.new(@response,@request_options).set(key,post_content)
+    when 'PUT'    then HTTP::RecordRequestHandler.new(@response,@request_options).update(key,post_content)
+    when 'DELETE' then HTTP::RecordRequestHandler.new(@response,@request_options).delete(key)
     else handle_unknown_request
     end
   end
@@ -125,7 +115,7 @@ class Server < EM::Connection
 
   # parse the post_content
   def post_content
-    @post_content=if headers_hash['Content-Type'] == 'application/json'
+    @post_content=if @http_post_content && headers_hash['Content-Type'] == 'application/json'
       deep_to_s(JSON.parse(@http_post_content))
     else
       {}
@@ -151,17 +141,17 @@ class Server < EM::Connection
   def handle_first_records_request(request_router,options)
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
-    request_router||=Monotable::ExternalRequestRouter.new(Server.router)
     return handle_unknown_request unless @http_request_method=='GET'
-    HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_first(options)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
+    HTTP::RecordRequestHandler.new(@response,@request_options).get_first(options)
   end
 
   def handle_last_records_request(request_router,options)
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
-    request_router||=Monotable::ExternalRequestRouter.new(Server.router)
     return handle_unknown_request unless @http_request_method=='GET'
-    HTTP::RecordRequestHandler.new(@response,:store=>request_router).get_last(options)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
+    HTTP::RecordRequestHandler.new(@response,@request_options).get_last(options)
   end
 
   def handle_unknown_request

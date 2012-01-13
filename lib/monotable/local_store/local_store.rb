@@ -144,8 +144,7 @@ module Monotable
       case chunk
       when DiskChunk then
         chunks[chunk.range_start]=chunk
-        GlobalIndex.update_index(chunk,@multi_store) if @multi_store
-      else raise "unknown type #{chunk.class}"
+        GlobalIndex.update_index(chunk,@multi_store) if @multi_store      else raise "unknown type #{chunk.class}"
       end
     end
 

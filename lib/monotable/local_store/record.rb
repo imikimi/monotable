@@ -12,12 +12,18 @@ module Monotable
       @disk_offset=0
     end
 
+    def each
+      fields.each {|k,v| yield k,v}
+    end
+    include Enumerable
+
     def accounting_size
       @accounting_size||=calculate_accounting_size
     end
     alias :memory_size :accounting_size
 
     def [](key) fields[key] end
+    def []=(key,v) fields[key]=v end
 
     def update(new_fields)
       fields.update(new_fields)

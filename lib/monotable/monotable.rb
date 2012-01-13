@@ -1,13 +1,13 @@
 require File.join(File.dirname(__FILE__),"xbd")
 require File.join(File.dirname(__FILE__),"version")
 
-def mt_require(relative_path,modules)
+def monotable_require(relative_path,modules)
   modules.each do |mod|
     require File.join(File.dirname(__FILE__),relative_path.to_s,mod)
   end
 end
 
-mt_require :local_store, %w{
+monotable_require :local_store, %w{
   api
   string
   global
@@ -16,7 +16,6 @@ mt_require :local_store, %w{
   record_cache
   index_block_cache
   constants
-  global_index
   tools
   file_handle
   journal
@@ -26,6 +25,7 @@ mt_require :local_store, %w{
   column
   columns
   record
+  global_index
   chunk
   index_block
   index_block_encoder
@@ -36,7 +36,8 @@ mt_require :local_store, %w{
   local_store
 }
 
-mt_require '', %w{
+monotable_require '', %w{
+  server/cluster_manager
   exceptions/exceptions
   solo_daemon/solo_daemon
   router/server_client
@@ -44,9 +45,20 @@ mt_require '', %w{
 }
 
 
-mt_require :daemon, %w{
+require 'yaml'
+require 'cgi'
+require 'fileutils'
+require 'json'
+require 'rubygems'
+require 'eventmachine'
+require 'evma_httpserver'
+require 'uri'
+require "addressable/uri"
+
+monotable_require :daemon, %w{
   daemon
   http_request_handler
+  server_controller
   http_record_request_handler
   http_internal_request_handler
 }

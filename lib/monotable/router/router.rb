@@ -2,33 +2,39 @@
 module Monotable
   class Router
     attr_accessor :local_store
-    attr_accessor :clients
+    attr_accessor :server_clients
 
     #options[:local_store] => LocalStore
     def initialize(options={})
       @local_store=options[:local_store]
-      @clients=[]
+      @server_clients=[]
       raise ArgumentError,"options[:local_store].kind_of?(LocalStore) required" unless @local_store.kind_of?(LocalStore)
     end
 
     def paxos_record
     end
 
+    # key is in the first chunk if it has the same number of "+"s as the paxos record
+    def key_in_first_chunk?(internal_key)
+      internal_key[0..paxos_record.key.length-1]==paxos_record.key
+    end
+
     # find the servers containing the chunk that covers key
     def servers(internal_key)
-      if internal_key[0..paxos_record.key.length-1]==paxos_record.key
+      if key_in_first_chunk? internal_key
         paxos_record[:servers]
       else
-        get("+"+internal_key)[:record]["servers"].split(",")
+        GlobalIndex.find(internal_key,self).servers
       end
     end
 
     def server_client(ikey)
       ss=servers(ikey)
       server=ss[rand(ss.length)]
-      clients[server]
+      server_clients[server]||=ServerClient.new(server)
     end
 
+    # external keys, or user-space keys, are prefixed to distinguish them from other internal-use keys
     def Router.internalize_key(external_key)
       "u/"+external_key
     end
