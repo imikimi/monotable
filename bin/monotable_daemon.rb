@@ -69,4 +69,8 @@ options[:store_paths].each do |path|
 end
 
 require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
-Monotable::Daemon::Server.start(options)
+begin
+  Monotable::Daemon::Server.start(options)
+rescue Monotable::UserInterventionRequiredError => user_error
+  $stderr.puts "\n#{user_error.class}:\n  #{user_error.to_s.gsub("\n","\n  ")}"
+end

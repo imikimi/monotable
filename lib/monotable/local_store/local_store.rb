@@ -96,6 +96,7 @@ module Monotable
     end
 
     def init_local_store(options={})
+      puts "LocalStore initializing..." if options[:verbose]
       @options=options
       Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
@@ -112,9 +113,49 @@ module Monotable
       end
       initialize_new_store if options[:initialize_new_store]
       initialize_new_multi_store if options[:initialize_new_multi_store]
+      if options[:verbose]
+        puts "LocalStore successfully initialized."
+        puts({"LocalStore status" => status}.to_yaml)
+      end
+    end
+
+    def accounting_size
+      @path_stores.inject(0) {|total,ps| ps.accounting_size+total}
+    end
+
+    def record_count
+      @path_stores.inject(0) {|total,ps| ps.record_count+total}
+    end
+
+    # return a simple, human and machine-readable ruby structure describing the status of the cluster
+    def status
+      {
+      "chunks_found" => @chunks.length,
+      "store_paths" => @path_stores.collect {|a| a.path},
+      "accounting_size" => accounting_size,
+      "record_count" => record_count,
+      }
+    end
+
+    def verify_store_is_blank_for_init
+      path_stores_with_chunks = @path_stores.select {|path_store|path_store.chunks.length>0}
+      if path_stores_with_chunks.length > 0
+        path_list = path_stores_with_chunks.collect{|ps|"  "+ps.path.inspect}
+        raise UserInterventionRequiredError.new [
+          "Cannot initialize a new store. The following store locations already contain data:",
+          "",
+          path_list,
+          "",
+          "Options:",
+          "  1) Use the existing store data. Start daemon without initializing a new store.",
+          "  2) Delete the existing data",
+          "  3) Use different store locations."
+          ].flatten.join("\n")
+      end
     end
 
     def initialize_new_multi_store
+      verify_store_is_blank_for_init
       puts "Initializing new multi-store..." if @options[:verbose]
       @multi_store=self
       [
@@ -131,6 +172,7 @@ module Monotable
     end
 
     def initialize_new_store
+      verify_store_is_blank_for_init
       chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
       chunk_file=@path_stores[0].add(chunk)
       add chunk_file

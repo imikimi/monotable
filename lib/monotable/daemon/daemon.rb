@@ -15,9 +15,12 @@ class Server < EM::Connection
     #   :cluster => {} => params for initializing the cluster-manager
     def start(options={})
       @verbose=options[:verbose]
-      puts "#{self} start options=#{options.inspect}" if verbose
+      if verbose
+        puts "Monotable #{Monotable::VERSION}"
+        puts "Startup options: #{options.inspect}"
+        puts ""
+      end
 
-      puts "Initializing LocalStore. Stores:\n\t#{options[:store_paths].join("\n\t")}" if verbose
       @local_store = Monotable::LocalStore.new(options)
       @router = Monotable::Router.new :local_store=>@local_store
       @cluster_manager = Monotable::ClusterManager.new(options[:cluster])
@@ -25,9 +28,13 @@ class Server < EM::Connection
       @port = options[:port] || 8080
       @host = options[:host] || 'localhost'
 
-      @cluster_manager.add("#{@host}:#{@port}")
+      @cluster_manager.local_daemon_address = "#{@host}:#{@port}"
 
-      puts "Starting Monotable on: #{@host}:#{@port}" if verbose
+      if verbose
+        puts({"Cluster status" => @cluster_manager.status}.to_yaml)
+        puts "\nMonotable init successful."
+        puts "Monotable now listenting on: #{@host}:#{@port}"
+      end
 
 
       EM.run do

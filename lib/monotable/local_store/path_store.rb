@@ -18,7 +18,60 @@ module Monotable
       @journal_manager = JournalManager.new(path,options.merge(:path_store=>self))
       validate_store
       @next_chunk_number=0
-      init_chunks
+
+      init_chunks(options)
+
+      load_config || create_config
+    end
+
+    # the config file and path for this path_store instance
+    def config_filename
+      File.join path,LOCAL_STORE_CONFIG_FILE
+    end
+
+    def accounting_size
+      @chunks.inject(0) {|total,keychunk| keychunk[1].accounting_size + total}
+    end
+
+    def record_count
+      @chunks.inject(0) {|total,keychunk| keychunk[1].length + total}
+    end
+
+    # load the config file on disk if it exists
+    # returns true if the file was loaded, false if it didn't exist
+    def load_config
+      return unless File.exists?(config_filename)
+      @config_file = YAML.load_file(config_filename)
+    end
+
+    # create and save the default config file
+    def create_config
+      raise InternalError.new("config already exists") if File.exists?(config_filename)
+      File.open(config_filename,"w") {|f| f.write default_config_file.to_yaml}
+    end
+
+    # create the default config file
+    def default_config_file
+      {
+      :config_for => "monotable_store",
+      :created => {
+        :daemon_type => "monotable",
+        :daemon_version => Monotable::VERSION,
+        :created_at => Time.now.to_s,
+        :runtime_environment => {
+          :ruby_version => RUBY_VERSION,
+          :ruby_platform => RUBY_PLATFORM,
+          :ruby_release_date => RUBY_RELEASE_DATE
+          }
+        }
+      }
+    end
+
+    def store_initialized?
+      puts "testing path_store #{path}"
+      Dir.glob(File.join(path,"*")).each do |file|
+        puts "   file: #{file}"
+      end
     end
 
     def max_chunk_size; @local_store.max_chunk_size; end
@@ -57,7 +110,8 @@ module Monotable
     #**************************************
     # internal API
     #**************************************
-    def init_chunks
+    def init_chunks(options)
+      $stdout.write "  PathStore(#{path}) initializing chunks: " if options[:verbose]
       @chunks={}
       Dir.glob(File.join(path,"*#{CHUNK_EXT}")) do |f|
         f[/\/([0-9]+)\.#{CHUNK_EXT}$/]
@@ -65,7 +119,9 @@ module Monotable
         @next_chunk_number = chunk_number+1 if chunk_number >= @next_chunk_number
 
         chunks[f]=DiskChunk.init(:filename=>f,:journal=>journal_manager,:path_store=>self)
+        $stdout.write "." if options[:verbose]
       end
+      $stdout.puts "" if options[:verbose]
     end
 
     # select a numbered filename between 1 and 100 million that is unique on this path

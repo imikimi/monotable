@@ -8,6 +8,9 @@ module Monotable
   # temporary fault
   class TemporaryError < StandardError; end
 
+  # signal that a human needs to do something to resolve this error
+  class UserInterventionRequiredError < StandardError; end
+
   # network error
   # a remote machine didn't respond or responded incorreclty
   # "It's not my fault!"
