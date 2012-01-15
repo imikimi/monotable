@@ -9,7 +9,7 @@ class ServerController < RequestHandler
     when "GET/chunks" then chunks
     when "GET/chunk" then chunk
     when "GET/servers" then servers
-    when "POST/join" then join
+    when "PUT/join" then join # using PUT because its ok to join again if already joined
     else handle_unknown_request
     end
   end

@@ -20,10 +20,17 @@ describe Monotable::Daemon do
     cleanup
   end
 
-  it "should be accessible via HTTP" do
+  it "should return valid known-servers list" do
     response=RestClient.get("#{daemon_uri}/server/servers")
     r = JSON.parse response
     r["servers"].keys.should == ["127.0.0.1:32100"]
+  end
+
+  it "joining the cluster should add the joining server-name to the known servers list" do
+    RestClient.put("#{daemon_uri}/server/join?server_name=frank",{})
+    response=RestClient.get("#{daemon_uri}/server/servers")
+    r = JSON.parse response
+    r["servers"].keys.should == ["127.0.0.1:32100","frank"]
   end
 
 end
