@@ -5,7 +5,6 @@ module HTTP
 class ServerController < RequestHandler
 
   def handle
-    puts "#{method}/#{action}"
     case "#{method}/#{action}"
     when "GET/chunks" then chunks
     when "GET/chunk" then chunk
@@ -25,7 +24,11 @@ class ServerController < RequestHandler
 
   # get a list of known servers
   def servers
-    content={:servers => Monotable::Daemon::Server.cluster_manager.servers}
+    servers={}
+    Monotable::Daemon::Server.cluster_manager.servers.each do |k,v|
+      servers[k] = v.to_hash
+    end
+    content={:servers => servers}
     respond 200, content
   end
 

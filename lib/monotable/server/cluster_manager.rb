@@ -11,7 +11,11 @@ class ClusterManager
 
     # when called from a parent to_json, two params are passed in; ignored here
     def to_json(a=nil,b=nil)
-      {:name => name}.to_json
+      to_hash.to_json
+    end
+
+    def to_hash
+      {:name => name}
     end
   end
 
