@@ -106,12 +106,17 @@ module Monotable
     def read(offset=nil,length=nil,hold_open=false,&block)
       open_read(hold_open) do |f|
         f.seek(offset) if offset
+        length ||= size - (offset||0)
         block ? yield(f) : f.read(length).force_encoding("BINARY")
       end
     end
 
     def write(str)
-      @write_handle.write(str)
+      if @write_handle
+        @write_handle.write(str)
+      else
+        open_write {|f| f.write(str)}
+      end
     end
 
     def flush

@@ -130,7 +130,7 @@ module Monotable
     # return a simple, human and machine-readable ruby structure describing the status of the cluster
     def status
       {
-      "chunks_found" => @chunks.length,
+      "chunk_count" => @chunks.length,
       "store_paths" => @path_stores.collect {|a| a.path},
       "accounting_size" => accounting_size,
       "record_count" => record_count,

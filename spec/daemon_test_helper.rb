@@ -2,34 +2,49 @@ module DaemonTestHelper
 
   def port; 32100; end
   def host; '127.0.0.1'; end
-  def daemon_uri; "http://#{host}:#{port}"; end
+  def daemon_uri(daemon_number=0); "http://#{host}:#{port+daemon_number}"; end
 
-  def local_store_path
-    @local_store_path ||= Dir.mktmpdir
+  def local_store_paths
+    @local_store_paths||=[]
   end
 
-  def start_daemon
+  def local_store_path
+    ret = Dir.mktmpdir
+    local_store_paths << ret
+    ret
+  end
+
+  def server_pids
+    @server_pids||=[]
+  end
+
+  def start_daemon(options={:initialize_new_store => true})
     # Start up the daemon
-    @server_pid = fork {
-      Monotable::Daemon::Server.start(
-        :port=>port,
+    server_pids<< fork {
+      Monotable::Daemon::Server.start({
+        :port=>port+server_pids.length,
         :host=>host,
         :store_paths => [local_store_path],
 #        :verbose => true,
-        :initialize_new_store => true
+      }.merge(options)
       )
     }
     sleep 0.1 # Hack; sleep for a bit while the server starts up
   end
 
   def shutdown_daemon
-    Process.kill 'HUP', @server_pid
-    Process.wait @server_pid
+    server_pids.each do |server_pid|
+      Process.kill 'HUP', server_pid
+      Process.wait server_pid
+    end
+    @server_pids=nil
   end
 
   def cleanup
-    FileUtils.rm_rf local_store_path
-    @local_store_path=nil
+    local_store_paths.each do |local_store_path|
+      FileUtils.rm_rf local_store_path
+    end
+    @local_store_paths=nil
   end
 
   def clear_store

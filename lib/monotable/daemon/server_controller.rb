@@ -9,6 +9,8 @@ class ServerController < RequestHandler
     when "GET/chunks" then chunks
     when "GET/chunk" then chunk
     when "GET/servers" then servers
+    when "GET/heartbeat" then heartbeat
+    when "GET/local_store_status" then local_store_status
     when "PUT/join" then join # using PUT because its ok to join again if already joined
     else handle_unknown_request
     end
@@ -45,6 +47,15 @@ class ServerController < RequestHandler
     return handle_resource_missing_request("chunk-id:#{@resource_id.inspect}") unless chunk
     content={:records=>chunk.keys}
     respond 200, content
+  end
+
+  def heartbeat
+    respond 200, {:status => :alive}
+  end
+
+  def local_store_status
+    status = Monotable::Daemon::Server.local_store.status
+    respond 200, status
   end
 end
 
