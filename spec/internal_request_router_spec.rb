@@ -6,7 +6,7 @@ describe Monotable::ExternalRequestRouter do
 
   def blank_store
     reset_temp_dir
-    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
+    local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_test_store=>true)
     router=Monotable::Router.new(:local_store=>local_store)
     Monotable::InternalRequestRouter.new(router)
   end

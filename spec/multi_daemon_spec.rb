@@ -6,7 +6,7 @@ describe Monotable::LocalStore do
   it "should be possible to initialize a new LocalStore in MultiDaemon mode" do
     reset_temp_dir
     local_store=Monotable::LocalStore.new(:store_paths=>[temp_dir])
-    local_store.initialize_new_multi_store
+    local_store.initialize_new_store
     local_store.chunks.length.should == 5
   end
 end

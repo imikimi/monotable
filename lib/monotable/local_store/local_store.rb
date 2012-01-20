@@ -97,6 +97,7 @@ module Monotable
 
     def init_local_store(options={})
       puts "LocalStore initializing..." if options[:verbose]
+      puts "LocalStore init options=#{options.inspect}"
       @options=options
       Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
@@ -111,8 +112,8 @@ module Monotable
         end
         ps
       end
+      initialize_new_test_store if options[:initialize_new_test_store]
       initialize_new_store if options[:initialize_new_store]
-      initialize_new_multi_store if options[:initialize_new_multi_store]
       if options[:verbose]
         puts "LocalStore successfully initialized."
         puts({"LocalStore status" => status}.to_yaml)
@@ -154,7 +155,7 @@ module Monotable
       end
     end
 
-    def initialize_new_multi_store
+    def initialize_new_store
       verify_store_is_blank_for_init
       puts "Initializing new multi-store..." if @options[:verbose]
       @multi_store=self
@@ -171,7 +172,9 @@ module Monotable
       end
     end
 
-    def initialize_new_store
+    # a test-store is a 100% blank store
+    # Significantly, it contains no index records
+    def initialize_new_test_store
       verify_store_is_blank_for_init
       chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
       chunk_file=@path_stores[0].add(chunk)

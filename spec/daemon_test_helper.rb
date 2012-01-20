@@ -23,7 +23,7 @@ module DaemonTestHelper
     @server_clients||=[]
   end
 
-  def start_daemon(options={:initialize_new_store => true})
+  def start_daemon(options={:initialize_new_test_store => true})
     # Start up the daemon
     daemon_number = server_pids.length
     server_pids<< fork {

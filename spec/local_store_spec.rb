@@ -6,7 +6,7 @@ describe Monotable::LocalStore do
 
   def blank_store
     reset_temp_dir
-    Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
+    Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_test_store=>true)
   end
 
   api_tests
@@ -117,7 +117,7 @@ describe Monotable::LocalStore do
       :store_paths => [temp_dir],
       :max_chunk_size => test_max_chunk_size,
       :max_index_block_size => test_max_index_block_size,
-      :initialize_new_store => true
+      :initialize_new_test_store => true
     )
 
     # split the chunk

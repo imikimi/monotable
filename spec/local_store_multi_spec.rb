@@ -6,7 +6,7 @@ describe Monotable::LocalStore do
 
   def blank_store
     reset_temp_dir
-    Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_multi_store=>true)
+    Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
   end
 
   api_tests
