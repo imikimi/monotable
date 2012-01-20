@@ -19,7 +19,6 @@ describe ServerClient do
 
   after(:all) do
     shutdown_daemon
-    cleanup
   end
 
   def client

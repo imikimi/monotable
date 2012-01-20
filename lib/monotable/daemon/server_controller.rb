@@ -12,8 +12,15 @@ class ServerController < RequestHandler
     when "GET/heartbeat" then heartbeat
     when "GET/local_store_status" then local_store_status
     when "PUT/join" then join # using PUT because its ok to join again if already joined
+    when "POST/move_chunk" then move_chunk
+    when "POST/balance" then balance
     else handle_unknown_request
     end
+  end
+
+  # force load balancing
+  def balance
+
   end
 
   # server is joining the cluster
@@ -51,6 +58,21 @@ class ServerController < RequestHandler
 
   def heartbeat
     respond 200, {:status => :alive}
+  end
+
+  def move_chunk
+    # compact chunk
+    async_compaction=Journal.async_compaction
+    Monotable::Daemon::Server.local_store.compact
+    Journal.async_compaction=async_compaction
+
+    # return chunk
+    chunk=Monotable::Daemon::Server.local_store.chunks[@resource_id]
+    respond_raw chunk.chunk_file_data
+
+    # after successful transfer
+    # delete locally
+    Monotable::Daemon::Server.local_store.delete_local_chunk(@resource_id)
   end
 
   def local_store_status

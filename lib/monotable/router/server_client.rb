@@ -1,5 +1,35 @@
 # encoding: BINARY
 module Monotable
+  module RestClientHelper
+    #request is the URI
+    def json_get(request_path,params={})
+      request = "#{server}/#{request_path}"
+      RestClient.get(request, :params=>params, :accept=>:json) do |response, request, result|
+        return symbolize_keys(JSON.parse(response.body)) if response.code == 200
+        raise NetworkError.new("invalid response code: #{response.code.inspect} for GET request: #{request.inspect}. Result: #{result.inspect}")
+      end
+    end
+
+    # payload can be a hash or a string
+    def json_put(request_path,payload={})
+      request = "#{server}/#{request_path}"
+      RestClient.put(request, payload, :accept=>:json) do |response, request, result|
+        return symbolize_keys(JSON.parse(response.body)) if response.code == 200
+        raise NetworkError.new("invalid response code: #{response.code.inspect} for PUT request: #{request.inspect}. Result: #{result.inspect}")
+      end
+    end
+
+    def symbolize_keys(hash,keys_to_symbolize_values={})
+      ret={}
+      hash.each do |k,v|
+        k=k.to_sym
+        v=v.to_sym if keys_to_symbolize_values[k]
+        ret[k]=v
+      end
+      ret
+    end
+  end
+
   # see ReadAPI
   module ServerClientReadAPI
     include ReadAPI
@@ -107,20 +137,25 @@ module Monotable
     end
   end
 
+  # The ServerAPI object is instantiated rather than included so that it is crystal clear
+  # when you are using it as these calls can be potentially unsafe if not used correctly.
+  module ServerClientServerAPI
+    def chunks; json_get("server/chunks")[:chunks]; end
+    def up?; json_get("server/heartbeat")[:status]=="alive"; end
+    def servers; json_get("server/servers")[:servers]; end
+    def chunk(id); json_get("server/chunk/#{id}"); end
+    def local_store_status; json_get("server/local_store_status"); end
+
+    def join(server); json_put("server/join?server_name=#{server}"); end
+  end
+
   class ServerClient
     include ServerClientReadAPI
     include ServerClientWriteAPI
+    include ServerClientServerAPI
+    include RestClientHelper
     attr_accessor :server
 
-    def symbolize_keys(hash,keys_to_symbolize_values={})
-      ret={}
-      hash.each do |k,v|
-        k=k.to_sym
-        v=v.to_sym if keys_to_symbolize_values[k]
-        ret[k]=v
-      end
-      ret
-    end
 
     def initialize(server)
       @server=server
@@ -128,6 +163,18 @@ module Monotable
 
     def to_s
       @server
+    end
+
+    # when called from a parent to_json, two params are passed in; ignored here
+    def to_json(a=nil,b=nil)
+      to_hash.to_json
+    end
+
+    def <=>(b) name<=>b.server; end
+    include Comparable;
+
+    def to_hash
+      {:server_address => server}
     end
   end
 end

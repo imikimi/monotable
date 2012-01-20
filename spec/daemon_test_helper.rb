@@ -3,6 +3,7 @@ module DaemonTestHelper
   def port; 32100; end
   def host; '127.0.0.1'; end
   def daemon_uri(daemon_number=0); "http://#{host}:#{port+daemon_number}"; end
+  def server_client(daemon_number=0); server_clients[daemon_number]; end
 
   def local_store_paths
     @local_store_paths||=[]
@@ -18,17 +19,23 @@ module DaemonTestHelper
     @server_pids||=[]
   end
 
+  def server_clients
+    @server_clients||=[]
+  end
+
   def start_daemon(options={:initialize_new_store => true})
     # Start up the daemon
+    daemon_number = server_pids.length
     server_pids<< fork {
       Monotable::Daemon::Server.start({
-        :port=>port+server_pids.length,
+        :port=>port + daemon_number,
         :host=>host,
         :store_paths => [local_store_path],
 #        :verbose => true,
       }.merge(options)
       )
     }
+    server_clients << Monotable::ServerClient.new(daemon_uri(daemon_number))
     sleep 0.1 # Hack; sleep for a bit while the server starts up
   end
 
@@ -37,7 +44,8 @@ module DaemonTestHelper
       Process.kill 'HUP', server_pid
       Process.wait server_pid
     end
-    @server_pids=nil
+    @server_clients = @server_pids=nil
+    cleanup
   end
 
   def cleanup

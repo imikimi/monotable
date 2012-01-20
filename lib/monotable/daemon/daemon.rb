@@ -5,7 +5,7 @@ module Daemon
 class Server < EM::Connection
   include EM::HttpServer
 
-  class <<self
+  class << self
     attr_accessor :local_store,:port,:host,:router,:verbose,:cluster_manager
 
     # options

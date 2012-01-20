@@ -76,6 +76,10 @@ module Monotable
 
     def data_loaded; false; end
 
+    def chunk_file_data
+      @file_handle.read
+    end
+
     #*************************************************************
     # Write API
     #*************************************************************

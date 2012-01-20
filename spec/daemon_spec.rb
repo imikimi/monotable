@@ -17,7 +17,6 @@ describe Monotable::Daemon do
 
   after(:all) do
     shutdown_daemon
-    cleanup
   end
 
   it "should be accessible via HTTP" do

@@ -1,40 +1,25 @@
 module Monotable
 class ClusterManager
-  class Server
-    attr_reader :name
-
-    def initialize(name)
-      @name = name
-    end
-
-    def to_s; name; end
-
-    # when called from a parent to_json, two params are passed in; ignored here
-    def to_json(a=nil,b=nil)
-      to_hash.to_json
-    end
-
-    def to_hash
-      {:name => name}
-    end
-  end
-
-  attr_reader :servers
+  attr_reader :servers, :local_server
 
   def initialize(options={})
     @servers = {}
   end
 
-  attr_reader :local_daemon_address
+  def other_servers
+    servers.select {|a| a!=local_daemon_address}
+  end
 
   # sets the address of the local daemon
   def local_daemon_address=(server_address)
-    @local_daemon_address=add(server_address)
+    @local_server=add(server_address)
   end
+
+  def local_deamon_address; @local_server.to_s; end
 
   # add a server to the list of known servers
   def add(server_address)
-    @servers[server_address] = Server.new(server_address)
+    @servers[server_address] = ServerClient.new(server_address)
   end
 
   # return a simple, human and machine-readable ruby structure describing the status of the cluster
