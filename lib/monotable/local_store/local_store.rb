@@ -189,10 +189,25 @@ module Monotable
       disk_chunk = path_store.add_chunk chunk
 
       chunks[disk_chunk.range_start] = disk_chunk
-      update_index(chunk)
+      update_index(chunk) # should signal that we are adding this server to the index
+    end
+
+    def delete_chunk(chunk_id)
+      chunk = chunks[chunk_id]
+      raise "chunk does not exist: #{chunk_id.inspect}" unless chunk
+
+      path_store = chunk.path_store
+
+      path_store.delete_chunk(chunk)
+
+      chunks.delete(chunk_id)
+      update_index(chunk) # should signal that we are moving this server from the index
     end
 
     def update_index(chunk)
+      # SBD: Ultimaitely, this should not be handled in local_store at all.
+      # This is the "local-store", therefor it shoudn't know anything about the GlobalIndex
+      # I'm just not sure quite where to put this yet... we'll get there.
       GlobalIndex.update_index(chunk,@multi_store) if @multi_store
     end
 

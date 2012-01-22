@@ -65,6 +65,13 @@ class ServerController < RequestHandler
     respond 200, {:status => :alive}
   end
 
+  # returns the up-to-date chunk as a binary chunk-file
+  # The final version should look more like this:
+  #   1) caller starts streaming all NEW updates to the chunk
+  #   2) all previous updates are compacted asynchronously
+  #   3) caller receives the compacted chunk-file data
+  #   4) caller adds itself to the chunk global-index-record's server-list
+  #   1 & 2 would be started by this call, then 3 & 4 would be a processed in a callback
   def up_replicate_chunk
     # compact chunk
     async_compaction=Journal.async_compaction
