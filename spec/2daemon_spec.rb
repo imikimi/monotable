@@ -43,7 +43,11 @@ describe Monotable::Daemon do
   it "a balance request should leave the two servers with near equal chunk counts" do
     server_client(0).chunks.length.should>1
     server_client(1).chunks.length.should==0
-#    puts server_client(1).balance.inspect
-#    (server_client(0).chunks.length - server_client(1).chunks.length).abs.should <= 1
+    (server_client(0).chunks.length - server_client(1).chunks.length).abs.should > 1
+
+    res = server_client(1).balance
+    res[:chunks_moved].length.should > 0
+
+    (server_client(0).chunks.length - server_client(1).chunks.length).abs.should <= 1
   end
 end

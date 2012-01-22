@@ -43,6 +43,7 @@ class LoadBalancer
   def balance
     client,chunks = self.most_loaded_neighbor
 
+    chunks_moved={}
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
     while chunks.length+1 > local_store.chunks.length
       chunk_key = chunks.pop
@@ -50,7 +51,9 @@ class LoadBalancer
       local_store.add_chunk chunk_data
 
       client.down_replicate_chunk chunk_key
+      chunks_moved[chunk_key]=client.to_s
     end
+    chunks_moved
   end
 end
 end

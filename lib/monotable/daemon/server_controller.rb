@@ -21,11 +21,8 @@ class ServerController < RequestHandler
 
   # force load balancing
   def balance
-    puts "balance: Monotable::Daemon::Server.cluster_manager.local_server = #{Monotable::Daemon::Server.cluster_manager.local_server}"
-    puts "balance: neighbors: #{Monotable::Daemon::Server.cluster_manager.neighbors.inspect}"
-
-    Monotable::Daemon::Server.load_balancer.balance
-    respond 200,{:most_loaded_neighbor=>most_loaded_neighbor.to_s}
+    chunks_moved = Monotable::Daemon::Server.load_balancer.balance
+    respond 200,{:chunks_moved => chunks_moved}
   end
 
   # server is joining the cluster
