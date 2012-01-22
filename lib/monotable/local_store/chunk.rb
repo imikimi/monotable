@@ -186,6 +186,10 @@ module Monotable
       @loaded_record_count=0
     end
 
+    def local_store
+      @local_store||=@path_store && @path_store.local_store
+    end
+
     def range
       [range_start,range_end]
     end
@@ -355,18 +359,18 @@ module Monotable
     # MemoryChunk Splitting
     #***************************************************
     # all keys >= on_key are put into a new entry
-    def split_into(on_key,second_entry)
+    def split_into(on_key,second_chunk)
       # TODO: if @records where an RBTree, couldn't we just do a spit in O(1) ?
       @records.keys.each do |key|
-        second_entry.records[key] = @records.delete(key) if key >= on_key
+        second_chunk.records[key] = @records.delete(key) if key >= on_key
       end
 
       # update ranges of both chunks
-      second_entry.range_end = @range_end
-      second_entry.range_start = @range_end = on_key
+      second_chunk.range_end = @range_end
+      second_chunk.range_start = @range_end = on_key
 
-      # return second_entry
-      second_entry
+      # return second_chunk
+      second_chunk
     end
 
     # all keys >= on_key are put into a new chunk
@@ -379,14 +383,14 @@ module Monotable
       to_filename||=path_store.generate_filename
 
       # create new chunk
-      second_chunk_file=DiskChunk.init(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size)
+      second_chunk_file=DiskChunk.init(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size,:path_store => path_store)
 
       # do the actual split
       # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.
-      self.split_into(on_key,second_chunk_file)
+      split_into(on_key,second_chunk_file)
 
       # update the path_store (which will also update the local_store)
-      path_store.add(second_chunk_file) if path_store
+      local_store.add_chunk(second_chunk_file) if local_store
 
       # set entry
       journal.split(file_handle,on_key,to_filename)

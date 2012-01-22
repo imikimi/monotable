@@ -58,6 +58,13 @@ class RequestHandler
     @response.send_response
   end
 
+  def respond_binary(status,content)
+    @response.content_type 'application/binary'
+    @response.status = status.to_s
+    @response.content = content
+    @response.send_response
+  end
+
   def respond_with_json(status,content)
     @response.content_type 'application/json'
     content = Tools.force_encoding(content,"UTF-8")

@@ -97,7 +97,6 @@ module Monotable
 
     def init_local_store(options={})
       puts "LocalStore initializing..." if options[:verbose]
-      puts "LocalStore init options=#{options.inspect}"
       @options=options
       Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
@@ -166,9 +165,7 @@ module Monotable
       INDEX_KEY_PREFIX*1+FIRST_DATA_KEY,  # for 64meg chunks approx 2^48 records max at this index level
       FIRST_DATA_KEY                      # for 64meg chunks approx 2^74 bytes max at this index level
       ].each do |range_start|
-        chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size,:range_start=>range_start)
-        chunk_file=@path_stores[0].add(chunk)
-        add chunk_file
+        add_chunk MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size,:range_start=>range_start)
       end
     end
 
@@ -176,21 +173,27 @@ module Monotable
     # Significantly, it contains no index records
     def initialize_new_test_store
       verify_store_is_blank_for_init
-      chunk=MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
-      chunk_file=@path_stores[0].add(chunk)
-      add chunk_file
+      add_chunk MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
     end
 
 
     #*************************************************************
     # Internal API
     #*************************************************************
-    def add(chunk)
-      case chunk
-      when DiskChunk then
-        chunks[chunk.range_start]=chunk
-        GlobalIndex.update_index(chunk,@multi_store) if @multi_store      else raise "unknown type #{chunk.class}"
-      end
+    def most_empty_path_store
+      path_stores[0]  # temporary hack
+    end
+
+    def add_chunk(chunk)
+      path_store = chunk.kind_of?(DiskChunk) ? chunk.path_store : most_empty_path_store
+      disk_chunk = path_store.add_chunk chunk
+
+      chunks[disk_chunk.range_start] = disk_chunk
+      update_index(chunk)
+    end
+
+    def update_index(chunk)
+      GlobalIndex.update_index(chunk,@multi_store) if @multi_store
     end
 
     def length

@@ -30,6 +30,11 @@ describe ServerClient do
     ServerClient.new(daemon_uri)
   end
 
+  it "should be comparable" do
+    ServerClient.new(daemon_uri).should == ServerClient.new(daemon_uri)
+    ServerClient.new(daemon_uri).should_not == ServerClient.new(daemon_uri(1))
+  end
+
   it "should be accessible via HTTP" do
     Net::HTTP.get(host,'/',port).should_not be_empty
   end

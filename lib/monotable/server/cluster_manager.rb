@@ -6,8 +6,8 @@ class ClusterManager
     @servers = {}
   end
 
-  def other_servers
-    servers.select {|a| a!=local_daemon_address}
+  def neighbors
+    servers.select {|k,server| server!=local_server}
   end
 
   # sets the address of the local daemon
@@ -15,17 +15,27 @@ class ClusterManager
     @local_server=add(server_address)
   end
 
-  def local_deamon_address; @local_server.to_s; end
+  def local_daemon_address; @local_server.to_s; end
 
   # add a server to the list of known servers
   def add(server_address)
-    @servers[server_address] = ServerClient.new(server_address)
+    @servers[server_address] ||= ServerClient.new(server_address)
+  end
+
+  def add_servers(servers)
+    servers.each {|s| add(s)}
+  end
+
+  def join(server)
+    client = add(server)
+    join_result = client.join(local_server.to_s)
+    add_servers join_result[:servers].keys
   end
 
   # return a simple, human and machine-readable ruby structure describing the status of the cluster
   def status
     {
-    "local_daemon_address" => local_daemon_address.to_s,
+    "local_daemon_address" => local_daemon_address,
     "known_servers" => servers.keys
     }
   end

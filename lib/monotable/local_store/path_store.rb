@@ -91,18 +91,21 @@ module Monotable
     end
 
     # Takes a MemoryChunk object, assigns it a filename, saves it to disk,
-    # creates a DiskChunk object, adds that to this pathstore, and returns the DiskChunk
-    def add(chunk)
+    # creates a DiskChunk object, adds that to this pathstore, and
+    # returns the DiskChunk
+    def add_chunk(chunk)
       case chunk
       when MemoryChunk then
-        filename=generate_filename
+        filename = generate_filename
         chunk.save(filename)
-        chunks[filename]=DiskChunk.init(:filename=>filename,:journal=>journal_manager,:path_store=>self)
+        chunks[filename] = DiskChunk.init(:filename=>filename,:journal=>journal_manager,:path_store=>self)
+      when String then
+        filename = generate_filename
+        File.open(filename,"wb") {|f| f.write(chunk)}
+        chunks[filename] = DiskChunk.init(:filename=>filename,:journal=>journal_manager,:path_store=>self)
       when DiskChunk then
-        raise "DiskChunk attached to some other PathStore" unless !chunk.path_store || chunk.path_store==self
-        chunk.path_store=self
-        chunks[chunk.filename]=chunk
-        local_store.add(chunk)
+        raise "DiskChunk attached to some other PathStore" unless chunk.path_store==self
+        chunks[chunk.filename] = chunk
       else raise "unknown type #{chunk.class}"
       end
     end

@@ -2,7 +2,8 @@ module DaemonTestHelper
 
   def port; 32100; end
   def host; '127.0.0.1'; end
-  def daemon_uri(daemon_number=0); "http://#{host}:#{port+daemon_number}"; end
+  def daemon_address(daemon_number=0); "#{host}:#{port+daemon_number}"; end
+  def daemon_uri(daemon_number=0); "http://"+daemon_address(daemon_number); end
   def server_client(daemon_number=0); server_clients[daemon_number]; end
 
   def local_store_paths

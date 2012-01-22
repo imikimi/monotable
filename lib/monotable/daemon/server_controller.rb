@@ -12,7 +12,8 @@ class ServerController < RequestHandler
     when "GET/heartbeat" then heartbeat
     when "GET/local_store_status" then local_store_status
     when "PUT/join" then join # using PUT because its ok to join again if already joined
-    when "POST/move_chunk" then move_chunk
+    when "POST/up_replicate_chunk" then up_replicate_chunk
+    when "POST/down_replicate_chunk" then down_replicate_chunk
     when "POST/balance" then balance
     else handle_unknown_request
     end
@@ -20,7 +21,11 @@ class ServerController < RequestHandler
 
   # force load balancing
   def balance
+    puts "balance: Monotable::Daemon::Server.cluster_manager.local_server = #{Monotable::Daemon::Server.cluster_manager.local_server}"
+    puts "balance: neighbors: #{Monotable::Daemon::Server.cluster_manager.neighbors.inspect}"
 
+    Monotable::Daemon::Server.load_balancer.balance
+    respond 200,{:most_loaded_neighbor=>most_loaded_neighbor.to_s}
   end
 
   # server is joining the cluster
@@ -60,7 +65,7 @@ class ServerController < RequestHandler
     respond 200, {:status => :alive}
   end
 
-  def move_chunk
+  def up_replicate_chunk
     # compact chunk
     async_compaction=Journal.async_compaction
     Monotable::Daemon::Server.local_store.compact
@@ -68,11 +73,11 @@ class ServerController < RequestHandler
 
     # return chunk
     chunk=Monotable::Daemon::Server.local_store.chunks[@resource_id]
-    respond_raw chunk.chunk_file_data
+    respond_binary 200,chunk.chunk_file_data
+  end
 
-    # after successful transfer
-    # delete locally
-    Monotable::Daemon::Server.local_store.delete_local_chunk(@resource_id)
+  def down_replicate_chunk
+    Monotable::Daemon::Server.local_store.delete_chunk @resource_id
   end
 
   def local_store_status

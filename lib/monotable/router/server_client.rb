@@ -11,11 +11,38 @@ module Monotable
     end
 
     # payload can be a hash or a string
+    def put(request_path,payload={})
+      request = "#{server}/#{request_path}"
+      RestClient.put(request, payload) do |response, request, result|
+        return response.body if response.code == 200
+        raise NetworkError.new("invalid response code: #{response.code.inspect} for PUT request: #{request.inspect}. Result: #{result.inspect}")
+      end
+    end
+
+    # payload can be a hash or a string
+    def post(request_path,payload={})
+      request = "#{server}/#{request_path}"
+      RestClient.post(request, payload) do |response, request, result|
+        return response.body if response.code == 200
+        raise NetworkError.new("invalid response code: #{response.code.inspect} for POST request: #{request.inspect}. Result: #{result.inspect}")
+      end
+    end
+
+    # payload can be a hash or a string
     def json_put(request_path,payload={})
       request = "#{server}/#{request_path}"
       RestClient.put(request, payload, :accept=>:json) do |response, request, result|
         return symbolize_keys(JSON.parse(response.body)) if response.code == 200
         raise NetworkError.new("invalid response code: #{response.code.inspect} for PUT request: #{request.inspect}. Result: #{result.inspect}")
+      end
+    end
+
+    # payload can be a hash or a string
+    def json_post(request_path,payload={})
+      request = "#{server}/#{request_path}"
+      RestClient.post(request, payload, :accept=>:json) do |response, request, result|
+        return symbolize_keys(JSON.parse(response.body)) if response.code == 200
+        raise NetworkError.new("invalid response code: #{response.code.inspect} for POST request: #{request.inspect}. Result: #{result.inspect}")
       end
     end
 
@@ -137,22 +164,30 @@ module Monotable
     end
   end
 
-  # The ServerAPI object is instantiated rather than included so that it is crystal clear
-  # when you are using it as these calls can be potentially unsafe if not used correctly.
-  module ServerClientServerAPI
+  # this api is supported for testing, it should never be used by an actual client
+  module ServerClientServerReadAPI
     def chunks; json_get("server/chunks")[:chunks]; end
     def up?; json_get("server/heartbeat")[:status]=="alive"; end
     def servers; json_get("server/servers")[:servers]; end
     def chunk(id); json_get("server/chunk/#{id}"); end
     def local_store_status; json_get("server/local_store_status"); end
+  end
 
+  # this api is supported for testing, it should never be used by an actual client
+  module ServerClientServerModifyAPI
+    def balance; json_post("server/balance"); end
     def join(server); json_put("server/join?server_name=#{server}"); end
+
+    # returns the raw chunk-file
+    def up_replicate_chunk(chunk_key); post("server/up_replicate_chunk/#{chunk_key}"); end
+    def down_replicate_chunk(chunk_key); post("server/down_replicate_chunk/#{chunk_key}"); end
   end
 
   class ServerClient
     include ServerClientReadAPI
     include ServerClientWriteAPI
-    include ServerClientServerAPI
+    include ServerClientServerReadAPI
+    include ServerClientServerModifyAPI
     include RestClientHelper
     attr_accessor :server
 
@@ -170,7 +205,7 @@ module Monotable
       to_hash.to_json
     end
 
-    def <=>(b) name<=>b.server; end
+    def <=>(b) server<=>b.server; end
     include Comparable;
 
     def to_hash
