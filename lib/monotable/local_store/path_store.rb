@@ -110,6 +110,11 @@ module Monotable
       end
     end
 
+    def delete_chunk(chunk)
+      chunk.file_handle.delete
+      chunks.delete chunk.filename
+    end
+
     #**************************************
     # internal API
     #**************************************

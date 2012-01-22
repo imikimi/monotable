@@ -85,6 +85,7 @@ class ServerController < RequestHandler
 
   def down_replicate_chunk
     Monotable::Daemon::Server.local_store.delete_chunk @resource_id
+    respond 200, {:result => :success}
   end
 
   def local_store_status
