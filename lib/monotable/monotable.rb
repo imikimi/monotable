@@ -37,11 +37,11 @@ monotable_require :local_store, %w{
 }
 
 monotable_require '', %w{
+  client/server_client
   server/cluster_manager
   server/load_balancer
   exceptions/exceptions
   solo_daemon/solo_daemon
-  router/server_client
   router/router
 }
 
