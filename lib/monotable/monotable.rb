@@ -52,6 +52,7 @@ require 'fileutils'
 require 'json'
 require 'rubygems'
 require 'eventmachine'
+require 'em-http-request'
 require 'evma_httpserver'
 require 'uri'
 require "addressable/uri"

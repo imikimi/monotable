@@ -22,7 +22,10 @@ module Monotable
   end
 =end
   module Tools
+
+    # if encoding is nil, this just returns obj
     def Tools.force_encoding(obj,encoding)
+      return obj unless encoding
       case obj
       when String then
         if obj.encoding!=encoding
