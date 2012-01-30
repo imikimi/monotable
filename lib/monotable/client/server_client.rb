@@ -105,7 +105,7 @@ module Monotable
           :params => options[:params],
           :accept => :json,
           :content_type => :json,
-        },
+        }
         ) do |response, request, result|
         if response.code == 200 || (options[:accept_404] && response.code == 404)
           return process_response(response.body,options)
