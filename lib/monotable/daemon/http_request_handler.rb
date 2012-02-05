@@ -5,10 +5,12 @@ module HTTP
 class RequestHandler
   attr_accessor :options
   attr_reader :method, :params, :uri, :response, :response_type, :controller, :action, :post_action_path, :resource_id
+  attr_reader :server
 
   # options:
   #   :resonse_type => :json or :html
-  def initialize(response,options={})
+  def initialize(server,response,options)
+    @server = server
     @options = options
     @response = response
     @response_type=options[:response_type] || :json

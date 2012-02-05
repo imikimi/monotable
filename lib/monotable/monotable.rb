@@ -40,6 +40,7 @@ monotable_require '', %w{
   client/server_client
   server/cluster_manager
   server/load_balancer
+  server/server
   exceptions/exceptions
   solo_daemon/solo_daemon
   router/router

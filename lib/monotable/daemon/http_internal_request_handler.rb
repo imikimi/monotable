@@ -6,7 +6,7 @@ class InternalRequestHandler < RequestHandler
 #  include EM::Deferrable
 
   def chunks()
-    content={:chunks=>Monotable::Daemon::Server.local_store.chunks.keys}
+    content={:chunks=>server.local_store.chunks.keys}
     respond(200, content)
   end
 end

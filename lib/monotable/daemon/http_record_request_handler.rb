@@ -53,7 +53,7 @@ class RecordRequestHandler < RequestHandler
   include ReadAPI
   include WriteAPI
 
-  def initialize(response,options={})
+  def initialize(server,response,options={})
     super
     (@store = options[:store])
     raise(ArgumentError,"options[:store] required") unless @store

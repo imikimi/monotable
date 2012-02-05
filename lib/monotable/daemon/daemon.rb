@@ -6,11 +6,7 @@ class Server < EM::Connection
   include EM::HttpServer
 
   class << self
-    # config variables
-    attr_accessor :port,:host,:verbose
-
-    # server module instances
-    attr_accessor :local_store,:router,:cluster_manager,:load_balancer
+    attr_reader :server
 
     # options
     #   :store_paths=>["path",...]
@@ -18,37 +14,23 @@ class Server < EM::Connection
     #   :host => host to listen on - default "localhost"
     #   :cluster => {} => params for initializing the cluster-manager
     def start(options={})
-      @verbose=options[:verbose]
-      if verbose
-        puts "Monotable #{Monotable::VERSION}"
-        puts "Startup options: #{options.inspect}"
-        puts ""
-      end
+      @server = Monotable::Server.new(options)
 
-      @local_store = Monotable::LocalStore.new(options)
-      @router = Monotable::Router.new :local_store=>@local_store
-      @cluster_manager = Monotable::ClusterManager.new(options[:cluster])
-      @load_balancer = Monotable::LoadBalancer.new
-
-      @port = options[:port] || 8080
-      @host = options[:host] || 'localhost'
-
-      @cluster_manager.local_daemon_address = "#{@host}:#{@port}"
-
-      @cluster_manager.join(options[:join]) if options[:join]
-
-      if verbose
-        puts({"Cluster status" => @cluster_manager.status}.to_yaml)
+      if server.verbose
+        puts({"Cluster status" => server.cluster_manager.status}.to_yaml)
         puts "\nMonotable init successful."
-        puts "Monotable now listenting on: #{@host}:#{@port}"
+        puts "Monotable now listenting on: #{server.host}:#{server.port}"
       end
-
 
       EM.run do
         EM.threadpool_size = 1 # TODO Increase then when the localstore is thread-safe
-        EM.start_server @host, @port,  Monotable::Daemon::Server
+        EM.start_server server.host, server.port,  Monotable::Daemon::Server
       end
     end
+  end
+
+  def server
+    Server.server
   end
 
   def post_init
@@ -82,7 +64,7 @@ class Server < EM::Connection
     request_router=nil
     if @http_request_uri[INTERNAL_REQUEST_PATTERN]
       request_uri="/#{$1}"
-      request_router=Monotable::InternalRequestRouter.new(Server.router)
+      request_router=Monotable::InternalRequestRouter.new(server,@response,@request_options)
     end
 
     @request_options = {
@@ -95,16 +77,17 @@ class Server < EM::Connection
     when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
     when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$3))
     when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$3))
-    when SERVER_REQUEST_PATTERN         then Monotable::Daemon::HTTP::ServerController.new(@response,@request_options).handle
+    when SERVER_REQUEST_PATTERN         then Monotable::Daemon::HTTP::ServerController.new(server,@response,@request_options).handle
     when ROOT_REQUEST_PATTERN           then handle_default_request
     else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
     end
-    if Server.verbose
+    if server.verbose
       puts "#{@http_request_method}:#{@http_request_uri.inspect} params: #{params.inspect}"
       puts "  post_content: #{post_content.inspect}"
       puts "  response_content: #{@response.content.inspect}"
     end
   end
+
 =begin
 /first_records/gt/
 /first_records/gte/
@@ -115,12 +98,12 @@ class Server < EM::Connection
 =end
 
   def handle_record_request(request_router,key)
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
     case @http_request_method
-    when 'GET'    then HTTP::RecordRequestHandler.new(@response,@request_options).get(key)
-    when 'POST'   then HTTP::RecordRequestHandler.new(@response,@request_options).set(key,post_content)
-    when 'PUT'    then HTTP::RecordRequestHandler.new(@response,@request_options).update(key,post_content)
-    when 'DELETE' then HTTP::RecordRequestHandler.new(@response,@request_options).delete(key)
+    when 'GET'    then HTTP::RecordRequestHandler.new(server,@response,@request_options).get(key)
+    when 'POST'   then HTTP::RecordRequestHandler.new(server,@response,@request_options).set(key,post_content)
+    when 'PUT'    then HTTP::RecordRequestHandler.new(server,@response,@request_options).update(key,post_content)
+    when 'DELETE' then HTTP::RecordRequestHandler.new(server,@response,@request_options).delete(key)
     else handle_unknown_request
     end
   end
@@ -156,16 +139,16 @@ class Server < EM::Connection
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
     return handle_unknown_request unless @http_request_method=='GET'
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
-    HTTP::RecordRequestHandler.new(@response,@request_options).get_first(options)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
+    HTTP::RecordRequestHandler.new(server,@response,@request_options).get_first(options)
   end
 
   def handle_last_records_request(request_router,options)
     return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
     options[:limit]=options[:limit].to_i if options[:limit]
     return handle_unknown_request unless @http_request_method=='GET'
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(Server.router)
-    HTTP::RecordRequestHandler.new(@response,@request_options).get_last(options)
+    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
+    HTTP::RecordRequestHandler.new(server,@response,@request_options).get_last(options)
   end
 
   def handle_unknown_request

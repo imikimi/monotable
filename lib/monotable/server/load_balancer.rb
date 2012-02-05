@@ -2,8 +2,8 @@ module Monotable
 class LoadBalancer
   attr_accessor :server
 
-  def initialize
-    @server=Monotable::Daemon::Server
+  def initialize(server)
+    @server=server
   end
 
   def cluster_manager
@@ -20,7 +20,8 @@ class LoadBalancer
     end
   end
 
-  # returns [neighbor <ServerClient>, chunks <Array of chunk-keys>]
+  # Returns the "neighbor" that is most loaded and a list of its chunks:
+  #   [neighbor <ServerClient>, chunks <Array of chunk-keys>]
   def most_loaded_neighbor
     neighbor_chunks.sort_by {|a| a[1].length}[-1]
   end
@@ -55,5 +56,28 @@ class LoadBalancer
     end
     chunks_moved
   end
+
+  private
+  # takes a neighbor and its list of chunks, and moves one chunk at a time to us until balanced
+  def async_balance_neighbor(neighbor,chunks,chunks_moved={},&block)
+
+    # if the most_loaded_neighbor has at most 1 or more chunks than we do, we're balanced enough
+    return yield chunks_moved if chunks.length+1 <= local_store.chunks.length
+
+    chunk_key = chunks.pop
+    neighbor.up_replicate_chunk chunk_key do
+      local_store.add_chunk chunk_data
+      client.down_replicate_chunk chunk_key do
+        chunks_moved[chunk_key]=client.to_s
+        async_balance_neighbor(neighbor,chunks,chunks_moved,&block) # async recursion
+      end
+    end
+  end
+  public
+
+  def async_balance(&block)
+    most_loaded_neighbor {|n,c| async_balance_neighbor(n,c,&block)}
+  end
+
 end
 end

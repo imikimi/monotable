@@ -21,7 +21,7 @@ class ServerController < RequestHandler
 
   # force load balancing
   def balance
-    chunks_moved = Monotable::Daemon::Server.load_balancer.balance
+    chunks_moved = server.load_balancer.balance
     respond 200,{:chunks_moved => chunks_moved}
   end
 
@@ -29,14 +29,14 @@ class ServerController < RequestHandler
   def join
     server_name = params["server_name"]
     return handle_invalid_request("'server_name' parameter required") unless server_name
-    Monotable::Daemon::Server.cluster_manager.add(server_name)
+    server.cluster_manager.add(server_name)
     servers # return our list of known servers
   end
 
   # get a list of known servers
   def servers
     servers={}
-    Monotable::Daemon::Server.cluster_manager.servers.each do |k,v|
+    server.cluster_manager.servers.each do |k,v|
       servers[k] = v.to_hash
     end
     content={:servers => servers}
@@ -45,14 +45,14 @@ class ServerController < RequestHandler
 
   # get a list of chunks on this server
   def chunks
-    content={:chunks=>Monotable::Daemon::Server.local_store.chunks.keys}
+    content={:chunks=>server.local_store.chunks.keys}
     respond 200, content
   end
 
   # get a list of chunks on this server
   def chunk
     return handle_invalid_request("chunk-id required") unless @resource_id
-    chunk=Monotable::Daemon::Server.local_store.chunks[@resource_id]
+    chunk=server.local_store.chunks[@resource_id]
     return handle_resource_missing_request("chunk-id:#{@resource_id.inspect}") unless chunk
     content={:records=>chunk.keys}
     respond 200, content
@@ -72,21 +72,21 @@ class ServerController < RequestHandler
   def up_replicate_chunk
     # compact chunk
     async_compaction=Journal.async_compaction
-    Monotable::Daemon::Server.local_store.compact
+    server.local_store.compact
     Journal.async_compaction=async_compaction
 
     # return chunk
-    chunk=Monotable::Daemon::Server.local_store.chunks[@resource_id]
+    chunk=server.local_store.chunks[@resource_id]
     respond_binary 200,chunk.chunk_file_data
   end
 
   def down_replicate_chunk
-    Monotable::Daemon::Server.local_store.delete_chunk @resource_id
+    server.local_store.delete_chunk @resource_id
     respond 200, {:result => :success}
   end
 
   def local_store_status
-    status = Monotable::Daemon::Server.local_store.status
+    status = server.local_store.status
     respond 200, status
   end
 end
