@@ -58,8 +58,8 @@ require 'evma_httpserver'
 require 'uri'
 require "addressable/uri"
 
-monotable_require :daemon, %w{
-  daemon
+monotable_require :event_machine_server, %w{
+  event_machine_server
   http_request_handler
   server_controller
   http_record_request_handler
