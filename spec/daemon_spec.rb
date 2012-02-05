@@ -8,7 +8,7 @@ require 'json'
 require 'uri'
 require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 
-describe Monotable::Daemon do
+describe Monotable::EventMachineServer do
   include DaemonTestHelper
 
   before(:all) do

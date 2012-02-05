@@ -28,7 +28,7 @@ module DaemonTestHelper
     # Start up the daemon
     daemon_number = server_pids.length
     server_pids<< fork {
-      Monotable::Daemon::Server.start({
+      Monotable::EventMachineServer::HttpServer.start({
         :port=>port + daemon_number,
         :host=>host,
         :store_paths => [local_store_path],

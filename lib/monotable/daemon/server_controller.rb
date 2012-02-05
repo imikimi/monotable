@@ -1,5 +1,5 @@
 module Monotable
-module Daemon
+module EventMachineServer
 module HTTP
 
 class ServerController < RequestHandler

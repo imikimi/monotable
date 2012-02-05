@@ -1,8 +1,7 @@
-
 module Monotable
-module Daemon
+module EventMachineServer
 
-class Server < EM::Connection
+class HttpServer < EM::Connection
   include EM::HttpServer
 
   class << self
@@ -24,13 +23,13 @@ class Server < EM::Connection
 
       EM.run do
         EM.threadpool_size = 1 # TODO Increase then when the localstore is thread-safe
-        EM.start_server server.host, server.port,  Monotable::Daemon::Server
+        EM.start_server server.host, server.port,  Monotable::EventMachineServer::HttpServer
       end
     end
   end
 
   def server
-    Server.server
+    Monotable::EventMachineServer::HttpServer.server
   end
 
   def post_init
@@ -77,7 +76,7 @@ class Server < EM::Connection
     when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
     when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$3))
     when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$3))
-    when SERVER_REQUEST_PATTERN         then Monotable::Daemon::HTTP::ServerController.new(server,@response,@request_options).handle
+    when SERVER_REQUEST_PATTERN         then Monotable::EventMachineServer::HTTP::ServerController.new(server,@response,@request_options).handle
     when ROOT_REQUEST_PATTERN           then handle_default_request
     else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
     end
