@@ -25,7 +25,7 @@ class OptionsParser
       opts.on("-q", "--quiet", "Silence output") {|p| options[:verbose]=false}
       opts.on("-p", "--port #", "Port number to listen to") {|p| options[:port]=p.to_i}
       opts.on("-h", "--host address", "Host address to listen to") {|h| options[:host]=h}
-      opts.on("-i", "Initialize new store") {|h| options[:initialize_new_multi_store]=true}
+      opts.on("--initialize", "Initialize new store.") do {|h| options[:initialize_new_multi_store]=true}
 
       opts.on_tail("--version", "Show version") do
         puts Monotable::VERSION

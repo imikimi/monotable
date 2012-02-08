@@ -176,10 +176,15 @@ module Monotable
   # this api is supported for testing, it should never be used by an actual client
   module ServerClientServerReadAPI
     def chunks; request(:get,"server/chunks")[:chunks]; end
-    def up?; request(:get,"server/heartbeat")[:status]=="alive"; end
     def servers; request(:get,"server/servers")[:servers]; end
     def chunk(id); request(:get,"server/chunk/#{id}"); end
     def local_store_status; request(:get,"server/local_store_status"); end
+
+    # returns true if the server is up and responding to the heartbeat
+    def up?;
+      request(:get,"server/heartbeat")[:status]=="alive";
+    rescue Errno::ECONNREFUSED => e
+    end
   end
 
   # this api is supported for testing, it should never be used by an actual client

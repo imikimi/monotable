@@ -24,6 +24,15 @@ module DaemonTestHelper
     @server_clients||=[]
   end
 
+  def wait_for_server_to_start(client,max_wait = 0.1)
+    start_time = Time.now
+    while Time.now - start_time < max_wait
+      return client if client.up?
+      sleep 0.01
+    end
+    raise "server failed to start within #{max_wait} seconds"
+  end
+
   def start_daemon(options={:initialize_new_test_store => true})
     # Start up the daemon
     daemon_number = server_pids.length
@@ -36,8 +45,8 @@ module DaemonTestHelper
       }.merge(options)
       )
     }
-    server_clients << Monotable::ServerClient.new(daemon_uri(daemon_number))
-    sleep 0.1 # Hack; sleep for a bit while the server starts up
+    server_clients << client=Monotable::ServerClient.new(daemon_uri(daemon_number))
+    wait_for_server_to_start client
   end
 
   def shutdown_daemon
