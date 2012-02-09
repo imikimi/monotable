@@ -25,7 +25,7 @@ class OptionsParser
       opts.on("-q", "--quiet", "Silence output") {|p| options[:verbose]=false}
       opts.on("-p", "--port #", "Port number to listen to") {|p| options[:port]=p.to_i}
       opts.on("-h", "--host address", "Host address to listen to") {|h| options[:host]=h}
-      opts.on("--initialize", "Initialize new store.") do {|h| options[:initialize_new_multi_store]=true}
+      opts.on("--initialize", "Initialize new store.") {|h| options[:initialize_new_multi_store]=true}
 
       opts.on_tail("--version", "Show version") do
         puts Monotable::VERSION
@@ -70,6 +70,7 @@ end
 
 require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 begin
+#  Monotable::GoliathServer::HttpServer.start(options)
   Monotable::EventMachineServer::HttpServer.start(options)
 rescue Monotable::UserInterventionRequiredError => user_error
   $stderr.puts "\n#{user_error.class}:\n  #{user_error.to_s.gsub("\n","\n  ")}"
