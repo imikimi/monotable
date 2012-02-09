@@ -1,6 +1,5 @@
 module Monotable
-module EventMachineServer
-module HTTP
+module HttpServer
 
 class ServerController < RequestHandler
 
@@ -95,6 +94,5 @@ class ServerController < RequestHandler
   end
 end
 
-end
 end
 end

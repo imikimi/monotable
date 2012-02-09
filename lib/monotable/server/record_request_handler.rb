@@ -1,6 +1,5 @@
 module Monotable
-module EventMachineServer
-module HTTP
+module HttpServer
 
 class RecordRequestHandler < RequestHandler
 
@@ -134,6 +133,5 @@ Valid Patterns:
   include WriteAPI
 end
 
-end
 end
 end

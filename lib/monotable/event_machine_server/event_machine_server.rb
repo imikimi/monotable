@@ -3,6 +3,7 @@ module EventMachineServer
 
 class HttpServer < EM::Connection
   include EM::HttpServer
+  include Monotable::HttpServer::Routes
 
   class << self
     attr_reader :server
@@ -28,45 +29,14 @@ class HttpServer < EM::Connection
     end
   end
 
-  def server
-    Monotable::EventMachineServer::HttpServer.server
+  # EventMachine call this to start the request processing
+  def process_http_request
+    route_http_request
   end
 
   def post_init
     super
     no_environment_strings
-  end
-
-  SERVER_REQUEST_PATTERN = /^\/server\/(.*)$/
-  RECORDS_REQUEST_PATTERN = /^(\/internal)?\/(first_|last_|)records(.*)$/
-  ROOT_REQUEST_PATTERN = /^\/?$/
-  def process_http_request
-    # the http request details are available via the following instance variables:
-    #   @http_protocol
-    #   @http_request_method
-    #   @http_cookie
-    #   @http_if_none_match
-    #   @http_content_type
-    #   @http_path_info
-    #   @http_request_uri
-    #   @http_query_string
-    #   @http_post_content
-    #   @http_headers
-
-    case uri
-    when RECORDS_REQUEST_PATTERN        then HTTP::RecordRequestHandler.new(request_options).handle
-    when SERVER_REQUEST_PATTERN         then HTTP::ServerController.new(request_options).handle
-    when ROOT_REQUEST_PATTERN           then HTTP::RequestHandler.new(request_options).handle_default_request
-    else                                     HTTP::RequestHandler.new(request_options).handle_invalid_request("invalid URL: #{uri.inspect}")
-    end
-    if server.verbose
-      puts "#{@http_request_method}:#{uri.inspect} params: #{params.inspect}"
-      puts "  post_content: #{post_content.inspect}"
-      puts "  response_content: #{request_options[:response].content.inspect}"
-    end
-  rescue Exception => e
-    puts "#{self.class} Request Error: #{e.inspect}"
-    puts "    "+e.backtrace.join("    \n")
   end
 
   def uri
@@ -76,7 +46,7 @@ class HttpServer < EM::Connection
   def request_options
     @request_options ||= {
       :response => EM::DelegatedHttpResponse.new(self) ,
-      :server => server,
+      :server => Monotable::EventMachineServer::HttpServer.server,
       :params => params,
       :method => @http_request_method,
       :uri => uri ,
@@ -86,7 +56,7 @@ class HttpServer < EM::Connection
 
   # parse the post_content
   def post_content
-    @post_content=if @http_post_content && headers_hash['Content-Type'] == 'application/json'
+    @post_content||=if @http_post_content && headers_hash['Content-Type'] == 'application/json'
       deep_to_s(JSON.parse(@http_post_content))
     else
       {}
@@ -103,12 +73,9 @@ class HttpServer < EM::Connection
     end
   end
 
-  def parse_query_string
-    Addressable::URI.parse("?#{@http_query_string}").query_values
-  end
-
+  # generate the params hash
   def params
-    @params||=parse_query_string
+    @params||=Addressable::URI.parse("?#{@http_query_string}").query_values
   end
 
   # Returns a hash of strings for the http headers

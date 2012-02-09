@@ -134,7 +134,7 @@ module Monotable
       else
         # TODO
         # is it possible for the server_client to set up the evented remote call sequence, return an object, and then, here, attach
-        # they post-operation of finalizing the HTTP response?
+        # they post-operation of finalizing the Http response?
         sc=router.server_client(ikey)
         work_log<<"forwarding request to: #{sc}"
         yield sc,ikey

@@ -1,6 +1,5 @@
 module Monotable
-module EventMachineServer
-module HTTP
+module HttpServer
 
 class RequestHandler
   attr_accessor :options
@@ -98,6 +97,5 @@ ENDHTML
   end
 end
 
-end
 end
 end

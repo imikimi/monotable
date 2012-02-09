@@ -38,12 +38,19 @@ monotable_require :local_store, %w{
 
 monotable_require '', %w{
   client/server_client
-  server/cluster_manager
-  server/load_balancer
-  server/server
   exceptions/exceptions
   solo_daemon/solo_daemon
   router/router
+}
+
+monotable_require :server, %w{
+  cluster_manager
+  load_balancer
+  server
+  routes
+  request_handler
+  server_controller
+  record_request_handler
 }
 
 
@@ -64,9 +71,6 @@ monotable_require :goliath_server, %w{
 
 monotable_require :event_machine_server, %w{
   event_machine_server
-  http_request_handler
-  server_controller
-  http_record_request_handler
 }
 
 module Monotable
