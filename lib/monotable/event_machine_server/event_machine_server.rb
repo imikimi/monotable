@@ -37,11 +37,8 @@ class HttpServer < EM::Connection
     no_environment_strings
   end
 
-  INTERNAL_REQUEST_PATTERN = /^\/internal\/(.*)$/
-  RECORDS_REQUEST_PATTERN = /^\/records(?:\/?(.*))$/
   SERVER_REQUEST_PATTERN = /^\/server\/(.*)$/
-  FIRST_RECORDS_REQUEST_PATTERN = /^\/first_records\/(gt|gte|with_prefix)(\/(.+)?)?$/
-  LAST_RECORDS_REQUEST_PATTERN = /^\/last_records\/(gt|gte|lt|lte|with_prefix)(\/(.+)?)?$/
+  RECORDS_REQUEST_PATTERN = /^(\/internal)?\/(first_|last_|)records(.*)$/
   ROOT_REQUEST_PATTERN = /^\/?$/
   def process_http_request
     # the http request details are available via the following instance variables:
@@ -60,23 +57,18 @@ class HttpServer < EM::Connection
 
     request_uri = @http_request_uri
 
-    request_router=nil
-    if @http_request_uri[INTERNAL_REQUEST_PATTERN]
-      request_uri="/#{$1}"
-      request_router=Monotable::InternalRequestRouter.new(server,@response,@request_options)
-    end
-
-    @request_options = {
+    request_options = {
+      :response => @response,
+      :server => server,
       :params => params,
       :method => @http_request_method,
       :uri => request_uri,
+      :post_content => post_content
     }
 
     case request_uri
-    when RECORDS_REQUEST_PATTERN        then handle_record_request(request_router,$1)
-    when FIRST_RECORDS_REQUEST_PATTERN  then handle_first_records_request(request_router,params.merge($1=>$3))
-    when LAST_RECORDS_REQUEST_PATTERN   then handle_last_records_request(request_router,params.merge($1=>$3))
-    when SERVER_REQUEST_PATTERN         then Monotable::EventMachineServer::HTTP::ServerController.new(server,@response,@request_options).handle
+    when RECORDS_REQUEST_PATTERN        then HTTP::RecordRequestHandler.new(request_options).handle
+    when SERVER_REQUEST_PATTERN         then HTTP::ServerController.new(request_options).handle
     when ROOT_REQUEST_PATTERN           then handle_default_request
     else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
     end
@@ -85,29 +77,10 @@ class HttpServer < EM::Connection
       puts "  post_content: #{post_content.inspect}"
       puts "  response_content: #{@response.content.inspect}"
     end
+  rescue Exception => e
+    puts "#{self.class} Request Error: #{e.inspect}"
+    puts "    "+e.backtrace.join("    \n")
   end
-
-=begin
-/first_records/gt/
-/first_records/gte/
-/first_records/with_prefix/
-/last_records/lt/
-/last_records/lte/
-/last_records/with_prefix/
-=end
-
-  def handle_record_request(request_router,key)
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
-    case @http_request_method
-    when 'GET'    then HTTP::RecordRequestHandler.new(server,@response,@request_options).get(key)
-    when 'POST'   then HTTP::RecordRequestHandler.new(server,@response,@request_options).set(key,post_content)
-    when 'PUT'    then HTTP::RecordRequestHandler.new(server,@response,@request_options).update(key,post_content)
-    when 'DELETE' then HTTP::RecordRequestHandler.new(server,@response,@request_options).delete(key)
-    else handle_unknown_request
-    end
-  end
-
-  VALID_FIRST_LAST_PARAMS=%w{ lt lte gt gte with_prefix limit fields }
 
   # parse the post_content
   def post_content
@@ -132,22 +105,6 @@ class HttpServer < EM::Connection
     else
       Hash[p.collect {|k,v| [k.to_sym,v]}]
     end
-  end
-
-  def handle_first_records_request(request_router,options)
-    return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
-    options[:limit]=options[:limit].to_i if options[:limit]
-    return handle_unknown_request unless @http_request_method=='GET'
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
-    HTTP::RecordRequestHandler.new(server,@response,@request_options).get_first(options)
-  end
-
-  def handle_last_records_request(request_router,options)
-    return unless options=validate_params(VALID_FIRST_LAST_PARAMS,options)
-    options[:limit]=options[:limit].to_i if options[:limit]
-    return handle_unknown_request unless @http_request_method=='GET'
-    @request_options[:store]=request_router || Monotable::ExternalRequestRouter.new(server.router)
-    HTTP::RecordRequestHandler.new(server,@response,@request_options).get_last(options)
   end
 
   def handle_unknown_request

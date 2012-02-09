@@ -9,18 +9,22 @@ class RequestHandler
 
   # options:
   #   :resonse_type => :json or :html
-  def initialize(server,response,options)
-    @server = server
+  def initialize(options)
     @options = options
-    @response = response
-    @response_type=options[:response_type] || :json
+    @server = options[:server]
+    @response = options[:response]
+    @response_type = options[:response_type] || :json
 
     @method = options[:method]
     @params = options[:params]
     @uri    = options[:uri]
 
-    ignore, @controller, @action, @post_action_path = @uri.split("/",4)
+    parse_uri
     @resource_id = @post_action_path
+  end
+
+  def parse_uri
+    ignore, @controller, @action, @post_action_path = @uri.split("/",4)
   end
 
   def handle

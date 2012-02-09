@@ -37,6 +37,7 @@ module DaemonTestHelper
     # Start up the daemon
     daemon_number = server_pids.length
     server_pids<< fork {
+#      Monotable::GoliathServer::HttpServer.start({
       Monotable::EventMachineServer::HttpServer.start({
         :port=>port + daemon_number,
         :host=>host,

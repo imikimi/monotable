@@ -58,12 +58,15 @@ require 'evma_httpserver'
 require 'uri'
 require "addressable/uri"
 
+monotable_require :goliath_server, %w{
+  goliath_server
+}
+
 monotable_require :event_machine_server, %w{
   event_machine_server
   http_request_handler
   server_controller
   http_record_request_handler
-  http_internal_request_handler
 }
 
 module Monotable

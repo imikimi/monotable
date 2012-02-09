@@ -4,6 +4,10 @@ module HTTP
 
 class ServerController < RequestHandler
 
+  def record_key
+    @record_key||=options[:record_key]
+  end
+
   def handle
     case "#{method}/#{action}"
     when "GET/chunks" then chunks
