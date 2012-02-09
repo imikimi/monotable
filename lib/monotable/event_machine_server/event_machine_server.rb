@@ -53,33 +53,35 @@ class HttpServer < EM::Connection
     #   @http_post_content
     #   @http_headers
 
-    @response = EM::DelegatedHttpResponse.new(self)
-
-    request_uri = @http_request_uri
-
-    request_options = {
-      :response => @response,
-      :server => server,
-      :params => params,
-      :method => @http_request_method,
-      :uri => request_uri,
-      :post_content => post_content
-    }
-
-    case request_uri
+    case uri
     when RECORDS_REQUEST_PATTERN        then HTTP::RecordRequestHandler.new(request_options).handle
     when SERVER_REQUEST_PATTERN         then HTTP::ServerController.new(request_options).handle
-    when ROOT_REQUEST_PATTERN           then handle_default_request
-    else                                     handle_invalid_request("invalid URL: #{request_uri.inspect}")
+    when ROOT_REQUEST_PATTERN           then HTTP::RequestHandler.new(request_options).handle_default_request
+    else                                     HTTP::RequestHandler.new(request_options).handle_invalid_request("invalid URL: #{uri.inspect}")
     end
     if server.verbose
-      puts "#{@http_request_method}:#{@http_request_uri.inspect} params: #{params.inspect}"
+      puts "#{@http_request_method}:#{uri.inspect} params: #{params.inspect}"
       puts "  post_content: #{post_content.inspect}"
-      puts "  response_content: #{@response.content.inspect}"
+      puts "  response_content: #{request_options[:response].content.inspect}"
     end
   rescue Exception => e
     puts "#{self.class} Request Error: #{e.inspect}"
     puts "    "+e.backtrace.join("    \n")
+  end
+
+  def uri
+    @http_request_uri
+  end
+
+  def request_options
+    @request_options ||= {
+      :response => EM::DelegatedHttpResponse.new(self) ,
+      :server => server,
+      :params => params,
+      :method => @http_request_method,
+      :uri => uri ,
+      :post_content => post_content
+    }
   end
 
   # parse the post_content
@@ -89,43 +91,6 @@ class HttpServer < EM::Connection
     else
       {}
     end
-  end
-
-  # the params with the keys symbolized if all params are in the valid_params list,
-  # else this sets up an invalid_request response
-  def validate_params(valid_params,p=nil)
-    p||=params
-    count=0
-    valid_params.each do |kstr|
-      count+=1 if p.has_key? kstr
-    end
-    if count!=p.length
-      handle_invalid_request "Query-string parameters must be one of: #{valid_params.inspect}"
-      false
-    else
-      Hash[p.collect {|k,v| [k.to_sym,v]}]
-    end
-  end
-
-  def handle_unknown_request
-    @response.status = 406
-    @response.content_type 'text/html'
-    @response.content = 'Unknown request'
-    @response.send_response
-  end
-
-  def handle_invalid_request(message)
-    @response.status = 406
-    @response.content_type 'text/html'
-    @response.content = message || 'Invalid request'
-    @response.send_response
-  end
-
-  def handle_default_request
-    @response.status = 200
-    @response.content_type 'text/html'
-    @response.content = 'Monotable'
-    @response.send_response
   end
 
   # Turns everything in the hash to a string

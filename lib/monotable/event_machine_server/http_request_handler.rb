@@ -55,6 +55,13 @@ class RequestHandler
     @response.send_response
   end
 
+  def handle_default_request
+    @response.status = 200
+    @response.content_type 'text/html'
+    @response.content = 'Monotable'
+    @response.send_response
+  end
+
   def respond(status,content)
     @response.status = status.to_s
     case @response_type
