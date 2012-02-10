@@ -68,10 +68,11 @@ options[:store_paths].each do |path|
   Dir.mkdir(path) unless File.exists?(path)
 end
 
+puts "Monotable internal initialization..."
 require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 begin
-#  Monotable::GoliathServer::HttpServer.start(options)
-  Monotable::EventMachineServer::HttpServer.start(options)
+  Monotable::GoliathServer::HttpServer.start(options)
+#  Monotable::EventMachineServer::HttpServer.start(options)
 rescue Monotable::UserInterventionRequiredError => user_error
   $stderr.puts "\n#{user_error.class}:\n  #{user_error.to_s.gsub("\n","\n  ")}"
 end

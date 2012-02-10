@@ -1,6 +1,19 @@
 require File.join(File.dirname(__FILE__),"xbd")
 require File.join(File.dirname(__FILE__),"version")
 
+require 'yaml'
+require 'cgi'
+require 'fileutils'
+require 'json'
+require 'rubygems'
+require 'eventmachine'
+require 'em-http-request'
+require 'evma_httpserver'
+require 'uri'
+require "addressable/uri"
+require "fiber"
+require "rest-client"
+
 def monotable_require(relative_path,modules)
   modules.each do |mod|
     require File.join(File.dirname(__FILE__),relative_path.to_s,mod)
@@ -54,18 +67,9 @@ monotable_require :server, %w{
 }
 
 
-require 'yaml'
-require 'cgi'
-require 'fileutils'
-require 'json'
-require 'rubygems'
-require 'eventmachine'
-require 'em-http-request'
-require 'evma_httpserver'
-require 'uri'
-require "addressable/uri"
 
 monotable_require :goliath_server, %w{
+  params_and_body
   goliath_server
 }
 

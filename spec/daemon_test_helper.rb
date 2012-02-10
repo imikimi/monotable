@@ -24,12 +24,13 @@ module DaemonTestHelper
     @server_clients||=[]
   end
 
-  def wait_for_server_to_start(client,max_wait = 0.1)
+  def wait_for_server_to_start(client,max_wait = 1)
     start_time = Time.now
     while Time.now - start_time < max_wait
       return client if client.up?
       sleep 0.01
     end
+    shutdown_daemon
     raise "server failed to start within #{max_wait} seconds"
   end
 
@@ -37,8 +38,8 @@ module DaemonTestHelper
     # Start up the daemon
     daemon_number = server_pids.length
     server_pids<< fork {
-#      Monotable::GoliathServer::HttpServer.start({
-      Monotable::EventMachineServer::HttpServer.start({
+      Monotable::GoliathServer::HttpServer.start({
+#      Monotable::EventMachineServer::HttpServer.start({
         :port=>port + daemon_number,
         :host=>host,
         :store_paths => [local_store_path],
@@ -52,7 +53,7 @@ module DaemonTestHelper
 
   def shutdown_daemon
     server_pids.each do |server_pid|
-      Process.kill 'HUP', server_pid
+      Process.kill 'TERM', server_pid
       Process.wait server_pid
     end
     @server_clients = @server_pids=nil

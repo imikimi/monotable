@@ -30,5 +30,9 @@ class Server
     @cluster_manager.local_daemon_address = "#{@host}:#{@port}"
     @cluster_manager.join(options[:join]) if options[:join]
   end
+
+  def inspect
+    "#<#{self.class} port=#{port} host=#{host}>"
+  end
 end
 end

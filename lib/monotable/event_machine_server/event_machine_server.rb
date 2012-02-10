@@ -49,22 +49,22 @@ class HttpServer < EM::Connection
       :server => Monotable::EventMachineServer::HttpServer.server,
       :params => params,
       :method => @http_request_method,
-      :uri => uri ,
-      :post_content => post_content
+      :uri => uri,
+      :body => processed_body
     }
   end
 
-  # parse the post_content
-  def post_content
-    @post_content||=if @http_post_content && headers_hash['Content-Type'] == 'application/json'
+  # parse the body
+  def processed_body
+    @body||=if @http_post_content && headers_hash['Content-Type'] == 'application/json'
       deep_to_s(JSON.parse(@http_post_content))
     else
-      {}
+      @http_post_content
     end
   end
 
   # Turns everything in the hash to a string
-  # Does not preserve all the structure we may want; consider tweaking.
+  # TODO: Does not preserve all the structure we may want; consider tweaking.
   def deep_to_s(obj)
     if obj.is_a?(Hash)
       Hash[obj.map{|k,v| [k.to_s, v.to_s]}]

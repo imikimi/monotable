@@ -4,7 +4,7 @@ module HttpServer
 class RecordRequestHandler < RequestHandler
 
   attr_accessor :internal
-  def post_content; @post_content||=options[:post_content]; end
+  def body; @body||=options[:body]; end
 
 =begin
 Valid Patterns:
@@ -50,8 +50,8 @@ Valid Patterns:
   def handle_record_request(key)
     case method
     when 'GET'    then get(key)
-    when 'POST'   then set(key,post_content)
-    when 'PUT'    then update(key,post_content)
+    when 'POST'   then set(key,body)
+    when 'PUT'    then update(key,body)
     when 'DELETE' then delete(key)
     else handle_unknown_request
     end
