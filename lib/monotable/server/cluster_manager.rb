@@ -19,7 +19,7 @@ class ClusterManager
 
   # add a server to the list of known servers
   def add(server_address)
-    @servers[server_address] ||= ServerClient.new(server_address)
+    @servers[server_address] ||= ServerClient.new(server_address,:use_synchrony=>true)
   end
 
   def add_servers(servers)

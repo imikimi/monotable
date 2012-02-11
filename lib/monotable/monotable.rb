@@ -13,6 +13,8 @@ require 'uri'
 require "addressable/uri"
 require "fiber"
 require "rest-client"
+require 'goliath'
+require 'em-synchrony/em-http'
 
 def monotable_require(relative_path,modules)
   modules.each do |mod|

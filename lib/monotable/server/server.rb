@@ -1,7 +1,7 @@
 module Monotable
 class Server
   # config variables
-  attr_accessor :port,:host,:verbose
+  attr_accessor :port,:host,:verbose,:options
 
   # server module instances
   attr_accessor :local_store,:router,:cluster_manager,:load_balancer
@@ -12,6 +12,7 @@ class Server
   #   :host => host to listen on - default "localhost"
   #   :cluster => {} => params for initializing the cluster-manager
   def initialize(options={})
+    @options = options
     @verbose=options[:verbose]
     if verbose
       puts "Monotable #{Monotable::VERSION}"
@@ -28,11 +29,19 @@ class Server
     @host = options[:host] || 'localhost'
 
     @cluster_manager.local_daemon_address = "#{@host}:#{@port}"
-    @cluster_manager.join(options[:join]) if options[:join]
+  end
+
+  # call this after monotable is listening to incoming HTTP request
+  def post_init
+    @cluster_manager.join(@options[:join]) if @options[:join]
   end
 
   def inspect
     "#<#{self.class} port=#{port} host=#{host}>"
+  end
+
+  def to_s
+    "#{host}:#{port}"
   end
 end
 end

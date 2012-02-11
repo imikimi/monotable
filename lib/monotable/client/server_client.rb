@@ -69,11 +69,12 @@ module Monotable
     #   :on_error => called on-error. Parameters: |http_request,error_message|
     #   :keys_to_symbolize_values => {} passed into symbolize_keys
     # block => called on success with the json-parsed response
-    def async_request(method,request_path,options={},&block)
+    def em_async_request(method,request_path,options={},&block)
       headers = {:accept => :json}
       on_error = options[:on_error] || Proc.new {|http_request,message| puts message;}
+      async_method = "a#{method}".to_sym
 
-      http_request = EventMachine::HttpRequest.new(request_path).send method, :body => options[:body], :params=> options[:params], :head => headers
+      http_request = EventMachine::HttpRequest.new(request_path).send async_method, :body => options[:body], :params=> options[:params], :head => headers
 
       http_request.errback { on_error.call(http_request,"request: #{method}|#{request_path}. errback called.") }
       http_request.callback do
@@ -86,20 +87,28 @@ module Monotable
       end
     end
 
-    #request is the URI
-    # options:
-    #   :accept_404 => if true, treat 404 asif they were 200 messages (the assumption is the body encodes information about the 404 error)
-    #   :params => request params
-    #   :force_encoding => ruby string encoding type: Ex. "ASCII-8BIT"
-    # if you include a block, this uses async_reqeust
-    # for examples of using RestClient::Request.execute
-    #   https://github.com/archiloque/rest-client/blob/master/lib/restclient.rb
-    def request(method,request_path,options={},&block)
-      request = "#{server}/#{request_path}"
-      return async_request method, request, options, &block if block
+    def em_synchrony_request(method,request_path,options={})
+      request_uri = "http://"+request_path
+      request = EM::HttpRequest.new(request_uri).send(
+        method,
+        :body => options[:body],
+        :query => options[:params],
+        :headers => {
+          :accept => :json,
+          :content_type => :json,
+        }
+      )
+      code = request.response_header.status
+      if code == 200 || (options[:accept_404] && code == 404)
+        return process_response(request.response,options)
+      end
+      raise NetworkError.new("invalid response code: #{code.inspect} for #{method} request: #{request.inspect}. Result: #{request.response}")
+    end
+
+    def rest_client_request(method,request_path,options={})
       RestClient::Request.execute(
         :method => method,
-        :url => request,
+        :url => request_path,
         :payload => options[:body],
         :headers => {
           :params => options[:params],
@@ -112,6 +121,21 @@ module Monotable
         end
         raise NetworkError.new("invalid response code: #{response.code.inspect} for #{method} request: #{request.inspect}. Result: #{result.inspect}")
       end
+    end
+
+    #request is the URI
+    # options:
+    #   :accept_404 => if true, treat 404 asif they were 200 messages (the assumption is the body encodes information about the 404 error)
+    #   :params => request params
+    #   :force_encoding => ruby string encoding type: Ex. "ASCII-8BIT"
+    # if you include a block, this uses async_reqeust
+    # for examples of using RestClient::Request.execute
+    #   https://github.com/archiloque/rest-client/blob/master/lib/restclient.rb
+    def request(method,request_path,options={},&block)
+      request_path = "#{server}/#{request_path}"
+      return em_async_request method, request_path, options, &block if block
+      return em_synchrony_request method, request_path, options if client_options[:use_synchrony]
+      rest_client_request(method,request_path,options)
     end
 
     def symbolize_keys(hash,keys_to_symbolize_values=nil)
@@ -203,10 +227,13 @@ module Monotable
     include ServerClientServerReadAPI
     include ServerClientServerModifyAPI
     include RestClientHelper
-    attr_accessor :server
+    attr_accessor :server, :client_options
 
-    def initialize(server)
+    #options
+    #   :use_synchrony => true ?
+    def initialize(server,options={})
       @server=server
+      @client_options = options
     end
 
     def to_s

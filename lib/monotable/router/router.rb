@@ -31,7 +31,7 @@ module Monotable
     def server_client(ikey)
       ss=servers(ikey)
       server=ss[rand(ss.length)]
-      server_clients[server]||=ServerClient.new(server)
+      server_clients[server]||=ServerClient.new(server,:use_synchrony=>true)
     end
 
     # external keys, or user-space keys, are prefixed to distinguish them from other internal-use keys
