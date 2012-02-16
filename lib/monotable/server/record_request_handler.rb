@@ -23,9 +23,9 @@ Valid Patterns:
   def parse_uri
     super
     @store = if @uri[/^\/internal\//]
-      Monotable::InternalRequestRouter.new(server.router)
+      Monotable::RequestRouter.new(server.router)
     else
-      Monotable::ExternalRequestRouter.new(server.router)
+      Monotable::RequestRouter.new(server.router,:user_keys => true,:forward => true)
     end
   end
 

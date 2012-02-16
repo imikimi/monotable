@@ -37,16 +37,16 @@ module Monotable
     include WriteAPI
 
     def set(key,fields)
-      chunk=get_chunk(key)
-      ret=chunk.set(key,fields)
-      RecordCache[key]=chunk.get_record(key)
+      chunk = get_chunk(key)
+      ret = chunk.set(key,fields)
+      RecordCache[key] = chunk.get_record(key)
       ret
     end
 
     def update(key,fields)
-      chunk=get_chunk(key)
-      ret=chunk.update(key,fields)
-      RecordCache[key]=chunk.get_record(key)
+      chunk = get_chunk(key)
+      ret = chunk.update(key,fields)
+      RecordCache[key] = chunk.get_record(key)
       ret
     end
 
@@ -58,10 +58,9 @@ module Monotable
   end
 
   module LocalStoreChunkApi
-    # Throws errors if chunk for key not present
+    # returns nil for chunks not present
     def get_chunk(key) # rename chunk_for_record
       chunk_key,chunk=@chunks.upper_bound(key)
-      raise "local chunks do not cover the key #{key.inspect}\nchunks: #{@chunks.keys.inspect}" unless chunk && chunk.in_range?(key)
       chunk
     end
 
@@ -95,6 +94,10 @@ module Monotable
       init_local_store(options)
     end
 
+    def has_storage?
+      path_stores.length > 0
+    end
+
     def init_local_store(options={})
       puts "LocalStore initializing..." if options[:verbose]
       @options=options
@@ -103,7 +106,7 @@ module Monotable
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
 
       @chunks=RBTree.new
-      store_paths = options[:store_paths]
+      store_paths = options[:store_paths] || []
       @path_stores=store_paths.collect do |path|
         ps=PathStore.new(path,options.merge(:local_store=>self))
         ps.chunks.each do |filename,chunk_file|
@@ -112,7 +115,6 @@ module Monotable
         ps
       end
       initialize_new_test_store if options[:initialize_new_test_store]
-      initialize_new_store if options[:initialize_new_store]
       if options[:verbose]
         puts "LocalStore successfully initialized."
         puts({"LocalStore status" => status}.to_yaml)
@@ -154,21 +156,6 @@ module Monotable
       end
     end
 
-    def initialize_new_store
-      verify_store_is_blank_for_init
-      puts "Initializing new multi-store..." if @options[:verbose]
-      @multi_store=self
-      [
-      "",
-      INDEX_KEY_PREFIX*3+FIRST_DATA_KEY,  # for 64meg chunks approx 2^16 records max at this index level
-      INDEX_KEY_PREFIX*2+FIRST_DATA_KEY,  # for 64meg chunks approx 2^32 records max at this index level
-      INDEX_KEY_PREFIX*1+FIRST_DATA_KEY,  # for 64meg chunks approx 2^48 records max at this index level
-      FIRST_DATA_KEY                      # for 64meg chunks approx 2^74 bytes max at this index level
-      ].each do |range_start|
-        add_chunk MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size,:range_start=>range_start)
-      end
-    end
-
     # a test-store is a 100% blank store
     # Significantly, it contains no index records
     def initialize_new_test_store
@@ -189,7 +176,6 @@ module Monotable
       disk_chunk = path_store.add_chunk chunk
 
       chunks[disk_chunk.range_start] = disk_chunk
-      update_index(chunk) # should signal that we are adding this server to the index
     end
 
     def delete_chunk(chunk_id)
@@ -201,14 +187,6 @@ module Monotable
       path_store.delete_chunk(chunk)
 
       chunks.delete(chunk_id)
-      update_index(chunk) # should signal that we are moving this server from the index
-    end
-
-    def update_index(chunk)
-      # SBD: Ultimaitely, this should not be handled in local_store at all.
-      # This is the "local-store", therefor it shoudn't know anything about the GlobalIndex
-      # I'm just not sure quite where to put this yet... we'll get there.
-      GlobalIndex.update_index(chunk,@multi_store) if @multi_store
     end
 
     def length

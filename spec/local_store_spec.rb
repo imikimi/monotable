@@ -16,6 +16,12 @@ describe Monotable::LocalStore do
     local_store.chunks.length.should == 1
   end
 
+  it "should be OK to init a localstore with no path-stores" do
+    local_store = Monotable::LocalStore.new
+
+    local_store.chunks.length.should == 0
+  end
+
   it "should be possible to init from an existing LocalStore" do
     local_store=blank_store
 

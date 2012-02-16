@@ -156,19 +156,19 @@ module Monotable
 
     # see ReadAPI
     def get(key,options={},&block)
-      request(:get, "records/#{key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      request(:get, "#{path_prefix}records/#{key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
 
     # see ReadAPI
     def get_first(options={},&block)
       request, params = prepare_get_first_request(options)
-      request(:get, request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
 
     # see ReadAPI
     def get_last(options={},&block)
       request,params = prepare_get_last_request(options)
-      request(:get, request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
   end
 
@@ -182,18 +182,18 @@ module Monotable
     # see WriteAPI
     def set(key,fields,&block)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :post, "records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :post, "#{path_prefix}records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
 
     # see WriteAPI
     def update(key,fields,&block)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :put, "records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :put, "#{path_prefix}records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
 
     # see WriteAPI
     def delete(key,&block)
-      request :delete, "records/#{key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :delete, "#{path_prefix}records/#{key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
   end
 
@@ -201,11 +201,11 @@ module Monotable
   module ServerClientServerReadAPI
     def chunks; request(:get,"server/chunks")[:chunks]; end
     def servers; request(:get,"server/servers")[:servers]; end
-    def chunk(id); request(:get,"server/chunk/#{id}"); end
+    def chunk(id); request(:get,"server/chunk/#{id}", :accept_404=>true)[:chunk_info]; end
     def local_store_status; request(:get,"server/local_store_status"); end
 
     # returns true if the server is up and responding to the heartbeat
-    def up?;
+    def up?
       request(:get,"server/heartbeat")[:status]=="alive";
     rescue Errno::ECONNREFUSED => e
     end
@@ -214,7 +214,7 @@ module Monotable
   # this api is supported for testing, it should never be used by an actual client
   module ServerClientServerModifyAPI
     def balance; request(:post,"server/balance"); end
-    def join(server); request(:put,"server/join?server_name=#{server}"); end
+    def join(server); request(:put,"server/join?server_name=#{server}")[:servers]; end
 
     # returns the raw chunk-file
     def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{chunk_key}",:raw_response => true); end
@@ -228,12 +228,14 @@ module Monotable
     include ServerClientServerModifyAPI
     include RestClientHelper
     attr_accessor :server, :client_options
+    attr_accessor :path_prefix
 
     #options
     #   :use_synchrony => true ?
     def initialize(server,options={})
       @server=server
       @client_options = options
+      @path_prefix = options[:internal] ? "internal/" : ""
     end
 
     def to_s

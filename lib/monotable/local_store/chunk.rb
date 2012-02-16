@@ -85,6 +85,7 @@ module Monotable
       gte_key=options[:gte]
       lte_key=options[:lte]
       limit=options[:limit]
+      next_options = nil
 
       res=[]
       each_key do |k|
@@ -162,7 +163,7 @@ module Monotable
     attr_accessor :accounting_size         # the bytesize of all keys, field-names and field-values
 
     attr_accessor :range_start  # all keys are >= range_start; nil == first possible key
-    attr_accessor :range_end    # all keys are < range_end; nil == last possible key
+    attr_accessor :range_end    # all keys are < range_end; nil or :infinity == last possible key
 
     attr_accessor :data_block_offset
     attr_accessor :file_handle
@@ -173,6 +174,11 @@ module Monotable
     include ChunkMemoryRevisions
     include ChunkReadAPI
     include ChunkWriteAPI
+
+    # return a json-friendly version of the range_end
+    def symbolless_range_end;
+      @range_end == :infinity ? nil : @range_end
+    end
 
     def init_chunk(options={})
       @path_store = options[:path_store]
@@ -282,7 +288,7 @@ module Monotable
     def save_saved_chunk_info
       sci=saved_chunk_info
       sci["range_start"] = @range_start
-      sci["range_end"] = @range_end == :infinity ? nil : @range_end
+      sci["range_end"] = symbolless_range_end
       sci["accounting_size"] = @accounting_size
       sci["record_count"] = length
       sci["max_chunk_size"] = @max_chunk_size

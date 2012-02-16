@@ -6,7 +6,8 @@ describe Monotable::LocalStore do
 
   def blank_store
     reset_temp_dir
-    Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
+    server = Monotable::Server.new(:store_paths=>[temp_dir],:initialize_new_store=>true)
+    server.local_store
   end
 
   api_tests

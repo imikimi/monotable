@@ -2,6 +2,19 @@
 #SimpleCov.start
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 
+module TestingHash
+  # self contains at least all the keys in other, and their values match
+  def >=(other)
+    other.each do |k,v|
+      return false unless self[k]==v
+    end
+    true
+  end
+end
+class Hash
+  include TestingHash
+end
+
 module MonotableHelperMethods
 
   def add_test_keys(store,prefix,num_records)

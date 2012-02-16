@@ -7,6 +7,7 @@ require 'net/http'
 require 'json'
 require 'uri'
 require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
+require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 
 describe Monotable::HttpServer::ServerController do
   include DaemonTestHelper
@@ -37,7 +38,7 @@ describe Monotable::HttpServer::ServerController do
   end
 
   it "server/chunk should work" do
-    server_client.chunk("").should == {:records=>[]} # an empty chunk
+    server_client.chunk("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
   it "server/local_store_status should work" do

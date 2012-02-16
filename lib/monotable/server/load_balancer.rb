@@ -1,18 +1,5 @@
 module Monotable
-class LoadBalancer
-  attr_accessor :server
-
-  def initialize(server)
-    @server=server
-  end
-
-  def cluster_manager
-    @cluster_manager||=server.cluster_manager
-  end
-
-  def local_store
-    @local_store ||= server.local_store
-  end
+class LoadBalancer < TopServerComponent
 
   def neighbor_chunks
     cluster_manager.neighbors.collect do |k,neighbor|
@@ -43,13 +30,19 @@ class LoadBalancer
   #
   def balance
     client,chunks = self.most_loaded_neighbor
+    #puts "#{self.class}#balance local chunks: #{local_store.chunks.keys.inspect}"
+    #puts "#{self.class}#balance neighbor (#{client}) chunks: #{chunks.inspect}"
 
     chunks_moved={}
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
     while chunks.length+1 > local_store.chunks.length
       chunk_key = chunks.pop
+      #puts "moving chunk: #{chunk_key.inspect}"
       chunk_data = client.up_replicate_chunk chunk_key
-      local_store.add_chunk chunk_data
+      #puts "add chunk locally"
+      chunk = local_store.add_chunk chunk_data
+      #puts "update global index"
+      global_index.add_local_replica(chunk)
 
       client.down_replicate_chunk chunk_key
       chunks_moved[chunk_key]=client.to_s

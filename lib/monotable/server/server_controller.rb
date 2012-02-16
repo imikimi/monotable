@@ -38,7 +38,8 @@ class ServerController < RequestHandler
 
   # get a list of known servers
   def servers
-    servers={}
+    local_server_address = server.cluster_manager.local_server_address
+    servers={local_server_address => {:server_address => local_server_address}}
     server.cluster_manager.servers.each do |k,v|
       servers[k] = v.to_hash
     end
@@ -52,13 +53,19 @@ class ServerController < RequestHandler
     respond 200, content
   end
 
-  # get a list of chunks on this server
+  # get info about a chunk on the server
   def chunk
     return handle_invalid_request("chunk-id required") unless @resource_id
-    chunk=server.local_store.chunks[@resource_id]
-    return handle_resource_missing_request("chunk-id:#{@resource_id.inspect}") unless chunk
-    content={:records=>chunk.keys}
-    respond 200, content
+    chunk = server.local_store.chunks[@resource_id]
+    if chunk
+      respond 200, :status => "found", :chunk_info => {:range_start => chunk.range_start,
+        :range_end => chunk.symbolless_range_end,
+        :accounting_size => chunk.accounting_size,
+        :record_count => chunk.length
+      }
+    else
+      respond 404, {:status => "chunk no on server"}
+    end
   end
 
   def heartbeat
@@ -84,7 +91,9 @@ class ServerController < RequestHandler
   end
 
   def down_replicate_chunk
+    chunk=server.local_store.chunks[@resource_id]
     server.local_store.delete_chunk @resource_id
+    server.global_index.remove_local_replica(chunk)
     respond 200, {:result => :success}
   end
 

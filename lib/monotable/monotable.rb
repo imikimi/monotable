@@ -22,6 +22,10 @@ def monotable_require(relative_path,modules)
   end
 end
 
+monotable_require :patches, %w{
+  eventmachine
+}
+
 monotable_require :local_store, %w{
   api
   string
@@ -40,7 +44,6 @@ monotable_require :local_store, %w{
   column
   columns
   record
-  global_index
   chunk
   index_block
   index_block_encoder
@@ -54,11 +57,12 @@ monotable_require :local_store, %w{
 monotable_require '', %w{
   client/server_client
   exceptions/exceptions
-  solo_daemon/solo_daemon
-  router/router
 }
 
 monotable_require :server, %w{
+  top_server_component
+  router
+  global_index
   cluster_manager
   load_balancer
   server

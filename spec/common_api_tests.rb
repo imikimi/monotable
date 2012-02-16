@@ -1,16 +1,3 @@
-module TestingHash
-  # self contains at least all the keys in other, and their values match
-  def >=(other)
-    other.each do |k,v|
-      return false unless self[k]==v
-    end
-    true
-  end
-end
-class Hash
-  include TestingHash
-end
-
 def api_tests(options={})
   key_prefix_size=options[:key_prefix_size]||0
   dont_test_get_record=options[:dont_test_get_record]
@@ -116,6 +103,11 @@ def api_tests(options={})
     result[:records].collect{|a|a[0]}.should == ["key3"]
   end
 
+  it "should work to get_first :gt with no results" do
+    result=setup_store_with_test_keys.get_first(:gt=>"key4")
+    result[:records].should==[]
+  end
+
   it "should work to get_first :with_prefix" do
     store=setup_store_with_test_keys
     add_test_keys(store,"apple",3)
@@ -146,6 +138,11 @@ def api_tests(options={})
   it "should work to get_last :lt" do
     result=setup_store_with_test_keys.get_last(:lt=>"key2")
     result[:records].should == [["key1", {"data"=>"key1"}]]
+  end
+
+  it "should work to get_last :lt with no results" do
+    result=setup_store_with_test_keys.get_last(:lt=>"key0")
+    result[:records].should == []
   end
 
   it "should work to get_last :lte, :gte" do
