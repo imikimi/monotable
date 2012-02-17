@@ -90,7 +90,7 @@ module Monotable
       res=[]
       each_key do |k|
         break if res.length>=limit || k > lte_key
-        res << [k,get_record(k).fields] if k>=gte_key
+        res << get_record(k) if k>=gte_key
       end
       if range_end!=:infinity && lte_key >= range_end && res.length < limit
         next_options=options.clone
@@ -111,7 +111,8 @@ module Monotable
       res=[]
       reverse_each_key do |k|
         break if res.length>=limit || k < gte_key
-        res << [k,records[k].fields] if k<=lte_key
+        raise "fail! k=#{k.inspect} keys=#{keys.inspect}" unless records[k]
+        res << records[k] if k<=lte_key
       end
       if gte_key < range_start && res.length < limit
         next_options=options.clone

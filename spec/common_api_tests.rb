@@ -93,14 +93,18 @@ def api_tests(options={})
   # test get_first and get_last
   #*******************************************************
 
+  def record(key,fields)
+    Monotable::MemoryRecord.new.init key,fields
+  end
+
   it "should work to get_first :gte" do
     result=setup_store_with_test_keys.get_first(:gte=>"key2")
-    result[:records].should == [["key2",{"data"=>"key2"}]]
+    result[:records].should == [record("key2","data"=>"key2")]
   end
 
   it "should work to get_first :gt" do
     result=setup_store_with_test_keys.get_first(:gt=>"key2")
-    result[:records].collect{|a|a[0]}.should == ["key3"]
+    result[:records].collect{|r|r.key}.should == ["key3"]
   end
 
   it "should work to get_first :gt with no results" do
@@ -115,29 +119,29 @@ def api_tests(options={})
     add_test_keys(store,"zoo",3)
 
     result=store.get_first(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos0","legos1"]
+    result[:records].collect{|r|r.key}.should == ["legos0","legos1"]
   end
 
   it "should work to get_first with limits" do
     store=setup_store_with_test_keys
     result=store.get_first(:gte=>"key2", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
+    result[:records].collect{|r|r.key}.should == ["key2","key3"]
 
     result=store.get_first(:gte=>"key2", :limit=>3)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
+    result[:records].collect{|r|r.key}.should == ["key2","key3","key4"]
 
     result=store.get_first(:gte=>"key2", :limit=>4)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3","key4"]
+    result[:records].collect{|r|r.key}.should == ["key2","key3","key4"]
   end
 
   it "should work to get_last :lte" do
     result=setup_store_with_test_keys.get_last(:lte=>"key2")
-    result[:records].should == [["key2", {"data"=>"key2"}]]
+    result[:records].should == [record("key2", "data"=>"key2")]
   end
 
   it "should work to get_last :lt" do
     result=setup_store_with_test_keys.get_last(:lt=>"key2")
-    result[:records].should == [["key1", {"data"=>"key1"}]]
+    result[:records].should == [record("key1", "data"=>"key1")]
   end
 
   it "should work to get_last :lt with no results" do
@@ -147,34 +151,34 @@ def api_tests(options={})
 
   it "should work to get_last :lte, :gte" do
     result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
+    result[:records].collect{|r|r.key}.should == ["key1","key2","key3"]
   end
 
   it "should work to get_last :lte, :gte, :limit=>2" do
     result=setup_store_with_test_keys.get_last(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key2","key3"]
+    result[:records].collect{|r|r.key}.should == ["key2","key3"]
   end
 
   it "should work to get_first :lte, :gte" do
     result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>10)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2","key3"]
+    result[:records].collect{|r|r.key}.should == ["key1","key2","key3"]
   end
 
   it "should work to get_first :lte, :gte, :limit=>2" do
     result=setup_store_with_test_keys.get_first(:gte => "key1", :lte=>"key3", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
+    result[:records].collect{|r|r.key}.should == ["key1","key2"]
   end
 
   it "should work to get_last with limits" do
     store=setup_store_with_test_keys
     result=store.get_last(:lte=>"key2",:limit => 2)
-    result[:records].collect{|a|a[0]}.should == ["key1","key2"]
+    result[:records].collect{|r|r.key}.should == ["key1","key2"]
 
     result=store.get_last(:lte=>"key2",:limit => 3)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
+    result[:records].collect{|r|r.key}.should == ["key0","key1","key2"]
 
     result=store.get_last(:lte=>"key2",:limit => 4)
-    result[:records].collect{|a|a[0]}.should == ["key0","key1","key2"]
+    result[:records].collect{|r|r.key}.should == ["key0","key1","key2"]
   end
 
   it "should work to get_last :with_prefix" do
@@ -184,6 +188,6 @@ def api_tests(options={})
     add_test_keys(store,"zoo",3)
 
     result=store.get_last(:with_prefix=>"legos", :limit=>2)
-    result[:records].collect{|a|a[0]}.should == ["legos1","legos2"]
+    result[:records].collect{|r|r.key}.should == ["legos1","legos2"]
   end
 end

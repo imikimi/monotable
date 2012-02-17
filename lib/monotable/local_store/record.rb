@@ -12,6 +12,10 @@ module Monotable
       @disk_offset=0
     end
 
+    def inspect
+      "<#{self.class} key=#{key.inspect} fields=#{fields.inspect}>"
+    end
+
     def each
       fields.each {|k,v| yield k,v}
     end
@@ -25,13 +29,17 @@ module Monotable
     def [](key) fields[key] end
     def []=(key,v) fields[key]=v end
 
+    def to_json(a=nil,b=nil)
+      [key,fields].to_json
+    end
+
     def update(new_fields)
       fields.update(new_fields)
     end
 
     def length() fields.length end
     def keys() fields.keys end
-    def ==(other) other && length==other.length && keys.each {|k| return false unless self[k]==other[k]} end
+    def ==(other) other && length==other.length && fields.each {|k,v| return false unless v==other[k]} end
 
     def Record.parse_record(data,column_dictionary,column_hash=nil)
       fields={}

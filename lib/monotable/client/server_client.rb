@@ -154,6 +154,14 @@ module Monotable
   module ServerClientReadAPI
     include ReadAPI
 
+    # convert the record data return to Monotable::MemoryRecords
+    def objectify_records(result)
+      result[:records] = result[:records].collect do |rec|
+        MemoryRecord.new.init(rec[0], rec[1])
+      end
+      result
+    end
+
     # see ReadAPI
     def get(key,options={},&block)
       request(:get, "#{path_prefix}records/#{key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
@@ -162,13 +170,13 @@ module Monotable
     # see ReadAPI
     def get_first(options={},&block)
       request, params = prepare_get_first_request(options)
-      request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
 
     # see ReadAPI
     def get_last(options={},&block)
       request,params = prepare_get_last_request(options)
-      request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
   end
 

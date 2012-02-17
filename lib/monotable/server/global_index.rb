@@ -16,8 +16,8 @@ module Monotable
         when nil then
           raise InternalError.new("#{self.class} was initialized incorrectly")
         else
-          init(initializer.key,initializer)
-          @servers = fields["servers"].split(",").map {|a| a.strip}
+          init(initializer.key,initializer.fields)
+          @servers = initializer.fields["servers"].split(",").map {|a| a.strip}
         end
 
         @servers ||= servers || []

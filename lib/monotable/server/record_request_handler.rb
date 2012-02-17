@@ -90,17 +90,25 @@ Valid Patterns:
       respond(content[:record] ? 200 : 404, content)
     end
 
+    def deobjectify_records(result)
+      puts "result = #{result.inspect}"
+      result[:records] = result[:records].collect do |rec|
+        [rec.key,rec.fields]
+      end
+      result
+    end
+
     # see Monotable::ReadAPI#get_first
     def get_first(options={})
       #puts "get_first options=#{options.inspect}"
-      content=@store.get_first(options)
+      content=deobjectify_records @store.get_first(options)
       respond(200,content)
     end
 
     # see Monotable::ReadAPI#get_last
     def get_last(options={})
       #puts "get_last options=#{options.inspect}"
-      content=@store.get_last(options)
+      content=deobjectify_records @store.get_last(options)
       respond(200,content)
     end
   end

@@ -19,7 +19,7 @@ module Monotable
 
     # key is in the first chunk if it has the same number of "+"s as the paxos record
     def key_in_first_chunk?(internal_key)
-      internal_key[0..first_record_key.length-1]==paxos_record.key
+      internal_key[0..first_record_key.length-1]==first_record_key
     end
 
     # find the servers containing the chunk that covers key
@@ -33,7 +33,7 @@ module Monotable
 
     def server_client(ikey)
       server_list=servers(ikey)
-      server_address=server_list[rand(ss.length)]
+      server_address=server_list[rand(server_list.length)]
       server.cluster_manager.server_client(server_address)
     end
   end
@@ -108,8 +108,8 @@ module Monotable
 
     def process_get_range_result(result)
       if @user_keys
-        result[:records]=result[:records].collect do |k,v|
-          [externalize_key(k),v]
+        result[:records]=result[:records].collect do |rec|
+          Monotable::MemoryRecord.new.init(externalize_key(rec.key),rec.fields)
         end
       end
       result
