@@ -246,6 +246,11 @@ module Monotable
       @path_prefix = options[:internal] ? "internal/" : ""
     end
 
+    # returns an internal server client
+    def internal
+      @internal||=ServerClient.new(server,client_options.merge(:internal => true))
+    end
+
     def to_s
       @server
     end
