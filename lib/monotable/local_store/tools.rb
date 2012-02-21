@@ -54,8 +54,6 @@ module Monotable
     #   :normalized_lte => key
     #   :normalized_gte => key
     def Tools.normalize_range_options(options)
-      options[:limit]||=1
-      return if options[:lte] && options[:gte]
       n=DEFAULT_MAX_KEY_LENGTH
 
       lte_key=options[:lte]
@@ -72,9 +70,11 @@ module Monotable
       gte_key||=""
       lte_key||="\xff"*n
 
-      options[:lte]=lte_key
-      options[:gte]=gte_key
-      options
+      {
+      :limit => options[:limit] || 1,
+      :lte => lte_key,
+      :gte => gte_key
+      }
     end
 
     def Tools.log_error(except,info=nil)

@@ -81,7 +81,7 @@ module Monotable
     # see ReadAPI
     def get_first(options={})
       records=self.records
-      Tools.normalize_range_options(options)
+      options = Tools.normalize_range_options(options)
       gte_key=options[:gte]
       lte_key=options[:lte]
       limit=options[:limit]
@@ -102,8 +102,7 @@ module Monotable
 
     # see ReadAPI
     def get_last(options={})
-      records=self.records
-      Tools.normalize_range_options(options)
+      options = Tools.normalize_range_options(options)
       gte_key=options[:gte]
       lte_key=options[:lte]
       limit=options[:limit]
@@ -111,8 +110,8 @@ module Monotable
       res=[]
       reverse_each_key do |k|
         break if res.length>=limit || k < gte_key
-        raise "fail! k=#{k.inspect} keys=#{keys.inspect}" unless records[k]
-        res << records[k] if k<=lte_key
+        raise "#{self.class}(#{object_id})#get_last(#{options.inspect}) fail! get_record(#{k.inspect})=#{get_record(k).inspect} keys=#{keys.inspect}, get_last chunk-key-range=#{range_start.inspect}..#{range_end.inspect}" unless get_record(k)
+        res << get_record(k) if k<=lte_key
       end
       if gte_key < range_start && res.length < limit
         next_options=options.clone

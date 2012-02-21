@@ -27,7 +27,7 @@ DiskChunk's record's structure consists of three sub-structures:
     NOTE: if a Key is in both @deleted_records AND @records, this means:
       a) the record exists on disk
       b) the record is NOT deleted
-      c) @records (and the journal file) holds the up-to-date version
+      c) AND @records (and the journal file) holds the up-to-date version
 =end
 
 module Monotable
@@ -111,7 +111,7 @@ module Monotable
 
     # see ReadAPI
     def get_record(key)
-      (@records[key] || locate_index_record(key)) unless @deleted_records[key]
+      @records[key] || (!@deleted_records[key] && locate_index_record(key))
     end
 
     #*************************************************************
