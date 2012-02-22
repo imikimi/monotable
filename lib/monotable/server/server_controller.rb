@@ -18,6 +18,7 @@ class ServerController < RequestHandler
     when "POST/up_replicate_chunk" then up_replicate_chunk
     when "POST/down_replicate_chunk" then down_replicate_chunk
     when "POST/balance" then balance
+    when "POST/split_chunk" then split_chunk
     else handle_unknown_request
     end
   end
@@ -58,11 +59,28 @@ class ServerController < RequestHandler
     return handle_invalid_request("chunk-id required") unless @resource_id
     chunk = server.local_store.chunks[@resource_id]
     if chunk
-      respond 200, :status => "found", :chunk_info => {:range_start => chunk.range_start,
-        :range_end => chunk.symbolless_range_end,
-        :accounting_size => chunk.accounting_size,
-        :record_count => chunk.length
-      }
+      respond 200, :status => "found", :chunk_info => chunk_info(chunk)
+    else
+      respond 404, {:status => "chunk no on server"}
+    end
+  end
+
+  def chunk_info(chunk)
+    {
+      :range_start => chunk.range_start,
+      :range_end => chunk.symbolless_range_end,
+      :accounting_size => chunk.accounting_size,
+      :record_count => chunk.length
+    }
+  end
+
+  def split_chunk
+    return handle_invalid_request("chunk-id required") unless @resource_id
+    chunk = server.local_store.chunks[@resource_id]
+    if chunk
+      on_key = params[:on_key]
+      right_chunk = chunk.split(on_key)
+      respond 200, :status => "success", :chunks => [chunk_info(chunk), chunk_info(right_chunk)]
     else
       respond 404, {:status => "chunk no on server"}
     end
@@ -81,13 +99,16 @@ class ServerController < RequestHandler
   #   1 & 2 would be started by this call, then 3 & 4 would be a processed in a callback
   def up_replicate_chunk
     # compact chunk
-    async_compaction=Journal.async_compaction
+    puts "#{self.class}#up_replicate_chunk local_server = #{server.cluster_manager.local_server}"
+    current_async_compaction = Journal.async_compaction
     server.local_store.compact
-    Journal.async_compaction=async_compaction
+    Journal.async_compaction = current_async_compaction
 
     # return chunk
     chunk=server.local_store.chunks[@resource_id]
-    respond_binary 200,chunk.chunk_file_data
+    chunk_data = chunk.chunk_file_data
+    puts "#{self.class}#up_repilcate_chunk chunk_data="+chunk_data[0..10].inspect
+    respond_binary 200,chunk_data
   end
 
   def down_replicate_chunk

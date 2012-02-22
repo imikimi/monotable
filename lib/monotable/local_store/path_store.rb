@@ -111,7 +111,7 @@ module Monotable
     end
 
     def delete_chunk(chunk)
-      chunk.file_handle.delete
+      chunk.delete_chunk
       chunks.delete chunk.filename
     end
 

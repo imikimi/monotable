@@ -1,11 +1,5 @@
-require File.join(File.dirname(__FILE__),"xbd")
-require File.join(File.dirname(__FILE__),"version")
+require File.join(File.dirname(__FILE__),"local_store")
 
-require 'yaml'
-require 'cgi'
-require 'fileutils'
-require 'json'
-require 'rubygems'
 require 'eventmachine'
 require 'em-http-request'
 require 'evma_httpserver'
@@ -26,34 +20,6 @@ monotable_require :patches, %w{
   eventmachine
 }
 
-monotable_require :local_store, %w{
-  api
-  string
-  global
-  mini_event_machine
-  cache
-  record_cache
-  index_block_cache
-  constants
-  tools
-  file_handle
-  journal
-  journal_manager
-  compaction_manager
-  logger
-  column
-  columns
-  record
-  chunk
-  index_block
-  index_block_encoder
-  memory_chunk
-  disk_chunk_base
-  disk_chunk
-  path_store
-  local_store
-}
-
 monotable_require '', %w{
   client/server_client
   exceptions/exceptions
@@ -71,8 +37,6 @@ monotable_require :server, %w{
   server_controller
   record_request_handler
 }
-
-
 
 monotable_require :goliath_server, %w{
   params_and_body

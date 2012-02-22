@@ -10,5 +10,11 @@ describe Monotable::LocalStore do
     server.local_store
   end
 
+  it "should work to do this" do
+    local_store = blank_store
+    res = local_store.get_last  :limit=>1, :gte=>"", :lte=>"++++0"
+    puts res.inspect
+  end
+
   api_tests
 end

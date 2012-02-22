@@ -9,12 +9,9 @@ module Monotable
       # OR key for new chunk
       def initialize(initializer,servers=nil)
         case initializer
-        when Chunk then
-          self.key = INDEX_KEY_PREFIX + initializer.range_start
-        when String then
-          self.key = INDEX_KEY_PREFIX + initializer
+        when Chunk, String then self.key = GlobalIndex.index_key(initializer)
         when nil then
-          raise InternalError.new("#{self.class} was initialized incorrectly")
+          raise InternalError.new("#{self.class} was initialized with 'nil'")
         else
           init(initializer.key,initializer.fields)
           @servers = initializer.fields["servers"].split(",").map {|a| a.strip}
@@ -24,7 +21,7 @@ module Monotable
       end
 
       def fields(columns_hash=nil)
-        {"servers"=>@servers.join("\n")}
+        {"servers"=>@servers.join(",")}
       end
 
       def add_server(server)
@@ -44,6 +41,21 @@ module Monotable
 
     def request_router
       RequestRouter.new(router,:forward=>true)
+    end
+
+    class << self
+      # get the index_key for a chunk
+      def index_key(chunk)
+        INDEX_KEY_PREFIX + case chunk
+        when Chunk  then chunk.range_start
+        when String then chunk
+        end
+      end
+
+      # get the index_record for a chunk
+      def index_record(chunk,store)
+        ChunkIndexRecord.new store.get_record(index_key(chunk))
+      end
     end
 
     # current server known to host the paxos record (the first record in the entire monotable)
@@ -74,13 +86,38 @@ module Monotable
       GlobalIndex::ChunkIndexRecord.new(first_record)
     end
 
+    #NOTE: this hard-caches the first-record-key
+    # Someday the first-record-key may change, but currently are initializing the
+    # store to be big enough for practically anyone's need, so adding another
+    # index level won't be needed for quite a while.
+    def first_record_key
+      @first_record_key ||= first_record.key
+    end
+
+    # returns the number of index levels in the global-index
+    # This is also the number of "+"s in the first_record_key
+    def index_depth
+      @index_depth ||= first_record_key[/\+*/].length
+    end
+
     def find(internal_key,initializing=false)
+      return first_record if (internal_key[/^\+*/]).length >= index_depth
+
       index_record_key=INDEX_KEY_PREFIX+internal_key # note, this doesn't have to be the exact key, just >= they key and < the next key
-      #puts "#{self.class}#find index_record_key=#{index_record_key}"
+      #puts "#{self.class}#find index_record_key=#{index_record_key} index_depth=#{index_depth} first_record_key=#{first_record_key.inspect}"
       response = request_router.get_last(:lte=>index_record_key,:limit=>1)
       record = response[:records][0]
-      raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}") unless record || initializing
-      ChunkIndexRecord.new record||internal_key
+      raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}") unless record
+      ChunkIndexRecord.new record
+    rescue MonotableDataStructureError => ds_error
+      return ChunkIndexRecord.new internal_key if initializing
+      raise
+    end
+
+    # returns the server-list for servers that hold the chunk that contains the record for internal_key
+    # NOTE: first server in the list is the server to write to; any can be read from
+    def chunk_servers(internal_key)
+      find(internal_key).servers
     end
 
     def update_replica_list(chunk,initializing=false)
@@ -91,10 +128,11 @@ module Monotable
       #puts "update_replica_list. ir.key = #{ir.key[0..10].inspect}"
 
       if chunk.range_start==""
-        puts "TODO - update the root/paxos record"
+        #puts "TODO - update the root/paxos record"
         # TODO - update the root/paxos record
       else
-        request_router.set ir.key, ir
+        #puts "Update index record: #{ir.inspect}"
+        request_router.set ir.key, ir.fields
       end
     end
 

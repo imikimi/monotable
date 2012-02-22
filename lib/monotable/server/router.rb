@@ -9,31 +9,14 @@ module Monotable
       @server_clients=[]
     end
 
-    #NOTE: this hard-caches the first-record-key
-    # Someday the first-record-key may change, but currently are initializing the
-    # store to be big enough for practically anyone's need, so adding another
-    # index level won't be needed for quite a while.
-    def first_record_key
-      @first_record_key ||= global_index.first_record.key
-    end
-
-    # key is in the first chunk if it has the same number of "+"s as the paxos record
-    def key_in_first_chunk?(internal_key)
-      internal_key[0..first_record_key.length-1]==first_record_key
-    end
-
     # find the servers containing the chunk that covers key
-    def servers(internal_key)
-      if key_in_first_chunk? internal_key
-        global_index.first_record.servers
-      else
-        global_index.find(internal_key,self).servers
-      end
+    def chunk_servers(internal_key)
+      global_index.chunk_servers(internal_key)
     end
 
     def server_client(ikey)
-      server_list=servers(ikey)
-      server_address=server_list[rand(server_list.length)]
+      server_list = chunk_servers(ikey)
+      server_address = server_list[rand(server_list.length)]
       server.cluster_manager.server_client(server_address)
     end
   end
@@ -100,8 +83,8 @@ module Monotable
     #routing_option should be :gte or :lte
     # yields the store to route to and the options, internalized
     def route_get_range(options,routing_option)
-      Tools.normalize_range_options(options)
-      route(options[routing_option]) do |store,key|
+      normal_options = Tools.normalize_range_options(options)
+      route(normal_options[routing_option]) do |store,key|
         yield store, @user_keys ? internalize_range_options(options) : options
       end
     end
@@ -141,7 +124,7 @@ module Monotable
       #puts "routing: ikey=#{ikey[0..10].inspect}"
       ret = if router.local_store.local?(ikey)
         #puts "routing: #{ikey[0..10].inspect} -> local"
-        work_log<<"processed locally"
+        work_log<<"(#{router.cluster_manager.local_server}) processed locally"
         yield router.local_store,ikey
       else
         #puts "routing: #{ikey[0..10].inspect} -> remote"
@@ -149,11 +132,11 @@ module Monotable
           {:error=>"key not covered by local chunks"}
         else
           sc=router.server_client(ikey)
-          work_log<<"forwarding request to: #{sc}"
+          work_log<<"(#{router.cluster_manager.local_server}) forwarded request to: #{sc}"
           yield sc,ikey
         end
       end
-      ret[:work_log]=(ret[:work_log]||[])+work_log
+      ret[:work_log]=work_log + (ret[:work_log]||[])
       ret
     end
   end

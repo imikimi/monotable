@@ -42,6 +42,7 @@ module Monotable
       command = strings[0]
       case command
       when "del" then {:command=>:delete,:chunk_file=>strings[1],:key=>strings[2]}
+      when "delete_chunk" then {:command=>:delete_chunk,:chunk_file=>strings[1]}
       when "split" then {:command=>:split,:chunk_file=>strings[1],:key=>strings[2],:to_file => strings[3]}
       when "set" then
         fields={}
@@ -60,6 +61,7 @@ module Monotable
       case journal_entry[:command]
       when :set then chunk.set(journal_entry[:key],journal_entry[:fields])
       when :delete then chunk.delete(journal_entry[:key])
+      when :delete_chunk then File.delete journal_entry[:chunk_file]
       when :split then
         chunk2=chunk.split(journal_entry[:key])
         chunks[journal_entry[:to_file]]={:chunk=>chunk2}
@@ -88,6 +90,10 @@ module Monotable
 
     def delete(chunk_file,key)
       save_entry ["del",chunk_file.to_s,key]
+    end
+
+    def delete_chunk(chunk_file)
+      save_entry ["delete_chunk",chunk_file.to_s]
     end
 
     def split(chunk_file,key,to_filename)
@@ -224,7 +230,9 @@ module Monotable
         chunk_file=File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
         FileUtils.rm [chunk_file] if File.exists?(chunk_file)
+        puts "compacted_file(#{compacted_file.inspect}) chunk_file(#{chunk_file}) compacted_file.size=#{File.stat(compacted_file).size}"
         FileUtils.mv compacted_file,chunk_file
+        puts "compacted_file(#{compacted_file.inspect}) chunk_file(#{chunk_file}) chunk_file.size=#{File.stat(chunk_file).size}"
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
         # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
         #   Then we can just:

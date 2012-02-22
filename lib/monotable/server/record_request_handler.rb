@@ -91,7 +91,7 @@ Valid Patterns:
     end
 
     def deobjectify_records(result)
-      puts "result = #{result.inspect}"
+      raise InternalError.new("invalid result: #{result.inspect}") unless result[:records].kind_of?(Array)
       result[:records] = result[:records].collect do |rec|
         [rec.key,rec.fields]
       end
@@ -99,16 +99,22 @@ Valid Patterns:
     end
 
     # see Monotable::ReadAPI#get_first
+    # TODO: if the internal get_first call returns an {:error=>"..."}, what should this method return?
+    #   Real example: {:error=>"key not covered by local chunks"}
     def get_first(options={})
-      #puts "get_first options=#{options.inspect}"
+      #puts "#{self.class}#get_first(#{options.inspect})"
       content=deobjectify_records @store.get_first(options)
+      #puts "#{self.class}#get_first(#{options.inspect}) => #{content.inspect}"
       respond(200,content)
     end
 
     # see Monotable::ReadAPI#get_last
+    # TODO: if the internal get_first call returns an {:error=>"..."}, what should this method return?
+    #   Real example: {:error=>"key not covered by local chunks"}
     def get_last(options={})
-      #puts "get_last options=#{options.inspect}"
+      #puts "#{self.class}#get_last(#{options.inspect})"
       content=deobjectify_records @store.get_last(options)
+      #puts "#{self.class}#get_last(#{options.inspect}) => #{content.inspect}"
       respond(200,content)
     end
   end

@@ -67,7 +67,8 @@ module Monotable
     def init_from_disk
       # parse the file on disk
       # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
-      file_handle.read {|f|parse(f)} if file_handle.exists?
+      puts "init_from_disk file=#{file_handle}"
+      file_handle.read(0) {|f|parse(f)} if file_handle.exists?
     end
 
     def filename
@@ -77,7 +78,7 @@ module Monotable
     def data_loaded; false; end
 
     def chunk_file_data
-      @file_handle.read
+      @file_handle.read(0)
     end
 
     #*************************************************************
@@ -96,6 +97,12 @@ module Monotable
     def delete(key)
       journal.delete(file_handle,key)
       delete_internal(key)
+    end
+
+    # delete this chunk
+    # TODO: this should actually move the chunk into the "Trash" - a holding area where we can later do a verification against the cluster to make sure it is safe to delete this chunk.
+    def delete_chunk
+      journal.delete_chunk(file_handle)
     end
 
     #*************************************************************

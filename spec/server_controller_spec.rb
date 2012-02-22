@@ -63,10 +63,9 @@ describe Monotable::HttpServer::ServerController do
     chunk["u/foo"].should == test_record
   end
 
-  it "server/down_replicate_chunk should work" do
+  it "server/split_chunk should work" do
     server_client.chunks.should == [""]
-    server_client.down_replicate_chunk("")
-    server_client.chunks.should == []
+    server_client.split_chunk("","foo")
+    server_client.chunks.should == ["","foo"]
   end
-
 end

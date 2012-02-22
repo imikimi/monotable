@@ -47,13 +47,13 @@ describe ServerClient do
 
   it "should be able to get a record" do
     setup_store(3)
-    client.get("key1").should=={:record=>{"field"=>"1"}, :size=>12, :num_fields=>1, :work_log=>["processed locally"]}
+    client.get("key1").should>={:record=>{"field"=>"1"}, :size=>12, :num_fields=>1}
     client["key1"].should=={"field"=>"1"}
   end
 
   it "should be able to set a record with set" do
     clear_store
-    client.set("foo",{"bar"=>"monkey"}).should=={:result=>:created, :size_delta=>14, :size=>14, :work_log=>["processed locally"]}
+    client.set("foo",{"bar"=>"monkey"}).should>={:result=>:created, :size_delta=>14, :size=>14}
     client["foo"].should=={"bar" => "monkey"}
   end
 

@@ -31,10 +31,11 @@ module DaemonTestHelper
       sleep 0.01
     end
     shutdown_daemon
-    raise "server failed to start within #{max_wait} seconds"
+    raise "server failed to start within #{max_wait} second(s)"
   end
 
   def start_daemon(options={:initialize_new_test_store => true})
+    print "<"
     # Start up the daemon
     daemon_number = server_pids.length
     server_pids<< fork {
@@ -52,6 +53,7 @@ module DaemonTestHelper
   end
 
   def shutdown_daemon
+    print ">"
     server_pids.each do |server_pid|
       Process.kill 'TERM', server_pid
       Process.wait server_pid

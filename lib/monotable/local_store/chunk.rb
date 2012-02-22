@@ -192,6 +192,11 @@ module Monotable
       @loaded_record_count=0
     end
 
+    # the key for the index record for this chunk
+    def index_key
+      GlobalIndex.index_key_for_chunk(self)
+    end
+
     def local_store
       @local_store||=@path_store && @path_store.local_store
     end
@@ -380,6 +385,7 @@ module Monotable
     end
 
     # all keys >= on_key are put into a new chunk
+    # returns the new chunk
     def split(on_key=nil,to_filename=nil)
       if on_key
         size1,size2=split_on_key_sizes(on_key)

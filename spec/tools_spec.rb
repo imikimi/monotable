@@ -20,8 +20,6 @@ describe Tools do
   it "should normalize_range_options({:lt, :gt})" do
     Tools.normalize_range_options({:gt=>"a",:lt=>"b"}).should=={
       :limit=>1,
-      :gt=>"a",
-      :lt=>"b",
       :gte=>"a\x00",
       :lte=>"a"+"\xFF"*(DEFAULT_MAX_KEY_LENGTH-1)
     }
@@ -29,7 +27,6 @@ describe Tools do
   it "should normalize_range_options({:with_prefix})" do
     Tools.normalize_range_options({:with_prefix=>"foo"}).should=={
       :limit=>1,
-      :with_prefix=>"foo",
       :gte=>"foo",
       :lte=>"foo"+"\xFF"*(DEFAULT_MAX_KEY_LENGTH-3)
     }

@@ -1,4 +1,5 @@
 # encoding: BINARY
+require 'uri'
 
 # https://github.com/archiloque/rest-client
 # http://rubydoc.info/gems/rest-client/1.6.7/frames
@@ -25,7 +26,7 @@ module Monotable
     # return the uri,params for a given get-first request
     def prepare_get_first_request(options)
       kind,key = hash_first options, [:gte,:gt,:with_prefix]
-      uri="first_records/#{kind}/#{key}"
+      uri="first_records/#{kind}/#{ue key}"
       params = hash_select options, [:limit,:lte,:lt]
       return uri,params
     end
@@ -33,7 +34,7 @@ module Monotable
     # return the uri,params for a given get-last request
     def prepare_get_last_request(options)
       kind,key = hash_first options, [:lte,:lt,:with_prefix]
-      uri="last_records/#{kind}/#{key}"
+      uri="last_records/#{kind}/#{ue key}"
       params = hash_select options, [:limit,:gte,:gt]
       return uri,params
     end
@@ -164,7 +165,7 @@ module Monotable
 
     # see ReadAPI
     def get(key,options={},&block)
-      request(:get, "#{path_prefix}records/#{key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      request(:get, "#{path_prefix}records/#{ue key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
 
     # see ReadAPI
@@ -190,18 +191,18 @@ module Monotable
     # see WriteAPI
     def set(key,fields,&block)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :post, "#{path_prefix}records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
 
     # see WriteAPI
     def update(key,fields,&block)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :put, "#{path_prefix}records/#{key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :put, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
 
     # see WriteAPI
     def delete(key,&block)
-      request :delete, "#{path_prefix}records/#{key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :delete, "#{path_prefix}records/#{ue key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
     end
   end
 
@@ -209,7 +210,7 @@ module Monotable
   module ServerClientServerReadAPI
     def chunks; request(:get,"server/chunks")[:chunks]; end
     def servers; request(:get,"server/servers")[:servers]; end
-    def chunk(id); request(:get,"server/chunk/#{id}", :accept_404=>true)[:chunk_info]; end
+    def chunk(id); request(:get,"server/chunk/#{ue id}", :accept_404=>true)[:chunk_info]; end
     def local_store_status; request(:get,"server/local_store_status"); end
 
     # returns true if the server is up and responding to the heartbeat
@@ -221,12 +222,13 @@ module Monotable
 
   # this api is supported for testing, it should never be used by an actual client
   module ServerClientServerModifyAPI
+    def split_chunk(id,on_key); request(:post,"server/split_chunk/#{ue id}?on_key=#{ue on_key}")[:chunks]; end
     def balance; request(:post,"server/balance"); end
-    def join(server); request(:put,"server/join?server_name=#{server}")[:servers]; end
+    def join(server); request(:put,"server/join?server_name=#{ue server}")[:servers]; end
 
     # returns the raw chunk-file
-    def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{chunk_key}",:raw_response => true); end
-    def down_replicate_chunk(chunk_key); request(:post,"server/down_replicate_chunk/#{chunk_key}"); end
+    def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{ue chunk_key}",:raw_response => true); end
+    def down_replicate_chunk(chunk_key); request(:post,"server/down_replicate_chunk/#{ue chunk_key}"); end
   end
 
   class ServerClient
@@ -237,6 +239,11 @@ module Monotable
     include RestClientHelper
     attr_accessor :server, :client_options
     attr_accessor :path_prefix
+
+    # uri-encode string
+    def ue(str)
+      URI.encode(str)
+    end
 
     #options
     #   :use_synchrony => true ?

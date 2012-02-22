@@ -89,6 +89,10 @@ module Monotable
       @current_journal.delete(chunk_file,key)
     end
 
+    def delete_chunk(chunk_file)
+      @current_journal.delete_chunk(chunk_file)
+    end
+
     def split(chunk_file,key,to_filename)
       @current_journal.split(chunk_file,key,to_filename)
     end
