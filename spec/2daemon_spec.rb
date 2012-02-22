@@ -45,7 +45,7 @@ describe Monotable::EventMachineServer do
 
     def get_record(key)
       clients.each do |c|
-        puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect})"
+#        puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect})"
         r=c.get_record(key)
         return r if r
       end
@@ -58,7 +58,7 @@ describe Monotable::EventMachineServer do
     server_name = client.server.split("http://")[1]
     client.chunks.each do |chunk|
       next if chunk==""
-      puts "validate #{server_name}:#{chunk} index"
+#      puts "validate #{server_name}:#{chunk} index"
       index_record = Monotable::GlobalIndex.index_record(chunk,internal_client)
       index_record.servers.should == [server_name]
     end

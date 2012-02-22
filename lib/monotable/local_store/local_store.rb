@@ -11,7 +11,6 @@ module Monotable
 
     # see ReadAPI
     def get_record(key)
-      puts "#{self.class}#get_record(#{key.inspect}) pid=#{Process.pid}"
       RecordCache.get(key) do
         chunk=get_chunk(key)
         chunk && chunk.get_record(key)

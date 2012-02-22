@@ -30,19 +30,13 @@ class LoadBalancer < TopServerComponent
   #
   def balance
     client,chunks = self.most_loaded_neighbor
-    #puts "#{self.class}#balance local chunks: #{local_store.chunks.keys.inspect}"
-    #puts "#{self.class}#balance neighbor (#{client}) chunks: #{chunks.inspect}"
 
     chunks_moved={}
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
     while chunks.length+1 > local_store.chunks.length
       chunk_key = chunks.pop
-      #puts "moving chunk: #{chunk_key.inspect}"
-      puts "#{self.class}#balance() moving chunk: #{chunk_key.inspect}"
       chunk_data = client.up_replicate_chunk chunk_key
-      puts "#{self.class}#balance() moving chunk data = #{chunk_data.inspect}"
       chunk = local_store.add_chunk chunk_data
-      #puts "update global index"
       global_index.add_local_replica(chunk)
 
       client.down_replicate_chunk chunk_key

@@ -31,7 +31,6 @@ module Monotable
 
       def remove_server(server)
         server = server.to_s
-        puts "#{self.class}#remove_server(#{server.inspect})"
         @servers = @servers.select {|a| a!=server}
       end
     end
@@ -107,7 +106,6 @@ module Monotable
       return first_record if (internal_key[/^\+*/]).length >= index_depth
 
       index_record_key=INDEX_KEY_PREFIX+internal_key # note, this doesn't have to be the exact key, just >= they key and < the next key
-      #puts "#{self.class}#find index_record_key=#{index_record_key} index_depth=#{index_depth} first_record_key=#{first_record_key.inspect}"
       response = request_router.get_last(:lte=>index_record_key,:limit=>1)
       record = response[:records][0]
       raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}") unless record
@@ -128,25 +126,19 @@ module Monotable
       ir_old_fields = ir.fields.clone
       yield ir
 
-      #puts "update_chunk_server_list. chunk.range_start = #{chunk.range_start[0..10].inspect}"
-      #puts "update_chunk_server_list. ir.key = #{ir.key[0..10].inspect}"
-
       if chunk.range_start==""
         #puts "TODO - update the root/paxos record"
         # TODO - update the root/paxos record
       else
-        puts "#{self.class}#update_chunk_server_list() key=#{ir.key.inspect} #{ir_old_fields.inspect} => #{ir.fields.inspect}"
         request_router.set ir.key, ir.fields
       end
     end
 
     def add_local_replica(chunk,initializing=false)
-      puts "#{self.class}#add_local_replica(#{chunk.to_s.inspect}) pid=#{Process.pid} server=#{server.to_s.inspect}"
       update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server}
     end
 
     def remove_local_replica(chunk)
-      puts "#{self.class}#remove_local_replica(#{chunk.to_s.inspect}) pid=#{Process.pid} server=#{server.to_s.inspect}"
       update_chunk_server_list(chunk) {|ir| ir.remove_server server}
     end
   end

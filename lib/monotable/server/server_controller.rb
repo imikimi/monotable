@@ -99,7 +99,6 @@ class ServerController < RequestHandler
   #   1 & 2 would be started by this call, then 3 & 4 would be a processed in a callback
   def up_replicate_chunk
     # compact chunk
-    puts "#{self.class}#up_replicate_chunk local_server = #{server.cluster_manager.local_server}"
     current_async_compaction = Journal.async_compaction
     server.local_store.compact
     Journal.async_compaction = current_async_compaction
@@ -107,7 +106,6 @@ class ServerController < RequestHandler
     # return chunk
     chunk=server.local_store.chunks[@resource_id]
     chunk_data = chunk.chunk_file_data
-    puts "#{self.class}#up_repilcate_chunk() chunk=#{chunk.file_handle}|#{chunk.to_s.inspect} chunk_data="+chunk_data.inspect
     respond_binary 200,chunk_data
   end
 

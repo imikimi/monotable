@@ -124,7 +124,6 @@ module Monotable
     # Phase 1 can safely be run as long as the journal_file is no longer being written to.
     # It is safe to continue to read from the journal and the effected chunks during Phase 1.
     def Journal.compact_phase_1(journal_file)
-      puts "Journal.compact_phase_1(#{journal_file})"
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
       success_filename = Journal.successfile_compaction_filename(journal_file)
@@ -153,7 +152,6 @@ module Monotable
             chunk=MemoryChunk.load(chunk_filename)
             chunks[chunk_filename]={:chunk=>chunk}
           end
-      puts "Journal.compact_phase_1() apply-entry #{entry.inspect} to chunk #{chunk.to_s.inspect}"
           Journal.apply_entry(entry,chunk,chunks)
         end
         journal_file.close
@@ -164,7 +162,6 @@ module Monotable
           chunk = status[:chunk]
           cf = status[:compacted_file] = File.join(compacted_chunks_path, File.basename(chunk_filename))
           chunk.save cf
-      puts "Journal.compact_phase_1() post_chunk_save #{chunk} data=#{File.read(cf).inspect}"
         end
 
         # "touch" the file: JOURNAL_COMPACTION_SUCCESS_FILENAME
@@ -208,7 +205,6 @@ module Monotable
     # Exclusive locks on each chunk must be aquired as its old version is deleted and new version is moved in place
     # TODO: Chunks effected should be "reset" after compaction
     def Journal.compact_phase_2(journal_file)
-      puts "Journal.compact_phase_2(#{journal_file})"
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
       success_filename = Journal.successfile_compaction_filename(journal_file)
@@ -234,9 +230,7 @@ module Monotable
         chunk_file=File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
         FileUtils.rm [chunk_file] if File.exists?(chunk_file)
-      puts "Journal.compact_phase_2() mv #{compacted_file} #{chunk_file}"
         FileUtils.mv compacted_file,chunk_file
-      puts "Journal.compact_phase_2() post_chunk_move to #{chunk_file} data=#{File.read(chunk_file).inspect}"
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
         # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
         #   Then we can just:
