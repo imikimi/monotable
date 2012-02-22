@@ -49,6 +49,7 @@ module Monotable
     end
 
     def reset
+      file_handle.close
       super
       init_from_disk
     end

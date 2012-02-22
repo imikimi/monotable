@@ -107,7 +107,7 @@ class ServerController < RequestHandler
     # return chunk
     chunk=server.local_store.chunks[@resource_id]
     chunk_data = chunk.chunk_file_data
-    puts "#{self.class}#up_repilcate_chunk chunk_data="+chunk_data[0..10].inspect
+    puts "#{self.class}#up_repilcate_chunk() chunk=#{chunk.file_handle}|#{chunk.to_s.inspect} chunk_data="+chunk_data.inspect
     respond_binary 200,chunk_data
   end
 

@@ -25,10 +25,13 @@ module Monotable
       end
 
       def add_server(server)
+        server = server.to_s
         @servers << server
       end
 
       def remove_server(server)
+        server = server.to_s
+        puts "#{self.class}#remove_server(#{server.inspect})"
         @servers = @servers.select {|a| a!=server}
       end
     end
@@ -120,28 +123,31 @@ module Monotable
       find(internal_key).servers
     end
 
-    def update_replica_list(chunk,initializing=false)
+    def update_chunk_server_list(chunk,initializing=false)
       ir = find(chunk.range_start,initializing)
+      ir_old_fields = ir.fields.clone
       yield ir
 
-      #puts "update_replica_list. chunk.range_start = #{chunk.range_start[0..10].inspect}"
-      #puts "update_replica_list. ir.key = #{ir.key[0..10].inspect}"
+      #puts "update_chunk_server_list. chunk.range_start = #{chunk.range_start[0..10].inspect}"
+      #puts "update_chunk_server_list. ir.key = #{ir.key[0..10].inspect}"
 
       if chunk.range_start==""
         #puts "TODO - update the root/paxos record"
         # TODO - update the root/paxos record
       else
-        #puts "Update index record: #{ir.inspect}"
+        puts "#{self.class}#update_chunk_server_list() key=#{ir.key.inspect} #{ir_old_fields.inspect} => #{ir.fields.inspect}"
         request_router.set ir.key, ir.fields
       end
     end
 
     def add_local_replica(chunk,initializing=false)
-      update_replica_list(chunk,initializing) {|ir| ir.add_server server}
+      puts "#{self.class}#add_local_replica(#{chunk.to_s.inspect}) pid=#{Process.pid} server=#{server.to_s.inspect}"
+      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server}
     end
 
     def remove_local_replica(chunk)
-      update_replica_list(chunk) {|ir| ir.remove_server server}
+      puts "#{self.class}#remove_local_replica(#{chunk.to_s.inspect}) pid=#{Process.pid} server=#{server.to_s.inspect}"
+      update_chunk_server_list(chunk) {|ir| ir.remove_server server}
     end
   end
 end

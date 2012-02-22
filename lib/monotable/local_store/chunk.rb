@@ -551,7 +551,7 @@ module Monotable
 
     def save(filename)
       filename += CHUNK_EXT unless filename[-CHUNK_EXT.length..-1]==CHUNK_EXT
-      File.open(filename,"wb") {|f| f.write to_binary}
+      File.open(filename,"wb") {|f| f.write to_binary.tap{|a|puts "#{self.class}#save(#{filename.inspect}) data=#{a.inspect}"}}
       filename
     end
 

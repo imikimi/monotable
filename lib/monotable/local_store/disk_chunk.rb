@@ -125,6 +125,7 @@ module Monotable
 
     # see WriteAPI
     def set(key,columns)
+      puts "#{self.class}#set(#{key.inspect},#{columns.inspect}) pid=#{Process.pid}"
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
       super
     end
