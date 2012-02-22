@@ -16,6 +16,11 @@ module Monotable
       "<#{self.class} key=#{key.inspect} fields=#{fields.inspect}>"
     end
 
+    # return true if this record no longer contains valid data
+    def valid?
+      true
+    end
+
     def each
       fields.each {|k,v| yield k,v}
     end
@@ -212,7 +217,9 @@ module Monotable
     attr_accessor :disk_offset
     attr_accessor :disk_length
 
-    def initialize(key,journal,disk_offset,disk_length,record)
+    def initialize(chunk,key,journal,disk_offset,disk_length,record)
+      @chunk = chunk
+      @chunk_memory_revision = chunk.memory_revision
       @key=key
       self.journal=journal
       self.disk_offset=disk_offset
@@ -222,6 +229,10 @@ module Monotable
       when Hash then calculate_accounting_size(record)
       else raise "invalid record class #{record.class}"
       end
+    end
+
+    def valid?
+      @chunk.memory_revision == @chunk_memory_revision
     end
 
     def [](key)

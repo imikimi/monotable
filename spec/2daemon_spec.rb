@@ -40,13 +40,27 @@ describe Monotable::EventMachineServer do
     local_store1_stats[:store_paths].should_not==local_store2_stats[:store_paths]
   end
 
-  def validate_index_records_for_chunks_on_server(client)
+  class ScanningClient
+    attr_accessor :clients
+
+    def get_record(key)
+      clients.each do |c|
+        puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect})"
+        r=c.get_record(key)
+        return r if r
+      end
+      nil
+    end
+  end
+
+  def validate_index_records_for_chunks_on_server(client,internal_client=nil)
+    internal_client||=client.internal
     server_name = client.server.split("http://")[1]
     client.chunks.each do |chunk|
       next if chunk==""
       puts "validate #{server_name}:#{chunk} index"
-      index_record = Monotable::GlobalIndex.index_record(chunk,client.internal)
-      index_record.servers.index(server_name).should >= 0
+      index_record = Monotable::GlobalIndex.index_record(chunk,internal_client)
+      index_record.servers.should == [server_name]
     end
   end
 
@@ -62,7 +76,9 @@ describe Monotable::EventMachineServer do
 
     server_client(0).chunks.should == ["", "+++0"]
     server_client(1).chunks.should == ["++0", "+0", "0"]
-    validate_index_records_for_chunks_on_server server_client(0)
-    validate_index_records_for_chunks_on_server server_client(1)
+    sc = ScanningClient.new
+    sc.clients = [server_client(0).internal,server_client(1).internal]
+    validate_index_records_for_chunks_on_server server_client(0),sc
+    validate_index_records_for_chunks_on_server server_client(1),sc
   end
 end

@@ -65,6 +65,7 @@ module Monotable
     end
 
     def reset
+      @records={}
       next_memory_revision
     end
   end

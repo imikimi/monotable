@@ -44,6 +44,11 @@ module Monotable
       init_disk_chunk_base(options)
     end
 
+    def reset
+      @deleted_records={}
+      super
+    end
+
     # returns number of records in the chunk
     def length; @loaded_record_count - @deleted_records.length + @records.length; end
 

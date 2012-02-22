@@ -10,10 +10,10 @@ describe Monotable::LocalStore do
     server.local_store
   end
 
-  it "should work to do this" do
+  it "should be possible to read an index record" do
     local_store = blank_store
     res = local_store.get_last  :limit=>1, :gte=>"", :lte=>"++++0"
-    puts res.inspect
+    res[:records][0].fields.should=={"servers"=>"localhost:8080"}
   end
 
   api_tests

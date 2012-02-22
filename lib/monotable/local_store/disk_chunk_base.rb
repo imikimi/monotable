@@ -67,7 +67,6 @@ module Monotable
     def init_from_disk
       # parse the file on disk
       # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
-      puts "init_from_disk file=#{file_handle}"
       file_handle.read(0) {|f|parse(f)} if file_handle.exists?
     end
 
@@ -88,7 +87,7 @@ module Monotable
 
     # see WriteAPI
     def set(key,columns)
-      ret=set_internal(key,journal.set(file_handle,key,columns))
+      ret=set_internal(key,journal.set(self,key,columns))
       MiniEventMachine.queue {self.split} if accounting_size > max_chunk_size
       ret
     end

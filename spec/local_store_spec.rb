@@ -9,8 +9,6 @@ describe Monotable::LocalStore do
     Monotable::LocalStore.new(:store_paths=>[temp_dir],:initialize_new_test_store=>true)
   end
 
-  api_tests
-
   it "should be possible to initialize a new LocalStore" do
     local_store=blank_store
     local_store.chunks.length.should == 1
@@ -148,6 +146,34 @@ describe Monotable::LocalStore do
 
     local_store.delete(record_key)
     local_store.get(record_key)[:record].should==nil
+  end
+
+  it "should be possible to read a record back after compaction" do
+    local_store=blank_store
+    record_key = 'apple'
+    record_value = { 'x' => '1' }
+    local_store.set(record_key,record_value)
+
+    current_async_compaction = Monotable::Journal.async_compaction
+    local_store.compact
+    Monotable::Journal.async_compaction = current_async_compaction
+
+    local_store.get(record_key).should >= {:record=>{"x"=>"1"}, :size=>7, :num_fields=>1}
+  end
+
+  it "should be possible to write 2 records and read the second back from the journal" do
+    local_store=blank_store
+    record_key = 'apple'
+    record_value = { 'x' => '1' }
+    local_store.set(record_key,record_value)
+    local_store.set(record_key+"2",{ 'x' => '2'})
+    local_store.set(record_key+"3",{ 'x' => '3'})
+
+    Monotable::Cache.global_cache.reset
+
+    local_store.get(record_key+"3").should >= {:record=>{"x"=>"3"}, :size=>8, :num_fields=>1}
+    local_store.get(record_key+"2").should >= {:record=>{"x"=>"2"}, :size=>8, :num_fields=>1}
+    local_store.get(record_key).should >= {:record=>{"x"=>"1"}, :size=>7, :num_fields=>1}
   end
 
 end

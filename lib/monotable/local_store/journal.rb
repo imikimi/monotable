@@ -81,11 +81,11 @@ module Monotable
       save_str
     end
 
-    def set(chunk_file,key,record)
+    def set(chunk,key,record)
       offset=@size
-      save_str=save_entry((["set",chunk_file.to_s,key] + record.collect {|k,v| [k,v]}).flatten)
+      save_str=save_entry((["set",chunk.file_handle.to_s,key] + record.collect {|k,v| [k,v]}).flatten)
       length=save_str.length
-      JournalDiskRecord.new(key,self,offset,length,record)
+      JournalDiskRecord.new(chunk,key,self,offset,length,record)
     end
 
     def delete(chunk_file,key)
@@ -230,9 +230,7 @@ module Monotable
         chunk_file=File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
         FileUtils.rm [chunk_file] if File.exists?(chunk_file)
-        puts "compacted_file(#{compacted_file.inspect}) chunk_file(#{chunk_file}) compacted_file.size=#{File.stat(compacted_file).size}"
         FileUtils.mv compacted_file,chunk_file
-        puts "compacted_file(#{compacted_file.inspect}) chunk_file(#{chunk_file}) chunk_file.size=#{File.stat(chunk_file).size}"
         # TODO: reset and then unlock chunk_file's matching DiskChunk object
         # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
         #   Then we can just:
