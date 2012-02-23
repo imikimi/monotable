@@ -58,10 +58,11 @@ module Monotable
   end
 
   module LocalStoreChunkApi
+    # returns the chunk responsible for storing records at location "key"
     # returns nil for chunks not present
     def get_chunk(key) # rename chunk_for_record
       chunk_key,chunk=@chunks.upper_bound(key)
-      chunk
+      chunk if chunk && (chunk.range_end==:infinity || key < chunk.range_end)
     end
 
     # Returns "true" if a local chunk covers the key-range for a given key.
