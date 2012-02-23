@@ -23,7 +23,7 @@ class ClusterManager < TopServerComponent
 
   # add a server to the list of known servers
   def add(server_address)
-    @servers[server_address] ||= ServerClient.new(server_address,:use_synchrony=>EM.running,:internal=>true)
+    @servers[server_address] ||= ServerClient.new(server_address,:internal=>true)
   end
 
   # server_client just returns the client for a given server or adds it if unknown - works the same as "add"
