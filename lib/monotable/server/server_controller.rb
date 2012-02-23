@@ -11,6 +11,7 @@ class ServerController < RequestHandler
     case "#{method}/#{action}"
     when "GET/chunks" then chunks
     when "GET/chunk" then chunk
+    when "GET/chunk_keys" then chunk_keys
     when "GET/servers" then servers
     when "GET/heartbeat" then heartbeat
     when "GET/local_store_status" then local_store_status
@@ -54,12 +55,27 @@ class ServerController < RequestHandler
     respond 200, content
   end
 
-  # get info about a chunk on the server
+  # given any @resource_id as a key, selects the chunk that covers that key
+  # returns info about the chunk on the server
+  # returns 404 if chunk not found
   def chunk
     return handle_invalid_request("chunk-id required") unless @resource_id
-    chunk = server.local_store.chunks[@resource_id]
+    chunk = server.local_store.get_chunk(@resource_id)
     if chunk
       respond 200, :status => "found", :chunk_info => chunk_info(chunk)
+    else
+      respond 404, {:status => "chunk no on server"}
+    end
+  end
+
+  # given any @resource_id as a key, selects the chunk that covers that key
+  # returns a list of all record keys in a chunk
+  # returns 404 if chunk not found
+  def chunk_keys
+    return handle_invalid_request("chunk-id required") unless @resource_id
+    chunk = server.local_store.get_chunk(@resource_id)
+    if chunk
+      respond 200, :status => "found", :keys => chunk.keys
     else
       respond 404, {:status => "chunk no on server"}
     end
@@ -75,14 +91,15 @@ class ServerController < RequestHandler
   end
 
   def split_chunk
-    return handle_invalid_request("chunk-id required") unless @resource_id
-    chunk = server.local_store.chunks[@resource_id]
+    on_key = @resource_id
+    return handle_invalid_request("split-on key required") unless on_key
+    chunk = server.local_store.get_chunk(on_key)
     if chunk
-      on_key = params[:on_key]
       right_chunk = chunk.split(on_key)
+      server.global_index.add_local_replica(right_chunk,true)
       respond 200, :status => "success", :chunks => [chunk_info(chunk), chunk_info(right_chunk)]
     else
-      respond 404, {:status => "chunk no on server"}
+      respond 404, {:status => "chunk not on server"}
     end
   end
 
