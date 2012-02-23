@@ -26,6 +26,7 @@ module Monotable
 
       def add_server(server)
         server = server.to_s
+        raise InternalError.new("server #{server.inspect} is already in the chunk-list for index-key #{self.key.inspect}") if @servers.index(server)
         @servers << server
       end
 
@@ -102,28 +103,30 @@ module Monotable
       @index_depth ||= first_record_key[/\+*/].length
     end
 
-    def find(internal_key,initializing=false)
+    def find(internal_key,work_log=nil)
       return first_record if (internal_key[/^\+*/]).length >= index_depth
-
       index_record_key=INDEX_KEY_PREFIX+internal_key # note, this doesn't have to be the exact key, just >= they key and < the next key
       response = request_router.get_last(:lte=>index_record_key,:limit=>1)
+      response[:work_log].each {|e| work_log<<e} if work_log
       record = response[:records][0]
-      raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}") unless record
-      ChunkIndexRecord.new record
-    rescue MonotableDataStructureError => ds_error
-      return ChunkIndexRecord.new internal_key if initializing
-      raise
+      return ChunkIndexRecord.new(record) if record
+
+      raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}")
     end
 
     # returns the server-list for servers that hold the chunk that contains the record for internal_key
     # NOTE: first server in the list is the server to write to; any can be read from
-    def chunk_servers(internal_key)
-      find(internal_key).servers
+    def chunk_servers(internal_key,work_log=nil)
+      find(internal_key,work_log).servers
     end
 
     def update_chunk_server_list(chunk,initializing=false)
-      ir = find(chunk.range_start,initializing)
-      ir_old_fields = ir.fields.clone
+      ir = if initializing
+        ChunkIndexRecord.new chunk.range_start
+      else
+        find(chunk.range_start)
+      end
+      raise MonotableDataStructureError.new("could not find index record for chunk #{chunk}. Closest <= was #{ir.key}") if ir.key!=INDEX_KEY_PREFIX+chunk.range_start
       yield ir
 
       if chunk.range_start==""
