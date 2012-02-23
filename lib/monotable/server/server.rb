@@ -50,7 +50,7 @@ class Server
     chunk_starts<<""
     chunk_starts.reverse!
 
-    if true #options[:verbose]
+    if options[:verbose]
       puts "Initializing new multi-store..."
       puts "  #{num_index_levels} index level(s)"
       puts "  #{max_chunk_size} bytes per chunk max"
