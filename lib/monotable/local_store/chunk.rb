@@ -82,10 +82,11 @@ module Monotable
     # see ReadAPI
     def get_first(options={})
       records=self.records
-      options = Tools.normalize_range_options(options)
-      gte_key=options[:gte]
-      lte_key=options[:lte]
-      limit=options[:limit]
+      normalized_options = Tools.normalize_range_options(options)
+      #puts "#{self.class}#get_first(#{options.inspect}) normalized_options=#{normalized_options.inspect}"
+      gte_key=normalized_options[:gte]
+      lte_key=normalized_options[:lte]
+      limit=normalized_options[:limit]
       next_options = nil
 
       res=[]
@@ -97,16 +98,18 @@ module Monotable
         next_options=options.clone
         next_options[:limit]-=res.length
         next_options[:gte]=range_end
+        next_options.delete(:gt)
       end
       {:records=>res,:next_options=>next_options}
     end
 
     # see ReadAPI
     def get_last(options={})
-      options = Tools.normalize_range_options(options)
-      gte_key=options[:gte]
-      lte_key=options[:lte]
-      limit=options[:limit]
+      normalized_options = Tools.normalize_range_options(options)
+      #puts "#{self.class}#get_last(#{options.inspect}) normalized_options=#{normalized_options.inspect}"
+      gte_key=normalized_options[:gte]
+      lte_key=normalized_options[:lte]
+      limit=normalized_options[:limit]
 
       res=[]
       reverse_each_key do |k|
@@ -118,6 +121,7 @@ module Monotable
         next_options=options.clone
         next_options[:limit]-=res.length
         next_options[:lte]=range_start.binary_prev(DEFAULT_MAX_KEY_LENGTH)
+        next_options.delete(:lt)
       end
       {:records=>res.reverse,:next_options=>next_options}
     end
