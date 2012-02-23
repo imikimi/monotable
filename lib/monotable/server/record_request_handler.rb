@@ -30,17 +30,16 @@ Valid Patterns:
   end
 
   def handle
-    #puts "request: #{method}:#{uri}"
 
     rest = @uri.split(/^\/internal/)[-1]
     case rest
     when RECORDS_REQUEST_PATTERN then
       handle_record_request($1)
     when FIRST_RECORDS_REQUEST_PATTERN then
-      params[$1] = $3
+      params[$1] = $3 || ""
       handle_first_last_request(params) {|o| get_first(o)}
     when LAST_RECORDS_REQUEST_PATTERN then
-      params[$1] = $3
+      params[$1] = $3 || ""
       handle_first_last_request(params) {|o| get_last(o)}
     else
       return handle_invalid_request
@@ -102,9 +101,7 @@ Valid Patterns:
     # TODO: if the internal get_first call returns an {:error=>"..."}, what should this method return?
     #   Real example: {:error=>"key not covered by local chunks"}
     def get_first(options={})
-      #puts "#{self.class}#get_first(#{options.inspect})"
       content=deobjectify_records @store.get_first(options)
-      #puts "#{self.class}#get_first(#{options.inspect}) => #{content.inspect}"
       respond(200,content)
     end
 
@@ -112,9 +109,7 @@ Valid Patterns:
     # TODO: if the internal get_first call returns an {:error=>"..."}, what should this method return?
     #   Real example: {:error=>"key not covered by local chunks"}
     def get_last(options={})
-      #puts "#{self.class}#get_last(#{options.inspect})"
       content=deobjectify_records @store.get_last(options)
-      #puts "#{self.class}#get_last(#{options.inspect}) => #{content.inspect}"
       respond(200,content)
     end
   end
