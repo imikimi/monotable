@@ -37,16 +37,31 @@ class Server
 
   def initialize_new_store
     local_store.verify_store_is_blank_for_init
-    puts "Initializing new multi-store..." if @options[:verbose]
     max_chunk_size = local_store.max_chunk_size
     max_index_block_size = local_store.max_index_block_size
-    chunk_starts=[
-      "",
-      INDEX_KEY_PREFIX*3+FIRST_DATA_KEY,  # for 64meg chunks approx 2^16 records max at this index level
-      INDEX_KEY_PREFIX*2+FIRST_DATA_KEY,  # for 64meg chunks approx 2^32 records max at this index level
-      INDEX_KEY_PREFIX*1+FIRST_DATA_KEY,  # for 64meg chunks approx 2^48 records max at this index level
-      FIRST_DATA_KEY                      # for 64meg chunks approx 2^74 bytes max at this index level
-    ]
+
+    num_index_levels = options[:num_index_levels] || 3
+    raise ArgumentError.new("num_index_levels must be >=1") unless num_index_levels >= 1
+
+    chunk_starts=[FIRST_DATA_KEY]
+    num_index_levels.times do |level|
+      chunk_starts << INDEX_KEY_PREFIX * (level+1) + FIRST_DATA_KEY
+    end
+    chunk_starts<<""
+    chunk_starts.reverse!
+
+    if true #options[:verbose]
+      puts "Initializing new multi-store..."
+      puts "  #{num_index_levels} index level(s)"
+      puts "  #{max_chunk_size} bytes per chunk max"
+      n = Math.log(max_chunk_size,2)
+      m = num_index_levels
+      address_bits = Tools.monotable_address_space_size(max_chunk_size,num_index_levels)
+      puts "  Estimated max storage:        2^#{address_bits} bytes (#{Tools.commaize 2**(address_bits-40)} terabytes)"
+      puts "  Estimated 'safe' max storage: 2^#{address_bits-2} bytes (#{Tools.commaize 2**(address_bits-42)} terabytes)"
+      puts "  Initial chunk: #{chunk_starts.inspect}"
+    end
+
     chunk_starts.each_with_index do |range_start,i|
       # TODO - this needs to also create the index records
       # This is probably not local_store's responsibility. since it requires access to the GlobalIndex.
