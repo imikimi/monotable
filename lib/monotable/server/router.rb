@@ -10,12 +10,12 @@ module Monotable
     end
 
     # find the servers containing the chunk that covers key
-    def chunk_servers(internal_key)
-      global_index.chunk_servers(internal_key)
+    def chunk_servers(internal_key,work_log=nil)
+      global_index.chunk_servers(internal_key,work_log)
     end
 
-    def server_client(ikey)
-      server_list = chunk_servers(ikey)
+    def server_client(ikey,work_log=nil)
+      server_list = chunk_servers(ikey,work_log)
       server_address = server_list[rand(server_list.length)]
       server.cluster_manager.server_client(server_address)
     end
@@ -27,7 +27,7 @@ module Monotable
 
     # see ReadAPI
     def get(key,field_names=nil)
-      route(key) {|store,key| store.get(key,field_names)}
+      route(:get,key) {|store,key| store.get(key,field_names)}
     end
 
     # see ReadAPI
@@ -47,17 +47,17 @@ module Monotable
 
     # see WriteAPI
     def set(key,fields)
-      route(key) {|store,key| store.set(key,fields)}
+      route(:set,key) {|store,key| store.set(key,fields)}
     end
 
     # see WriteAPI
     def update(key,fields)
-      route(key) {|store,key| store.update(key,fields)}
+      route(:update,key) {|store,key| store.update(key,fields)}
     end
 
     # see WriteAPI
     def delete(key)
-      route(key) {|store,key| store.delete(key)}
+      route(:delete,key) {|store,key| store.delete(key)}
     end
   end
 
@@ -84,7 +84,7 @@ module Monotable
     # yields the store to route to and the options, internalized
     def route_get_range(options,routing_option)
       normal_options = Tools.normalize_range_options(options)
-      route(normal_options[routing_option]) do |store,key|
+      route(:get_range,normal_options[routing_option]) do |store,key|
         yield store, @user_keys ? internalize_range_options(options) : options
       end
     end
@@ -118,25 +118,22 @@ module Monotable
     #   store => store to route to
     #   key => use this key instead of the key passed to route
     # TODO - should allow a block to be passed in which is the "what to do with the result" block
-    def route(key)
+    def route(request_type, key)
       ikey = @user_keys ? internalize_key(key) : key
       work_log=[]
-      #puts "routing: ikey=#{ikey[0..10].inspect}"
       ret = if router.local_store.local?(ikey)
-        #puts "routing: #{ikey[0..10].inspect} -> local"
-        work_log<<"(#{router.cluster_manager.local_server}) processed locally"
         yield router.local_store,ikey
       else
-        #puts "routing: #{ikey[0..10].inspect} -> remote"
         unless @forward
           {:error=>"key not covered by local chunks"}
         else
-          sc=router.server_client(ikey)
-          work_log<<"(#{router.cluster_manager.local_server}) forwarded request to: #{sc}"
+          sc = router.server_client(ikey,work_log)
+          work_log<<{:server => router.cluster_manager.local_server.to_s, :action => [sc.to_s, request_type, ikey]}
           yield sc,ikey
         end
       end
       ret[:work_log]=work_log + (ret[:work_log]||[])
+      raise NetworkError.new("too may requests. work_log: #{ret[:work_log].inspect}") if ret[:work_log].length >= 100
       ret
     end
   end
