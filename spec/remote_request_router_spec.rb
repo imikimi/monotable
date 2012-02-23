@@ -35,5 +35,5 @@ describe Monotable::RequestRouter do
     blank_store
   end
 
-#  api_tests(:dont_test_get_record=>true,:key_prefix_size=>2)
+  #it_should_behave_like "monotable api"
 end

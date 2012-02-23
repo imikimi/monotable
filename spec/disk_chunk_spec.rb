@@ -3,6 +3,7 @@ require File.join(File.dirname(__FILE__),"common_api_tests")
 
 describe Monotable::DiskChunk do
   include MonotableHelperMethods
+  it_should_behave_like "monotable api"
 
   #***************************************
   # helpers
@@ -13,8 +14,6 @@ describe Monotable::DiskChunk do
     Monotable::MemoryChunk.new().save(filename)
     Monotable::DiskChunk.init(:filename=>filename)
   end
-
-  api_tests
 
   #***************************************
   # tests

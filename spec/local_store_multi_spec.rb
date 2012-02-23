@@ -16,5 +16,5 @@ describe Monotable::LocalStore do
     res[:records][0].fields.should=={"servers"=>"localhost:8080"}
   end
 
-  api_tests
+  it_should_behave_like "monotable api"
 end

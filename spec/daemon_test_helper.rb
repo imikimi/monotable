@@ -53,8 +53,8 @@ module DaemonTestHelper
   end
 
   def shutdown_daemon
-    print ">"
     server_pids.each do |server_pid|
+      print ">"
       Process.kill 'TERM', server_pid
       Process.wait server_pid
     end
@@ -70,9 +70,11 @@ module DaemonTestHelper
   end
 
   def clear_store
-    records=JSON.parse(RestClient.get("#{daemon_uri}/first_records/gte",:params => {:limit=>100}))["records"]
-    records.each do |k,v|
-      RestClient.delete("#{daemon_uri}/records/#{k}")
+#    puts "clear_store: with_prefix => ''"
+    records = server_client.get_first(:with_prefix => '', :limit=>100)[:records]
+    records.each do |record|
+#      puts "clear_store: #{record.key}"
+      server_client.delete(record.key)
     end
   end
 

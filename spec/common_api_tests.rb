@@ -1,4 +1,5 @@
-def api_tests(options={})
+shared_examples "monotable api" do |options|
+  options||={}
   key_prefix_size=options[:key_prefix_size]||0
   dont_test_get_record=options[:dont_test_get_record]
 
@@ -120,6 +121,14 @@ def api_tests(options={})
 
     result=store.get_first(:with_prefix=>"legos", :limit=>2)
     result[:records].collect{|r|r.key}.should == ["legos0","legos1"]
+  end
+
+  it "should work to get_first :with_prefix empty" do
+    store=setup_store_with_test_keys
+    add_test_keys(store,"apple",3)
+
+    result=store.get_first(:with_prefix=>"", :limit=>2)
+    result[:records].collect{|r|r.key}.should == ["apple0","apple1"]
   end
 
   it "should work to get_first with limits" do

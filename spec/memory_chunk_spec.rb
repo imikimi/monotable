@@ -8,7 +8,7 @@ describe Monotable::MemoryChunk do
     Monotable::MemoryChunk.new
   end
 
-  api_tests
+  it_should_behave_like "monotable api"
 
   it "should be possible to serialize and deserialize a chunk with one record, one column" do
     chunk=Monotable::MemoryChunk.new

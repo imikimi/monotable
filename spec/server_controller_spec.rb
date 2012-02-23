@@ -41,6 +41,16 @@ describe Monotable::HttpServer::ServerController do
     server_client.chunk("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
+  it "server/chunk should work with any key in the chunk" do
+    server_client.chunk("abc").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
+  end
+
+  it "server/chunk_keys should work" do
+    server_client.set "dude", "id" => "123"
+    server_client.chunk_keys("").should == ["u/dude"]
+    server_client.delete "dude"
+  end
+
   it "server/local_store_status should work" do
     status = server_client.local_store_status
     status[:chunk_count].should==1
@@ -65,7 +75,7 @@ describe Monotable::HttpServer::ServerController do
 
   it "server/split_chunk should work" do
     server_client.chunks.should == [""]
-    server_client.split_chunk("","foo")
+    server_client.split_chunk("foo")
     server_client.chunks.should == ["","foo"]
   end
 end

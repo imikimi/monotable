@@ -116,7 +116,7 @@ describe Monotable::EventMachineServer do
     JSON.parse(RestClient.get("#{daemon_uri}/last_records/lt/key5", :params => {:limit=>2})).should>=
       {"records"=>[["key3", {'field'=>"3"}],["key4", {'field'=>"4"}]], "next_options"=>nil}
 
-    JSON.parse(RestClient.get("#{daemon_uri}/last_records/lt/", :params => {:limit=>2})).should>=
+    JSON.parse(RestClient.get("#{daemon_uri}/last_records/with_prefix/", :params => {:limit=>2})).should>=
       {"records"=>[["key8", {'field'=>"8"}],["key9", {'field'=>"9"}]], "next_options"=>nil}
   end
 

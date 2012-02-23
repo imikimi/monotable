@@ -39,7 +39,7 @@ describe ServerClient do
     Net::HTTP.get(host,'/',port).should_not be_empty
   end
 
-  api_tests(:key_prefix_size => 2)
+  it_should_behave_like "monotable api", :key_prefix_size => 2
 
   it "should be able to create a ServerClient" do
     ServerClient.new(daemon_uri)

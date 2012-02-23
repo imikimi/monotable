@@ -10,6 +10,6 @@ describe Monotable::RequestRouter do
     Monotable::RequestRouter.new(server.router)
   end
 
-  api_tests(:dont_test_get_record=>true)
+  it_should_behave_like "monotable api", :dont_test_get_record=>true
 
 end

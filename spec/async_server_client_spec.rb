@@ -1,5 +1,4 @@
 require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
-require File.join(File.dirname(__FILE__),"common_api_tests")
 require 'rest_client'
 require 'tmpdir'
 require 'fileutils'
