@@ -90,7 +90,6 @@ module Monotable
 
     def em_synchrony_request(method,request_path,options={})
       request_uri = "http://"+request_path
-      $stdout.print "["
       request = EM::HttpRequest.new(request_uri).send(
         method,
         :body => options[:body],
@@ -101,7 +100,6 @@ module Monotable
         }
       )
       code = request.response_header.status
-      $stdout.print "]"
       if code == 200 || (options[:accept_404] && code == 404)
         return process_response(request.response,options)
       end
