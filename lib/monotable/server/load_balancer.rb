@@ -33,7 +33,7 @@ class LoadBalancer < TopServerComponent
 
     chunks_moved={}
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
-    while chunks.length+1 > local_store.chunks.length
+    while chunks.length > local_store.chunks.length+1
       chunk_key = chunks.pop
       chunk_data = client.up_replicate_chunk chunk_key
       chunk = local_store.add_chunk chunk_data
