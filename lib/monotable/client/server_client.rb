@@ -90,16 +90,18 @@ module Monotable
 
     def em_synchrony_request(method,request_path,options={})
       request_uri = "http://"+request_path
+      $stdout.print "["
       request = EM::HttpRequest.new(request_uri).send(
         method,
         :body => options[:body],
         :query => options[:params],
-        :headers => {
-          :accept => :json,
-          :content_type => :json,
+        :head => {
+          :accept => "application/json",
+          :content_type => "application/json",
         }
       )
       code = request.response_header.status
+      $stdout.print "]"
       if code == 200 || (options[:accept_404] && code == 404)
         return process_response(request.response,options)
       end
@@ -135,7 +137,7 @@ module Monotable
     def request(method,request_path,options={},&block)
       request_path = "#{server}/#{request_path}"
       return em_async_request method, request_path, options, &block if block
-      return em_synchrony_request method, request_path, options if client_options[:use_synchrony]
+      return em_synchrony_request method, request_path, options if ServerClient.use_synchrony
       rest_client_request(method,request_path,options)
     end
 
@@ -210,7 +212,14 @@ module Monotable
   module ServerClientServerReadAPI
     def chunks; request(:get,"server/chunks")[:chunks]; end
     def servers; request(:get,"server/servers")[:servers]; end
-    def chunk(id); request(:get,"server/chunk/#{ue id}", :accept_404=>true)[:chunk_info]; end
+
+    # returns nil if chunk not found
+    def chunk(key); request(:get,"server/chunk/#{ue key}", :accept_404=>true)[:chunk_info]; end
+
+    # returns nil if chunk not found
+    def chunk_keys(key); request(:get,"server/chunk_keys/#{ue key}", :accept_404=>true)[:keys]; end
+
+    #
     def local_store_status; request(:get,"server/local_store_status"); end
 
     # returns true if the server is up and responding to the heartbeat
@@ -222,7 +231,7 @@ module Monotable
 
   # this api is supported for testing, it should never be used by an actual client
   module ServerClientServerModifyAPI
-    def split_chunk(id,on_key); request(:post,"server/split_chunk/#{ue id}?on_key=#{ue on_key}")[:chunks]; end
+    def split_chunk(on_key); request(:post,"server/split_chunk/#{ue on_key}")[:chunks]; end
     def balance; request(:post,"server/balance"); end
     def join(server); request(:put,"server/join?server_name=#{ue server}")[:servers]; end
 
@@ -239,6 +248,9 @@ module Monotable
     include RestClientHelper
     attr_accessor :server, :client_options
     attr_accessor :path_prefix
+    class <<self
+      attr_accessor :use_synchrony
+    end
 
     # uri-encode string
     def ue(str)
@@ -246,7 +258,6 @@ module Monotable
     end
 
     #options
-    #   :use_synchrony => true ?
     def initialize(server,options={})
       @server=server
       @client_options = options
