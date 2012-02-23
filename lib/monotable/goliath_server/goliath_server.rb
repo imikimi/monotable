@@ -63,6 +63,7 @@ end
 class HttpServer < Goliath::API
   class << self
     attr_reader :server
+    attr_reader :running
 
     def setup_logger
       log = Log4r::Logger.new('goliath')
@@ -131,6 +132,8 @@ class HttpServer < Goliath::API
       gserver.plugins = []
       gserver.options = {}
       gserver.start do
+        ServerClient.use_synchrony = true
+        @running = true
 
         server.post_init
         if verbose
