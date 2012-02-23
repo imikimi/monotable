@@ -22,6 +22,29 @@ module Monotable
   end
 =end
   module Tools
+    # thankyou http://www.ruby-forum.com/topic/97203
+    def Tools.commaize(num)
+      a=num.to_s.split('.')
+      a[0].reverse.gsub(/(\d{3})/,'\1,').chomp(',').reverse+"#{'.'+a[1] if a[1]}"
+    end
+
+    # returns the approximate number of bits needed to address a "full" monotable given the
+    # max_chunk_size and num_index_levels
+    # To get the max monotable size, in bytes: 2 ** Tools.monotable_address_space_size(...)
+    #   max_chunk_size -> in bytes
+    #
+    #
+    # About the calc:
+    #   n: where 2**n = max_chunk_size (in bytes)
+    #   m: number of index-levels. Index level-1 has exactly one chunk.
+    #   Assuming a 1k average size per record in the index
+    #     - which means approximately 2^(n-10) index records per index-chunk
+    #
+    def Tools.monotable_address_space_size(max_chunk_size,num_index_levels)
+      n = Math.log(max_chunk_size,2)
+      m = num_index_levels
+      address_bits = ( n * (m+1) - 10*m ).to_i
+    end
 
     # if encoding is nil, this just returns obj
     def Tools.force_encoding(obj,encoding)
