@@ -36,11 +36,10 @@ describe ServerClient do
     server_client(0).chunk_keys("foo").should == ["u/foo"]
     server_client(1).chunk_keys("foo").should == nil
     clear_store
-#    server_client(1).delete("foo")
     server_client(0).chunk_keys("foo").should == []
   end
 
-  it_should_behave_like "monotable api",:key_prefix_size => 2
+  it_should_behave_like "monotable api", :key_prefix_size => 2
 
 end
 end
