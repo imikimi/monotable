@@ -10,7 +10,8 @@ module ReadAPI
     #   exists: Record object
     #   !exists: nil
     def get_record(key)
-      raise "stub"
+      fields = get(key)[:record]
+      MemoryRecord.new.init(key,fields) if fields
     end
 
     # returns:

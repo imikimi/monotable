@@ -9,6 +9,10 @@ module Monotable
       @server_clients=[]
     end
 
+    def local_server
+      cluster_manager.local_server
+    end
+
     # find the servers containing the chunk that covers key
     def chunk_servers(internal_key,work_log=nil)
       global_index.chunk_servers(internal_key,work_log)
@@ -76,8 +80,6 @@ module Monotable
       @router = router
       @forward = options[:forward]
       @user_keys = options[:user_keys]
-      raise ArgumentError,"router.kind_of?(Router) required (router.class==#{router.class})" unless router.kind_of?(Router)
-      raise InternalError,"router.local_store not set" unless router.local_store
     end
 
     #routing_option should be :gte or :lte
@@ -128,7 +130,7 @@ module Monotable
           {:error=>"key not covered by local chunks"}
         else
           sc = router.server_client(ikey,work_log)
-          work_log<<{:server => router.cluster_manager.local_server.to_s, :action => [sc.to_s, request_type, ikey]}
+          work_log<<{:server => router.local_server.to_s, :action => [sc.to_s, request_type, ikey]}
           yield sc,ikey
         end
       end

@@ -10,6 +10,6 @@ describe Monotable::RequestRouter do
     Monotable::RequestRouter.new(server.router, :user_keys=>true, :forward => true)
   end
 
-  it_should_behave_like "monotable api", :dont_test_get_record=>true,:key_prefix_size=>2
+  it_should_behave_like "monotable api", :key_prefix_size=>2
 
 end
