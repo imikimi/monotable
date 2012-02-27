@@ -231,7 +231,8 @@ module Monotable
   module ServerClientServerModifyAPI
     def split_chunk(on_key); request(:post,"server/split_chunk/#{ue on_key}")[:chunks]; end
     def balance; request(:post,"server/balance"); end
-    def join(server); request(:put,"server/join?server_name=#{ue server}")[:servers]; end
+    def join(server,skip_servers=[]); request(:put,"server/join?server_name=#{ue server}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
+    def update_servers(servers,skip_servers=[]); request(:post,"server/update_servers?servers=#{ue servers.join(',')}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
 
     # returns the raw chunk-file
     def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{ue chunk_key}",:raw_response => true); end

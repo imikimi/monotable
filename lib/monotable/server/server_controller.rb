@@ -16,6 +16,7 @@ class ServerController < RequestHandler
     when "GET/heartbeat" then heartbeat
     when "GET/local_store_status" then local_store_status
     when "PUT/join" then join # using PUT because its ok to join again if already joined
+    when "POST/update_servers" then update_servers
     when "POST/up_replicate_chunk" then up_replicate_chunk
     when "POST/down_replicate_chunk" then down_replicate_chunk
     when "POST/balance" then balance
@@ -30,12 +31,32 @@ class ServerController < RequestHandler
     respond 200,{:chunks_moved => chunks_moved}
   end
 
+  private
+  def add_servers(servers,skip_servers=[])
+    num_known_servers = server.cluster_manager.servers.length
+    server.cluster_manager.add_servers servers
+    new_num_known_servers = server.cluster_manager.servers.length
+    if num_known_servers != new_num_known_servers
+      # if the server-list changed, inform the other servers of the update
+      server.cluster_manager.broadcast_servers(skip_servers)
+    end
+  end
+  public
+
   # server is joining the cluster
   def join
     server_name = params["server_name"]
+    skip_servers = (params["skip_servers"]||"").split(",")
     return handle_invalid_request("'server_name' parameter required") unless server_name
-    server.cluster_manager.add(server_name)
-    servers # return our list of known servers
+    add_servers([server_name],skip_servers)
+    self.servers # return our list of known servers
+  end
+
+  def update_servers
+    servers = params["servers"].split(",")
+    skip_servers = (params["skip_servers"]||"").split(",")
+    add_servers(servers,skip_servers)
+    self.servers # return our list of known servers
   end
 
   # get a list of known servers

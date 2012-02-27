@@ -29,6 +29,33 @@ class ClusterManager < TopServerComponent
   # server_client just returns the client for a given server or adds it if unknown - works the same as "add"
   alias :server_client :add
 
+  def broadcast_servers(skip_servers=[])
+    if @broadcast_servers_queued
+#      puts "#{self.class}#add_servers PID=#{Process.pid} already queued:server.cluster_manager.broadcast_servers servers=#{server.keys.sort.join(',')}"
+      return
+    end
+    @broadcast_servers_queued=true
+
+    skip_servers << local_server_address unless skip_servers.index(local_server_address)
+    skip_server_param = skip_servers.clone
+    servers.each do |name,client|
+      skip_server_param << name unless skip_server_param.index(name)
+    end
+
+#    puts "#{self.class}#add_servers PID=#{Process.pid} queue:server.cluster_manager.broadcast_servers servers=#{servers.keys.sort.join(',')}"
+    EventMachine::Synchrony.add_timer(0) do
+      @broadcast_servers_queued=false
+      server_names = servers.keys
+#      puts "#{self.class}#broadcast_servers PID=#{Process.pid} servers=#{server_names.join(',')}"
+      servers.each do |name,client|
+        next if skip_servers.index(name)
+#        puts "  PID=#{Process.pid} sent to: #{client} servers=#{server_names.join(',')}"
+        client.update_servers(server_names,skip_server_param)
+      end
+    end
+  end
+
+  # servers is an array of server-addresses as strings
   def add_servers(servers)
     servers.each {|s| add(s)}
   end

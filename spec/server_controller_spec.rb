@@ -25,7 +25,7 @@ describe Monotable::HttpServer::ServerController do
   end
 
   it "server/join joining the cluster should add the joining server-name to the known servers list" do
-    server_client.join("frank")
+    server_client.join("frank",["frank"])
     server_client.servers.keys.should == ["127.0.0.1:32100","frank"]
   end
 

@@ -87,7 +87,7 @@ describe Monotable::EventMachineServer do
     server_client(1).get("bob")[:record].should == {"id" => "123"}
   end
 
-  it "balance user records" do
+  it "should be able to read records balanced across two daemons" do
 
     server_client(0).chunks.should == ["", "++0", "+0", "0"]
     server_client(1).chunks.should == []
@@ -132,6 +132,56 @@ describe Monotable::EventMachineServer do
     server_client.chunk_keys("u/bret").should == ["u/bret"]
     server_client(1).chunk_keys("u/bret").should == nil
 
+    records.each do |key,fields|
+      r0 = server_client(0).get(key)
+      r1 = server_client(1).get(key)
+      r0[:record].should == fields
+      r1[:record].should == fields
+    end
+  end
+
+  it "should be able to write records balanced across two daemons" do
+
+    server_client(0).chunks.should == ["", "++0", "+0", "0"]
+    server_client(1).chunks.should == []
+
+    records = {
+      "amanda"=> {"dog" => "andy"     },
+      "bret"=>   {"dog" => "buddy"    },
+      "craig"=>  {"dog" => "chuckles" },
+      "dan"=>    {"dog" => "dooper"   },
+      "evan"=>   {"dog" => "erne"     },
+      "frank"=>  {"dog" => "flower"   },
+    }
+
+    # split chunks
+    split_keys = records.keys[1..-1].collect {|a|"u/"+a}
+    split_keys.each do |key|
+      server_client.split_chunk key
+    end
+
+    # verify chunks before balance
+    server_client(0).chunks.should == ["", "++0", "+0", "0"]+split_keys
+
+    #balance
+    res = server_client(1).balance
+
+    # verify chunks after balance
+    server_client(0).chunks.should == ["", "++0", "+0", "0", "u/bret"]
+    server_client(1).chunks.should == ["u/craig", "u/dan", "u/evan", "u/frank"]
+
+    # set records
+    records.each do |key,fields|
+      server_client.set key,fields
+    end
+
+    # verify one record is on server-0 and another is on server-1
+    server_client(0).chunk_keys("u/bret").should == ["u/bret"]
+    server_client(1).chunk_keys("u/bret").should == nil
+    server_client(0).chunk_keys("u/craig").should == nil
+    server_client(1).chunk_keys("u/craig").should == ["u/craig"]
+
+    # validate we can read we can read each record from either server
     records.each do |key,fields|
       r0 = server_client(0).get(key)
       r1 = server_client(1).get(key)
