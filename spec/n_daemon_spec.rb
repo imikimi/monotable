@@ -28,9 +28,7 @@ describe Monotable::EventMachineServer do
     server_client(1).up?.should==true
     server_client(2).up?.should==true
     server_client(3).up?.should==true
-  end
 
-  it "all servers should know about each other" do
     server_pids.length.should == 4
     servers_servers=server_clients.collect {|a| a.servers}
     servers_servers.each do |servers|
@@ -38,4 +36,46 @@ describe Monotable::EventMachineServer do
     end
   end
 
+  it "shoudl work to balance 4 servers" do
+    records = {
+      "amanda"=> {"dog" => "andy"     },
+      "bret"=>   {"dog" => "buddy"    },
+      "craig"=>  {"dog" => "chuckles" },
+      "dan"=>    {"dog" => "dooper"   },
+      "evan"=>   {"dog" => "erne"     },
+      "frank"=>  {"dog" => "flower"   },
+    }
+
+    # split chunks
+    split_keys = records.keys[1..-1].collect {|a|"u/"+a}
+    split_keys.each do |key|
+      server_client.split_chunk key
+    end
+
+    # verify chunks before balance
+    server_client(0).chunks.should == ["", "++0", "+0", "0"]+split_keys
+
+    #balance
+    res = server_client(1).balance
+    res = server_client(2).balance
+    res = server_client(3).balance
+
+    # verify chunks after balance
+    server_clients.collect{|c|c.chunks}.should == [
+      ["", "++0", "+0"],
+      ["u/craig", "u/dan"],
+      ["0", "u/bret"],
+      ["u/evan", "u/frank"]
+    ]
+
+    # set records
+    records.each do |key,fields|
+      server_client.set key,fields
+    end
+
+    # verify records can be read from the correct servers
+    server_clients.collect{|c|c.chunk_keys("u/bret")}.should == [[],[],["u/bret"],[]]
+    server_clients.collect{|c|c.chunk_keys("u/dan")}.should == [[],["u/dan"],[],[]]
+    server_clients.collect{|c|c.chunk_keys("u/frank")}.should == [[],[],[],["u/frank"]]
+  end
 end

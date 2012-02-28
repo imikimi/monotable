@@ -34,7 +34,7 @@ describe ServerClient do
   it "should be accessible via HTTP" do
     server_client(1).set("foo", "fookey" => "fooval")
     server_client(0).chunk_keys("foo").should == ["u/foo"]
-    server_client(1).chunk_keys("foo").should == nil
+    server_client(1).chunk_keys("foo").should == []
     clear_store
     server_client(0).chunk_keys("foo").should == []
   end

@@ -85,7 +85,7 @@ class ServerController < RequestHandler
     if chunk
       respond 200, :status => "found", :chunk_info => chunk_info(chunk)
     else
-      respond 404, {:status => "chunk no on server"}
+      respond 404, {:status => "chunk not on server"}
     end
   end
 
@@ -98,7 +98,7 @@ class ServerController < RequestHandler
     if chunk
       respond 200, :status => "found", :keys => chunk.keys
     else
-      respond 404, {:status => "chunk no on server"}
+      respond 404, {:status => "chunk not on server", :keys=>[]}
     end
   end
 
