@@ -61,33 +61,6 @@ module Monotable
       end
     end
 
-    # Async calls return immediately.
-    # When the request complets later, either:
-    #   a) execute the passed in block on succcess with the response information passed in OR
-    #   b) execute the optional :on_error Proc. If none, the error is ignored (TODO: log the error)
-    # options
-    #   :body => string or Hash (payload)
-    #   :on_error => called on-error. Parameters: |http_request,error_message|
-    #   :keys_to_symbolize_values => {} passed into symbolize_keys
-    # block => called on success with the json-parsed response
-    def em_async_request(method,request_path,options={},&block)
-      headers = {:accept => :json}
-      on_error = options[:on_error] || Proc.new {|http_request,message| puts message;}
-      async_method = "a#{method}".to_sym
-
-      http_request = EventMachine::HttpRequest.new(request_path).send async_method, :body => options[:body], :params=> options[:params], :head => headers
-
-      http_request.errback { on_error.call(http_request,"request: #{method}|#{request_path}. errback called.") }
-      http_request.callback do
-        if http_request.response_header.status == 200 || (options[:accept_404] && http_request.response_header.status == 404)
-          block.call process_response(http_request.response,options)
-        else
-          # error
-          on_error.call(http_request,"request: #{method}|#{request_path}. invalid status code: #{http_request.response_header.status}")
-        end
-      end
-    end
-
     def em_synchrony_request(method,request_path,options={})
       request_uri = "http://"+request_path
       request = EM::HttpRequest.new(request_uri).send(
@@ -132,9 +105,8 @@ module Monotable
     # if you include a block, this uses async_reqeust
     # for examples of using RestClient::Request.execute
     #   https://github.com/archiloque/rest-client/blob/master/lib/restclient.rb
-    def request(method,request_path,options={},&block)
+    def request(method,request_path,options={})
       request_path = "#{server}/#{request_path}"
-      return em_async_request method, request_path, options, &block if block
       return em_synchrony_request method, request_path, options if ServerClient.use_synchrony
       rest_client_request(method,request_path,options)
     end
@@ -164,8 +136,8 @@ module Monotable
     end
 
     # see ReadAPI
-    def get(key,options={},&block)
-      request(:get, "#{path_prefix}records/#{ue key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+    def get(key,options={})
+      request(:get, "#{path_prefix}records/#{ue key}", :accept_404=>true, :force_encoding => "ASCII-8BIT")
     end
 
     # return the raw value of one field as the body
@@ -174,15 +146,15 @@ module Monotable
     end
 
     # see ReadAPI
-    def get_first(options={},&block)
+    def get_first(options={})
       request, params = prepare_get_first_request(options)
-      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT")
     end
 
     # see ReadAPI
-    def get_last(options={},&block)
+    def get_last(options={})
       request,params = prepare_get_last_request(options)
-      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
+      objectify_records request(:get, path_prefix+request, :params => params, :accept_404=>true, :force_encoding => "ASCII-8BIT")
     end
   end
 
@@ -202,20 +174,20 @@ module Monotable
     end
 
     # see WriteAPI
-    def set(key,fields,&block)
+    def set(key,fields)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
     end
 
     # see WriteAPI
-    def update(key,fields,&block)
+    def update(key,fields)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :put, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+      request :put, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
     end
 
     # see WriteAPI
-    def delete(key,&block)
-      request :delete, "#{path_prefix}records/#{ue key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES, &block
+    def delete(key)
+      request :delete, "#{path_prefix}records/#{ue key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
     end
   end
 
