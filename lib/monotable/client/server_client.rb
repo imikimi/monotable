@@ -96,7 +96,7 @@ module Monotable
         :query => options[:params],
         :head => {
           :accept => "application/json",
-          :content_type => "application/json",
+          :content_type => options[:content_type] || "application/json",
         }
       )
       code = request.response_header.status
@@ -114,7 +114,7 @@ module Monotable
         :headers => {
           :params => options[:params],
           :accept => :json,
-          :content_type => :json,
+          :content_type => options[:content_type] || :json,
         }
         ) do |response, request, result|
         if response.code == 200 || (options[:accept_404] && response.code == 404)
@@ -168,6 +168,11 @@ module Monotable
       request(:get, "#{path_prefix}records/#{ue key}", :accept_404=>true, :force_encoding => "ASCII-8BIT", &block)
     end
 
+    # return the raw value of one field as the body
+    def get_field(key,field)
+      request :get, "#{path_prefix}records/#{ue key}?field=#{ue field}", :accept_404=>true, :force_encoding => "ASCII-8BIT", :raw_response => true
+    end
+
     # see ReadAPI
     def get_first(options={},&block)
       request, params = prepare_get_first_request(options)
@@ -187,6 +192,14 @@ module Monotable
 
     # this lists the KEYS of the returned JSON for which we want to automatically SYMBOLIZE their values.
     KEYS_TO_SYMBOLIZE_VALUES={:result => true}
+
+    # update_field exists to present an efficient way to write larger binary data over HTTP.
+    def update_field(key,field,value)
+      request :put, "#{path_prefix}records/#{ue key}?field=#{ue field}",
+        :body => value,
+        :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES,
+        :content_type => "application/octet-stream"
+    end
 
     # see WriteAPI
     def set(key,fields,&block)

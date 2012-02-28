@@ -73,6 +73,7 @@ module ReadAPI
   module WriteAPI
     def []=(key,fields) set(key,fields) end
 
+    # set replaces the entire value of the record
     # fields must be a hash or a Monotable::Record
     # returns
     #   record !existed: {:result=>:created, :size_delta=>#, :size=>#}
@@ -85,6 +86,7 @@ module ReadAPI
       raise "stub"
     end
 
+    # update will only overwrite the listed fields, other fields are left unchanged
     # returns
     #   record !existed: {:result=>:created, :size_delta=>#, :size=>#}
     #   record existed: {:result=>:updated, :size_delta=>#, :size=>#}

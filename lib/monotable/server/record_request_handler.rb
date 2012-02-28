@@ -48,9 +48,23 @@ Valid Patterns:
 
   def handle_record_request(key)
     case method
-    when 'GET'    then get(key)
+    when 'GET'    then
+      if params["field"]
+        get_field(key,params["field"])
+      else
+        get(key)
+      end
     when 'POST'   then set(key,body)
-    when 'PUT'    then update(key,body)
+    when 'PUT'    then
+      if params["field"]
+        # update a single field from the raw value of the body
+        update(key,params["field"] => body)
+      elsif body.kind_of? Hash
+        # assume the body has been parsed into a hash
+        update(key,body)
+      else
+        handle_invalid_request "check that you either pass a field-name and the raw value in the body OR encode the fields in the body as json and set the content-type to application/json"
+      end
     when 'DELETE' then delete(key)
     else handle_unknown_request
     end
@@ -87,6 +101,14 @@ Valid Patterns:
     def get(key,fields={})
       content=@store.get(key)
       respond(content[:record] ? 200 : 404, content)
+    end
+
+    # http optimized for getting large single-field values
+    def get_field(key,field)
+      record=@store.get_record(key)
+      content = record && record[field]
+      self.response_type=:bin
+      respond(record && content ? 200 : 404, content)
     end
 
     def deobjectify_records(result)

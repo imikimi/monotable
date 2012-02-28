@@ -3,7 +3,8 @@ module HttpServer
 
 class RequestHandler
   attr_accessor :options
-  attr_reader :method, :params, :uri, :response, :response_type, :controller, :action, :post_action_path, :resource_id
+  attr_accessor :response_type
+  attr_reader :method, :params, :uri, :response, :controller, :action, :post_action_path, :resource_id
   attr_reader :server
 
   # options:
@@ -64,6 +65,7 @@ class RequestHandler
   def respond(status,content)
     @response.status = status.to_s
     case @response_type
+    when :bin  then respond_binary(status,content)
     when :json then respond_with_json(status,content)
     when :html then respond_with_html(status,content)
     end

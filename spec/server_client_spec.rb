@@ -12,6 +12,7 @@ module Monotable
 describe ServerClient do
   include DaemonTestHelper
   include MonotableHelperMethods
+  it_should_behave_like "monotable api", :key_prefix_size => 2
 
   before(:all) do
     start_daemon
@@ -39,7 +40,6 @@ describe ServerClient do
     Net::HTTP.get(host,'/',port).should_not be_empty
   end
 
-  it_should_behave_like "monotable api", :key_prefix_size => 2
 
   it "should be able to create a ServerClient" do
     ServerClient.new(daemon_uri)
@@ -61,6 +61,15 @@ describe ServerClient do
     clear_store
     client["foo"]={"bar"=>"monkey"}
     client["foo"].should=={"bar" => "monkey"}
+  end
+
+  it "should be able to set/get a single large binary field" do
+    clear_store
+    file = File.expand_path(File.join(File.dirname(__FILE__),"test_data","0-65535.words.binary"))
+    data = File.open(file,"rb") {|f|f.read}
+    client.update_field("foo","file",data)
+    f=client.get_field("foo","file")
+    f.should == data
   end
 end
 end
