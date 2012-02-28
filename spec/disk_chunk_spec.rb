@@ -28,7 +28,7 @@ describe Monotable::DiskChunk do
     file=chunkify_test_data_directory
 
     chunk = Monotable::DiskChunk.new(:filename=>file)
-    chunk.keys.sort.should == %w{0-255.binary declaration_of_independence.txt plato.jpeg simple.png}
+    chunk.keys.sort.should == %w{0-255.binary 0-65535.words.binary declaration_of_independence.txt plato.jpeg simple.png}
   end
 
   it "should return nil if key is not in chunk" do
@@ -75,7 +75,7 @@ describe Monotable::DiskChunk do
 
     # test full loading with MemoryChunk
     chunk = Monotable::MemoryChunk.load(file)
-    chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png", "foo"].sort
+    chunk.keys.sort.should == ["0-255.binary", "0-65535.words.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png", "foo"].sort
     chunk["foo"].should == {"bar" => "June"}
   end
 
@@ -142,7 +142,7 @@ describe Monotable::DiskChunk do
     chunkfile.journal.compact
 
     chunk = Monotable::MemoryChunk.load(file)
-    chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png", "foo"].sort
+    chunk.keys.sort.should == ["0-255.binary", "0-65535.words.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png", "foo"].sort
     chunk["foo"].should == {"bar" => "June", "baz" => "January"}
   end
 
@@ -156,7 +156,7 @@ describe Monotable::DiskChunk do
 
     chunk = Monotable::MemoryChunk.load(file)
 
-    chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "simple.png"].sort
+    chunk.keys.sort.should == ["0-255.binary", "0-65535.words.binary", "declaration_of_independence.txt", "simple.png"].sort
     chunk["plato.jpeg"].should == nil
   end
 

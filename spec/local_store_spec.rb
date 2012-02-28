@@ -39,9 +39,9 @@ describe Monotable::LocalStore do
     local_store.get_chunk("").accounting_size.should == 0
     load_test_data_directory(local_store)
     local_store.chunks.length.should == 1
-    local_store.get_chunk("").records.length.should == 4
+    local_store.get_chunk("").records.length.should == 5
     local_store.get_chunk("").verify_accounting_size
-    local_store.get_chunk("").accounting_size.should == 15994
+    local_store.get_chunk("").accounting_size.should == 147095
   end
 
   it "should be possible to attach a localstore to a path with existing data" do
@@ -52,8 +52,8 @@ describe Monotable::LocalStore do
     #load LocalStore anew
     local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
-    local_store2.get_chunk("").length.should == 4
-    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    local_store2.get_chunk("").length.should == 5
+    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 147095
   end
 
   it "should be possible to attach a localstore to a path with a non-compacted journal" do
@@ -63,8 +63,8 @@ describe Monotable::LocalStore do
     #load LocalStore anew
     local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
-    local_store2.get_chunk("").length.should == 4
-    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 15994
+    local_store2.get_chunk("").length.should == 5
+    Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 147095
 
     #test write
     local_store2.set("testkey",{"field"=>"value"})
@@ -81,7 +81,7 @@ describe Monotable::LocalStore do
 
     # load the chunk
     chunk=Monotable::MemoryChunk.load(local_store.get_chunk("").filename)
-    chunk.keys.sort.should == ["0-255.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png"].sort
+    chunk.keys.sort.should == ["0-255.binary", "0-65535.words.binary", "declaration_of_independence.txt", "plato.jpeg", "simple.png"].sort
   end
 
   it "should be possible to split a chunk" do
@@ -92,9 +92,9 @@ describe Monotable::LocalStore do
 
     # split the chunk
     chunk1=local_store.get_chunk("")
-    chunk1.length.should==4
+    chunk1.length.should==5
     chunk2=chunk1.split("declaration_of_independence.txt")
-    chunk1.length.should==1
+    chunk1.length.should==2
     chunk2.length.should==3
   end
 
@@ -106,10 +106,10 @@ describe Monotable::LocalStore do
 
     # split the chunk
     chunk1=local_store.get_chunk("")
-    chunk1.length.should==4
+    chunk1.length.should==5
     chunk2=chunk1.split
-    chunk1.length.should==3
-    chunk2.length.should==1
+    chunk1.length.should==2
+    chunk2.length.should==3
   end
 
   it "max_chunk_size and max_index_block_size should propagate" do
