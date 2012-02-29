@@ -64,7 +64,7 @@ module Monotable
       when :delete_chunk then File.delete journal_entry[:chunk_file]
       when :split then
         chunk2=chunk.split(journal_entry[:key])
-        chunks[journal_entry[:to_file]]={:chunk=>chunk2}
+        chunks[journal_entry[:to_file]] = chunk2
       end
     end
 
@@ -116,6 +116,74 @@ module Monotable
       File.join Journal.compaction_dir(journal_filename), JOURNAL_COMPACTION_SUCCESS_FILENAME
     end
 
+    # load all entries from a journal and cluster them by chunk_filename
+    # Returns hash with exactly one entry per chunk_filename touched (including merged from or split-to)
+    # NOTE: all chunks involved in merges and splits will share the same list of entries,
+    #   though each will have its own entry in the returned structure.
+    def Journal.load_entries(journal_file)
+      entries_by_chunk={}
+      each_entry(journal_file) do |entry|
+        chunk_filename = entry[:chunk_file]
+
+        if jes = entries_by_chunk[chunk_filename]
+          jes<<entry
+        else
+          entries_by_chunk[chunk_filename]=[entry]
+        end
+
+        # All chunks involved in some combination of splits and merges will have all their journal entries
+        # merged into one list to be processed in concert
+        if entry[:command]==:split
+          chunk2_filename = entry[:to_file]
+          entries_by_chunk[chunk2_filename] = entries_by_chunk[chunk_filename]
+        end
+      end
+      journal_file.close
+      entries_by_chunk
+    end
+
+    # Given a list of entries, applies all edits to every chunk touched to complete MemoryChunk representations
+    # Returns a hash of all chunk-files processed as: {chunk_file_name => MemoryChunk instance}
+    #
+    # NOTE: merging and splitting magic
+    #   If a chunk is merged or split, then entries will contain entries for more than one chunk.
+    #   Specifically, entries will contain all entries for all chunks involved in any combination of merges and splits.
+    #   The order of the entries may not be the original order written to disk, but it will be a consitent ordering such that they can be processed in order safely.
+    def Journal.apply_entries_in_memory(entries)
+      {}.tap do |chunks|
+        entries.each do |entry|
+          chunk_filename = entry[:chunk_file]
+          chunks[chunk_filename] ||= MemoryChunk.load(chunk_filename)
+          chunk = chunks[chunk_filename]
+          apply_entry(entry,chunk,chunks)
+        end
+      end
+    end
+
+    # given a hash {chunk_filename => entries},
+    # Runs apply_entries_in_memory on each entries
+    def Journal.compact_by_chunk(entries_by_chunk,compacted_chunks_path)
+      completed_chunks={}
+      entries_by_chunk.each do |chunk_filename,entries|
+        # chunks involved in merges and splits will be processed together when the first representative of that
+        # cluster is processed. Hense, when we attempt to process the other members later, we just skip them.
+        next if completed_chunks[chunk_filename]
+
+        chunks = apply_entries_in_memory entries
+        chunks.each {|k,v| completed_chunks[k]=true}
+        write_compacted_chunks chunks, compacted_chunks_path
+      end
+    end
+
+    # write all compacted chunks to disk
+    # TODO: Write comacted_chunks to most-empty/least-loaded PathStores to Balance them
+    def Journal.write_compacted_chunks(chunks,compacted_chunks_path)
+      chunks.each do |chunk_filename,chunk|
+        new_chunk_filename=File.join(compacted_chunks_path, File.basename(chunk_filename))
+        chunk.save new_chunk_filename
+      end
+    end
+
     # file is a FileHandle or filename
     # phase 1 does 99% of the work:
     #   * reads the journal
@@ -137,32 +205,13 @@ module Monotable
 
       if journal_file.exists?
         # apply journal to every chunk
-        # NOTE: this loads all chunks that were touched fully into memory. This may be a problem :) - it may not fit in memory.
-        #   However, I think the best way to solve this problem is to limit the number of chunks one journal manages, somewhere upstream.
-        #   This would just mean we'd need to have more than one active journal if we have too many difference chunks being written to.
         # TODO: if the journal is somehow corrupt, I think the right answer is to stop parsting the journal, but keep all changes so far and continue.
         # The chunks -may- be OK if there were no further writes to them in the rest of the corrupt journal. We can detect their valididity later or immeidately with replicas on other disks.
         # Perhaps we need a possibly-corrupt directory which implies we need to compare with the replicas to verify integrity... ?
 
-        each_entry(journal_file) do |entry|
-          chunk_filename = entry[:chunk_file]
-          if ch=chunks[chunk_filename]
-            chunk=ch[:chunk]
-          else
-            chunk=MemoryChunk.load(chunk_filename)
-            chunks[chunk_filename]={:chunk=>chunk}
-          end
-          Journal.apply_entry(entry,chunk,chunks)
-        end
-        journal_file.close
+        entries_by_chunk = load_entries(journal_file)
 
-        # write all compacted chunks to disk
-        # TODO: Write comacted_chunks to most-empty/least-loaded PathStores to Balance them
-        chunks.each do |chunk_filename,status|
-          chunk = status[:chunk]
-          cf = status[:compacted_file] = File.join(compacted_chunks_path, File.basename(chunk_filename))
-          chunk.save cf
-        end
+        compact_by_chunk entries_by_chunk, compacted_chunks_path
 
         # "touch" the file: JOURNAL_COMPACTION_SUCCESS_FILENAME
         File.open(success_filename,"w") {}
@@ -170,6 +219,7 @@ module Monotable
     end
 
     # executes the compaction phase-1 as an external processes
+    # we are not using fork because it is important that we start with a blank garbage-collection space
     def Journal.compact_phase_1_external(journal_file)
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       # test to see if there is actually any phase-1 work
