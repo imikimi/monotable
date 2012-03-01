@@ -16,7 +16,7 @@ module Monotable
         if @queue.length>0
           info=@queue.shift
           @currently_compacting=info[:journal_file] || true # || true -> ensure correct operation of CompactionManger even if journal_file is nil
-          MiniEventMachine.defer(info[:async_task],info[:post_task])
+          EventMachine.defer(info[:async_task],info[:post_task])
         else
           @currently_compacting=false
         end
@@ -28,11 +28,11 @@ module Monotable
           @queue << {:async_task=>async_task,:post_task=>post_task,:journal_file=>journal_file}
         else
           @currently_compacting=journal_file || true # || true -> ensure correct operation of CompactionManger even if journal_file is nil
-          MiniEventMachine.defer(async_task,post_task)
+          EventMachine.defer(async_task,post_task)
         end
       end
 
-      def compact(journal_file)
+      def compact(journal_file,&block)
         async_task = Proc.new do
           Tools.log_time("async:Journal.compact_phase_1_external(#{journal_file.inspect})",true) do
             Journal.compact_phase_1_external(journal_file)
@@ -42,6 +42,7 @@ module Monotable
         post_task = Proc.new do
           Tools.log_time("sync:Journal.compact_phase_2(#{journal_file.inspect})") do
             Journal.compact_phase_2(journal_file)
+            yield if block
           end
           start_next_compaction
         end

@@ -77,7 +77,7 @@ module Monotable
       journal_file.open_append(true)
       @size+=Monotable::Tools.write_asi_checksum_string(journal_file,save_str)
       journal_file.flush
-      MiniEventMachine.queue {self.compact} if full?
+      EM::next_tick {self.compact} if full?
       save_str
     end
 
@@ -306,14 +306,15 @@ module Monotable
     #   :async => true
     #     if async is true, then the phase_1 compaction is run externally and control is returned immediately.
     #     Be sure to run CompactionManager.singleton.process_queue at some later point to finalize journal processing.
-    def compact(options={})
+    def compact(options={},&block)
       journal_manager && journal_manager.freeze_journal(self)
       @read_only=true
       if Journal.async_compaction #options[:async]
-        CompactionManager.compact(journal_file)
+        CompactionManager.compact(journal_file,&block)
       else
         Journal.compact_phase_1(journal_file)
         Journal.compact_phase_2(journal_file)
+        yield if block
       end
     end
   end

@@ -17,7 +17,6 @@ monotable_require :local_store, %w{
   api
   string
   global
-  mini_event_machine
   cache
   record_cache
   index_block_cache

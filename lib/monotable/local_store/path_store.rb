@@ -78,12 +78,12 @@ module Monotable
     def max_index_block_size; @local_store.max_index_block_size; end
 
     def validate_store
-      journal_manager.compact
+      journal_manager.compact_existing_journals
     end
 
     # options: see Journal#compact for more info
-    def compact(options={})
-      journal_manager.compact(options)
+    def compact(options={},&block)
+      journal_manager.compact(options,&block)
     end
 
     def journal

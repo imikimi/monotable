@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require File.expand_path(File.join(File.dirname(__FILE__),"..","lib","monotable","monotable"))
+require File.expand_path(File.join(File.dirname(__FILE__),"..","lib","monotable","local_store"))
 
 def show_usage(message=nil)
   puts <<ENDUSAGE

@@ -49,12 +49,11 @@ module Monotable
     end
 
     # options:    see Journal#compact for more information on options
-    def compact(options={})
+    def compact(options={},&block)
       if @current_journal
-        @current_journal.compact(options)
+        @current_journal.compact(options,&block)
         new_journal
       end
-      compact_existing_journals(options)
 
       # reset journal number
       @journal_number=0

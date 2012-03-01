@@ -89,7 +89,7 @@ module Monotable
     # see WriteAPI
     def set(key,columns)
       ret=set_internal(key,journal.set(self,key,columns))
-      MiniEventMachine.queue {self.split} if accounting_size > max_chunk_size
+      EM.next_tick {self.split} if accounting_size > max_chunk_size
       ret
     end
 
