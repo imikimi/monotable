@@ -9,8 +9,8 @@ Values in cache should not change their keys nor their memory_size.
 
 
 module Monotable
-  # MAX_CACHE_SIZE in bytes
-  MAX_CACHE_SIZE=64*(1024**2)
+  # DEFAULT_MAX_CACHE_SIZE in bytes
+  DEFAULT_MAX_CACHE_SIZE=64*(1024**2)
 
   class Cache
     attr_reader :max_size,:size
@@ -47,7 +47,7 @@ module Monotable
     end
 
     def initialize(max_size=nil)
-      @max_size=max_size || MAX_CACHE_SIZE
+      @max_size=max_size || DEFAULT_MAX_CACHE_SIZE
 
       reset
     end
