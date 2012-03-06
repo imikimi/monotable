@@ -103,6 +103,8 @@ module Monotable
       @index_depth ||= first_record_key[/\+*/].length
     end
 
+    # find the ChunkIndexRecord for the chunk that covers internal_key.
+    # Logs all work done in work_log (an array), if provided.
     def find(internal_key,work_log=nil)
       return first_record if (internal_key[/^\+*/]).length >= index_depth
       index_record_key=INDEX_KEY_PREFIX+internal_key # note, this doesn't have to be the exact key, just >= they key and < the next key
@@ -114,10 +116,30 @@ module Monotable
       raise MonotableDataStructureError.new("could not find index-record for chunk containing record: #{internal_key.inspect}. Index record-key: #{index_record_key.inspect}. Response=#{response.inspect}")
     end
 
+    # same as #find, only cached
+    def cached_find(internal_key,work_log=nil)
+      cached=true
+      GlobalIndexCache.get(internal_key) do
+        cached=false
+        find(internal_key,work_log)
+      end.tap do
+        work_log << {:on_server => router.local_server.to_s, :action_type => :cache_fetch, :action_details => [:global_index_record_read,internal_key]} if work_log && cached
+      end
+    end
+
+    def clear_index_cache_entry(internal_key)
+      GlobalIndexCache.delete internal_key
+    end
+
     # returns the server-list for servers that hold the chunk that contains the record for internal_key
     # NOTE: first server in the list is the server to write to; any can be read from
     def chunk_servers(internal_key,work_log=nil)
       find(internal_key,work_log).servers
+    end
+
+    # same as #chunk_servers, only cached
+    def cached_chunk_servers(internal_key,work_log=nil)
+      cached_find(internal_key,work_log).servers
     end
 
     def update_chunk_server_list(chunk,initializing=false)

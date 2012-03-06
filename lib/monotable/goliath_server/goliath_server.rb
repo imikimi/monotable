@@ -174,8 +174,13 @@ class HttpServer < Goliath::API
 
     include ParamsAndBody
 
+    # set by parse_params or parse_body
+    attr_accessor :argument_error
+
     def request_options
-      @request_options||={
+      return @request_options if @request_options
+
+      @request_options = {
         :response => Response.new,
         :server => GoliathServer::HttpServer.server,
         :params => parse_params(@env),
@@ -183,6 +188,8 @@ class HttpServer < Goliath::API
         :method => @env.REQUEST_METHOD,
         :uri => @env.REQUEST_PATH ,
       }
+      raise argument_error if argument_error # raise only the first time
+      @request_options
     end
 
     include Monotable::HttpServer::Routes
@@ -195,10 +202,12 @@ class HttpServer < Goliath::API
 
   def response(env)
     pr = PerResponse.new(env)
-    pr.route_http_request
+    pr.route_http_request     # all exceptions should be caught inside here and the proper response generated
     pr.to_rack_response
-  rescue RuntimeError => e
-    [500,{},"error: #{e.inspect}"]
+  rescue Exception => e
+    puts "#{self.class}#response Internal Error: #{e.inspect}"
+    puts "  "+e.backtrace.join("\n  ")
+    [500, {}, "#{self.class}#response Exception = #{e.inspect}"]
   end
 end
 end

@@ -1,13 +1,6 @@
 # encoding: BINARY
 module Monotable
   class Router < TopServerComponent
-    attr_accessor :server_clients
-
-    #options[:local_store] => LocalStore
-    def initialize(server)
-      super
-      @server_clients=[]
-    end
 
     def local_server
       cluster_manager.local_server
@@ -15,7 +8,7 @@ module Monotable
 
     # find the servers containing the chunk that covers key
     def chunk_servers(internal_key,work_log=nil)
-      global_index.chunk_servers(internal_key,work_log)
+      global_index.cached_chunk_servers(internal_key,work_log)
     end
 
     def server_client(ikey,work_log=nil)
@@ -120,23 +113,37 @@ module Monotable
     #   store => store to route to
     #   key => use this key instead of the key passed to route
     # TODO - should allow a block to be passed in which is the "what to do with the result" block
-    def route(request_type, key)
+    def route(request_type, key,&block)
       ikey = @user_keys ? internalize_key(key) : key
       work_log=[]
       ret = if router.local_store.local?(ikey)
         yield router.local_store,ikey
       else
-        unless @forward
-          raise NotAuthoritativeForKey.new(key)
-        else
-          sc = router.server_client(ikey,work_log)
-          work_log<<{:server => router.local_server.to_s, :action => [sc.to_s, request_type, ikey]}
-          yield sc,ikey
-        end
+        raise NotAuthoritativeForKey.new(key) unless @forward
+        forward_route(request_type,ikey,work_log,&block)
       end
       ret[:work_log]=work_log + (ret[:work_log]||[])
       raise NetworkError.new("too may requests. work_log: #{ret[:work_log].inspect}") if ret[:work_log].length >= 100
       ret
+    end
+
+    # attempt to forward the request to the server that hosts the chunk for "key"
+    # TODO: if a "write" request, must select the chunk's master-server
+    # If we pick the wrong server, because our cached index is stale, clear the stale cache entry and retry once.
+    def forward_route(request_type,ikey,work_log)
+      retries_left = 1
+      begin
+        sc = router.server_client(ikey,work_log)
+        work_log << {:on_server => router.local_server.to_s, :action_type => :remote_request, :action_details => {:host => sc.to_s, :api_call => request_type, :internal_key => ikey}}
+        yield sc,ikey
+      rescue NotAuthoritativeForKey
+        raise Monotable::MonotableDataStructureError.new("could not find chunk for key #{ikey.inspect}. work_log=#{work_log.inspect}") if retries_left < 1
+
+        router.global_index.clear_index_cache_entry(ikey)
+        work_log << {:on_server => router.local_server.to_s, :action_type => :clear_stale_global_index_cache_entry, :action_details => {:interal_key => ikey}}
+
+        retries_left -= 1;retry
+      end
     end
   end
 end

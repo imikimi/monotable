@@ -29,6 +29,7 @@ monotable_require '', %w{
 monotable_require :server, %w{
   top_server_component
   router
+  global_index_cache
   global_index
   cluster_manager
   load_balancer

@@ -45,20 +45,6 @@ module Routes
     when RECORDS_REQUEST_PATTERN        then HttpServer::RecordRequestHandler.new(request_options).handle
     when SERVER_REQUEST_PATTERN         then HttpServer::ServerController.new(request_options).handle
     when ROOT_REQUEST_PATTERN           then HttpServer::RequestHandler.new(request_options).handle_default_request
-    when %r{^/cycle_end}                then
-      response.status = 200
-      response.content_type 'text/html'
-      response.content = "cycle_test 1"
-      response.send_response
-
-    when %r{^/cycle_test}               then
-      response.status = 200
-      response.content_type 'text/html'
-
-      req_response = EM::HttpRequest.new("http://#{server}/cycle_end").get
-
-      response.content = req_response.response
-      response.send_response
     else                                     HttpServer::RequestHandler.new(request_options).handle_invalid_request("invalid URL: #{uri.inspect}")
     end
 #    puts "</PROCESSING uri=#{uri.inspect}>"
@@ -67,10 +53,16 @@ module Routes
       puts "  body: #{body.inspect}"
       puts "  response_content: #{request_options[:response].content.inspect}"
     end
+  rescue Monotable::ArgumentError => e
+    respond(400, :error => e.inspect)
   rescue Exception => e
-    puts "#{self.class} Request Error: #{e.inspect}"
-    puts "    "+e.backtrace.join("    \n")
+    puts "#{self.class}#route_http_request Internal Error: #{e.inspect}"
+    puts "  "+e.backtrace.join("\n  ")
     respond(500, :error => e.to_s)
+  end
+
+  def respond(status,content)
+    HttpServer::RequestHandler.new(request_options).respond(status,content)
   end
 end
 end

@@ -31,6 +31,9 @@ module GoliathServer
 
     def parse_params(env)
       indifferentize ::Rack::Utils.parse_nested_query(env['QUERY_STRING'])
+    rescue Exception => ae
+      self.argument_error = ArgumentError.new "Invalid query_string. Error: #{ae.inspect}"
+      nil
     end
 
     def parse_body(env)
@@ -42,8 +45,9 @@ module GoliathServer
       when "application/json" then
         begin
           indifferentize MultiJson.decode(body) unless body.empty?
-        rescue StandardError => e
-          raise ArgumentError.new "Invalid JSON in body. Error: #{e.class.to_s}. Body=#{body.inspect}"
+        rescue MultiJson::DecodeError => e
+          self.argument_error = ArgumentError.new "Invalid JSON in body. Error: #{e.class.to_s}. Body=#{body.inspect}"
+          nil
         end
       else
         body

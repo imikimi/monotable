@@ -18,6 +18,11 @@ describe ServerClient do
     start_daemon
   end
 
+  before(:each) do
+    @client=ServerClient.new(daemon_uri)
+  end
+  attr_accessor :client
+
   after(:all) do
     shutdown_daemon
   end
@@ -31,18 +36,34 @@ describe ServerClient do
     ServerClient.new(daemon_uri)
   end
 
+  it "should fail locally to set with invalid fields" do
+    lambda{client.set "my_key", nil}.should raise_error(Monotable::ArgumentError)
+    lambda{client.set "my_key", []}.should raise_error(Monotable::ArgumentError)
+  end
+
   it "should be comparable" do
-    ServerClient.new(daemon_uri).should == ServerClient.new(daemon_uri)
-    ServerClient.new(daemon_uri).should_not == ServerClient.new(daemon_uri(1))
+    client.should == client
+    client.should_not == ServerClient.new(daemon_uri(1))
   end
 
   it "should be accessible via HTTP" do
     Net::HTTP.get(host,'/',port).should_not be_empty
   end
 
+  it "Invalid HTTP posts should return invalid argument errors" do
+    RestClient::Request.execute(
+      :method => :post,
+      :url => "http://#{host}:#{port}/records/my_key",
+      :payload => nil.to_json,
+      :headers => {:accept => :json, :content_type => :json}
+    ) do |response, request, result|
+      result.code.should=="400"
+    end
+  end
+
 
   it "should be able to create a ServerClient" do
-    ServerClient.new(daemon_uri)
+    client
   end
 
   it "should be able to get a record" do

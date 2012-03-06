@@ -177,6 +177,7 @@ module Monotable
 
     # see WriteAPI
     def set(key,fields)
+      raise Monotable::ArgumentError.new("fields must be a Hash") unless fields.kind_of? Hash
       fields = Tools.force_encoding(fields,"UTF-8")
       request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
     end
