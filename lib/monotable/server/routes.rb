@@ -70,6 +70,7 @@ module Routes
   rescue Exception => e
     puts "#{self.class} Request Error: #{e.inspect}"
     puts "    "+e.backtrace.join("    \n")
+    respond(500, :error => e.to_s)
   end
 end
 end

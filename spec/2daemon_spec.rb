@@ -26,6 +26,7 @@ describe Monotable::EventMachineServer do
     server_client(1).up?.should==true
   end
 
+
   it "only the first daemon should start with chunks" do
     local_store1_stats=server_client(0).local_store_status
     local_store2_stats=server_client(1).local_store_status
@@ -45,9 +46,17 @@ describe Monotable::EventMachineServer do
 
     def get_record(key)
       clients.each do |c|
-#        puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect})"
-        r=c.get_record(key)
-        return r if r
+        begin
+  #        puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect})"
+          r = begin
+            c.get_record(key)
+          rescue Monotable::NotAuthoritativeForKey
+          end
+          return r if r
+        rescue Exception => e
+          puts "#{self.class}.get_record() #{c}.get_record(#{key.inspect}) failed=#{e.inspect}"
+          raise
+        end
       end
       nil
     end
@@ -87,12 +96,23 @@ describe Monotable::EventMachineServer do
     server_client(1).get("bob")[:record].should == {"id" => "123"}
   end
 
+  def test_records
+    @test_records||={
+      "amanda"=> {"dog" => "andy"     },
+      "bret"=>   {"dog" => "buddy"    },
+      "craig"=>  {"dog" => "chuckles" },
+      "dan"=>    {"dog" => "dooper"   },
+      "evan"=>   {"dog" => "erne"     },
+      "frank"=>  {"dog" => "flower"   },
+    }
+  end
+
   it "should be able to read records balanced across two daemons" do
 
     server_client(0).chunks.should == ["", "++0", "+0", "0"]
     server_client(1).chunks.should == []
 
-    records = {
+    test_records = {
       "amanda"=> {"dog" => "andy"     },
       "bret"=>   {"dog" => "buddy"    },
       "craig"=>  {"dog" => "chuckles" },
@@ -101,24 +121,24 @@ describe Monotable::EventMachineServer do
       "frank"=>  {"dog" => "flower"   },
     }
 
-    records.each do |key,fields|
+    test_records.each do |key,fields|
       server_client.set key,fields
     end
 
-    # verify written records before splits
-    records.each do |key,fields|
+    # verify written test_records before splits
+    test_records.each do |key,fields|
       server_client(0).get(key)[:record].should == fields
     end
 
-    split_keys = records.keys[1..-1].collect {|a|"u/"+a}
+    split_keys = test_records.keys[1..-1].collect {|a|"u/"+a}
     split_keys.each do |key|
       server_client.split_chunk key
     end
 
     server_client(0).chunks.should == ["", "++0", "+0", "0"]+split_keys
 
-    # verify written records before balance
-    records.each do |key,fields|
+    # verify written test_records before balance
+    test_records.each do |key,fields|
       server_client(0).get(key)[:record].should == fields
     end
 
@@ -132,7 +152,7 @@ describe Monotable::EventMachineServer do
     server_client.chunk_keys("u/bret").should == ["u/bret"]
     server_client(1).chunk_keys("u/bret").should == []
 
-    records.each do |key,fields|
+    test_records.each do |key,fields|
       r0 = server_client(0).get(key)
       r1 = server_client(1).get(key)
       r0[:record].should == fields
@@ -140,22 +160,12 @@ describe Monotable::EventMachineServer do
     end
   end
 
-  it "should be able to write records balanced across two daemons" do
-
+  def populate_balanced_store
     server_client(0).chunks.should == ["", "++0", "+0", "0"]
     server_client(1).chunks.should == []
 
-    records = {
-      "amanda"=> {"dog" => "andy"     },
-      "bret"=>   {"dog" => "buddy"    },
-      "craig"=>  {"dog" => "chuckles" },
-      "dan"=>    {"dog" => "dooper"   },
-      "evan"=>   {"dog" => "erne"     },
-      "frank"=>  {"dog" => "flower"   },
-    }
-
     # split chunks
-    split_keys = records.keys[1..-1].collect {|a|"u/"+a}
+    split_keys = test_records.keys[1..-1].collect {|a|"u/"+a}
     split_keys.each do |key|
       server_client.split_chunk key
     end
@@ -170,10 +180,14 @@ describe Monotable::EventMachineServer do
     server_client(0).chunks.should == ["", "++0", "+0", "0", "u/bret"]
     server_client(1).chunks.should == ["u/craig", "u/dan", "u/evan", "u/frank"]
 
-    # set records
-    records.each do |key,fields|
+    # set test_records
+    test_records.each do |key,fields|
       server_client.set key,fields
     end
+  end
+
+  it "should be able to write records balanced across two daemons" do
+    populate_balanced_store
 
     # verify one record is on server-0 and another is on server-1
     server_client(0).chunk_keys("u/bret").should == ["u/bret"]
@@ -182,11 +196,17 @@ describe Monotable::EventMachineServer do
     server_client(1).chunk_keys("u/craig").should == ["u/craig"]
 
     # validate we can read we can read each record from either server
-    records.each do |key,fields|
+    test_records.each do |key,fields|
       r0 = server_client(0).get(key)
       r1 = server_client(1).get(key)
       r0[:record].should == fields
       r1[:record].should == fields
     end
+  end
+
+  it "internal requests that cannot be answered athoritatively should raise NotAuthoritativeForKey errors" do
+    populate_balanced_store
+
+    lambda {server_client(1).internal.get("u/bret")}.should raise_error(Monotable::NotAuthoritativeForKey)
   end
 end

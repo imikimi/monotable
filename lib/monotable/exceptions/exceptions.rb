@@ -30,4 +30,17 @@ module Monotable
   # Implication:
   #   User (admin) needs to do something to resolve this error
   class MonotableDataStructureError < UserInterventionRequiredError; end
+
+  # On read or write: Thrown when the local_store does not contain the key's chunk.
+  # On write: Thrown when the local server is not the Master for the key's chunk.
+  class NotAuthoritativeForKey < ArgumentError
+    attr_accessor :key
+    def initialize(key)
+      @key=key
+    end
+
+    def to_s
+      "NotAuthoritativeForKey key=#{key.inspect}"
+    end
+  end
 end

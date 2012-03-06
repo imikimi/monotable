@@ -47,17 +47,25 @@ module Monotable
       fields && MemoryRecord.new.init(key,fields)
     end
 
-    def process_response(body,options)
-      if options[:raw_response]
-        body
+    def process_response(code,body,options)
+      if code == 200 || (options[:accept_404] && code == 404)
+        if options[:raw_response]
+          body
+        else
+          Tools.force_encoding(
+            symbolize_keys(
+              JSON.parse(body),
+              options[:keys_to_symbolize_values]
+            ),
+            options[:force_encoding]
+          )
+        end
+      elsif code==409 #&&
+        (parse=JSON.parse(body)) &&
+        key=parse["not_authoritative_for_key"]
+        raise NotAuthoritativeForKey.new(key)
       else
-        Tools.force_encoding(
-          symbolize_keys(
-            JSON.parse(body),
-            options[:keys_to_symbolize_values]
-          ),
-          options[:force_encoding]
-        )
+        raise NetworkError.new("invalid response code: #{code.inspect}")
       end
     end
 
@@ -73,10 +81,7 @@ module Monotable
         }
       )
       code = request.response_header.status
-      if code == 200 || (options[:accept_404] && code == 404)
-        return process_response(request.response,options)
-      end
-      raise NetworkError.new("invalid response code: #{code.inspect} for #{method} request: #{request.inspect}. Result: #{request.response}")
+      process_response(code,request.response,options)
     end
 
     def rest_client_request(method,request_path,options={})
@@ -90,10 +95,7 @@ module Monotable
           :content_type => options[:content_type] || :json,
         }
         ) do |response, request, result|
-        if response.code == 200 || (options[:accept_404] && response.code == 404)
-          return process_response(response.body,options)
-        end
-        raise NetworkError.new("invalid response code: #{response.code.inspect} for #{method} request: #{request.inspect}. Result: #{result.inspect}")
+        process_response(response.code,response.body,options)
       end
     end
 

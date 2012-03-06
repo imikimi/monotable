@@ -44,6 +44,9 @@ Valid Patterns:
     else
       return handle_invalid_request
     end
+
+  rescue NotAuthoritativeForKey => e
+    respond(409, :not_authoritative_for_key => e.key)
   end
 
   def handle_record_request(key)

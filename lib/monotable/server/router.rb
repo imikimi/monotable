@@ -127,7 +127,7 @@ module Monotable
         yield router.local_store,ikey
       else
         unless @forward
-          {:error=>"key not covered by local chunks"}
+          raise NotAuthoritativeForKey.new(key)
         else
           sc = router.server_client(ikey,work_log)
           work_log<<{:server => router.local_server.to_s, :action => [sc.to_s, request_type, ikey]}
