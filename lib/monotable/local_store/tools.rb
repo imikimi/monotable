@@ -28,6 +28,19 @@ module Monotable
       a[0].reverse.gsub(/(\d{3})/,'\1,').chomp(',').reverse+"#{'.'+a[1] if a[1]}"
     end
 
+    # convert all Hashes datastructure of Arrays and Hashs to indifferent hashes
+    def Tools.indifferentize(obj)
+      case obj
+      when Array then obj.collect {|el| indifferentize el}
+      when Hash then
+        indifferent_hash = Hash.new {|hash,key| hash[key.to_s] if Symbol === key }
+        obj.each {|k,v| indifferent_hash[k]=indifferentize v}
+        indifferent_hash
+      else
+        obj
+      end
+    end
+
     # returns the approximate number of bits needed to address a "full" monotable given the
     # max_chunk_size and num_index_levels
     # To get the max monotable size, in bytes: 2 ** Tools.monotable_address_space_size(...)

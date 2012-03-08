@@ -74,7 +74,7 @@ describe ServerClient do
 
   it "should be able to set a record with set" do
     clear_store
-    client.set("foo",{"bar"=>"monkey"}).should>={:result=>:created, :size_delta=>14, :size=>14}
+    client.set("foo",{"bar"=>"monkey"}).should>={:result=>"created", :size_delta=>14, :size=>14}
     client["foo"].should=={"bar" => "monkey"}
   end
 

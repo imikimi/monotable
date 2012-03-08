@@ -12,11 +12,11 @@ require File.expand_path(File.join(File.dirname(__FILE__),'mono_table_helper_met
 describe Monotable::EventMachineServer do
   include DaemonTestHelper
 
-  before(:all) do
+  before(:each) do
     start_daemon
   end
 
-  after(:all) do
+  after(:each) do
     shutdown_daemon
   end
 
@@ -50,6 +50,33 @@ describe Monotable::EventMachineServer do
     RestClient.get("#{daemon_uri}/records/#{record_key}") {|response, request, result|
       response.code.should == 404
     }
+  end
+
+  it "it should work to get_first / get_last across chunk boundaries" do
+    setup_store(5)
+    server_client.split_chunk("u/key3")
+    server_client.chunks.should == ["","u/key3"]
+
+    # get_first test
+    res = server_client.get_first(:gte => "key2", :limit=>3)
+    res[:records].collect{|a|a.to_ruby}.should==[["key2", {"field"=>"2"}]]
+    res[:next_options].should=={"limit"=>2, "gte"=>"key3"}
+
+    # get_first test "next"
+    puts "daemon_spec| res[:next_options]=#{res[:next_options].inspect}"
+    res = server_client.get_first(Monotable::Tools.indifferentize res[:next_options])
+    res[:records].collect{|a|a.to_ruby}.should==[["key3", {"field"=>"3"}], ["key4", {"field"=>"4"}]]
+    res[:next_options].should==nil
+
+    # get_last test
+    res = server_client.get_last(:lte => "key4", :limit=>3)
+    res[:records].collect{|a|a.to_ruby}.should==[["key3", {"field"=>"3"}], ["key4", {"field"=>"4"}]]
+    res[:next_options].should=={"limit"=>1, "lt"=>"key3"}
+
+    # get_last test "next"
+    res = server_client.get_last(res[:next_options])
+    res[:records].collect{|a|a.to_ruby}.should==[["key2", {"field"=>"2"}]]
+    res[:next_options].should==nil
   end
 
   it "should be possible to delete all records in the store" do

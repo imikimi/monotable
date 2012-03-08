@@ -80,7 +80,9 @@ module Monotable
     def route_get_range(options,routing_option)
       normal_options = Tools.normalize_range_options(options)
       route(:get_range,normal_options[routing_option]) do |store,key|
-        yield store, @user_keys ? internalize_range_options(options) : options
+        ret = yield store, @user_keys ? internalize_range_options(options) : options
+        ret[:next_options] = externalize_range_options(ret[:next_options]) if @user_keys && ret[:next_options]
+        ret
       end
     end
 
@@ -105,6 +107,13 @@ module Monotable
     def internalize_range_options(range_options)
       [:gte,:gt,:lte,:lt,:with_prefix].each do |key|
         range_options[key]=internalize_key(range_options[key]) if range_options[key]
+      end
+      range_options
+    end
+
+    def externalize_range_options(range_options)
+      [:gte,:gt,:lte,:lt,:with_prefix].each do |key|
+        range_options[key]=externalize_key(range_options[key]) if range_options[key]
       end
       range_options
     end

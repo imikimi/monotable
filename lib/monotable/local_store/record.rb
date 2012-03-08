@@ -34,6 +34,11 @@ module Monotable
     def [](key) fields[key] end
     def []=(key,v) fields[key]=v end
 
+    # to basic ruby data structures
+    def to_ruby
+      [key,fields]
+    end
+
     def to_json(a=nil,b=nil)
       [key,fields].to_json
     end

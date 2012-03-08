@@ -19,15 +19,15 @@ module Monotable
 
     # see ReadAPI
     def get_first(options={})
-      options = Tools.normalize_range_options(options)
-      gte_key=options[:gte]
+      normalized_options = Tools.normalize_range_options(options)
+      gte_key=normalized_options[:gte]
       get_chunk(gte_key).get_first(options)
     end
 
     # see ReadAPI
     def get_last(options={})
-      options = Tools.normalize_range_options(options)
-      lte_key=options[:lte]
+      normalized_options = Tools.normalize_range_options(options)
+      lte_key=normalized_options[:lte]
       get_chunk(lte_key).get_last(options)
     end
   end

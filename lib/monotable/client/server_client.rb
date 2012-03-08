@@ -52,13 +52,8 @@ module Monotable
         if options[:raw_response]
           body
         else
-          Tools.force_encoding(
-            symbolize_keys(
-              JSON.parse(body),
-              options[:keys_to_symbolize_values]
-            ),
-            options[:force_encoding]
-          )
+          Tools.indifferentize(Tools.force_encoding(JSON.parse(body),options[:force_encoding]))
+#          Tools.force_encoding(symbolize_keys(JSON.parse(body),options[:keys_to_symbolize_values]),options[:force_encoding])
         end
       elsif code==409 #&&
         (parse=JSON.parse(body)) &&
@@ -112,17 +107,6 @@ module Monotable
       return em_synchrony_request method, request_path, options if ServerClient.use_synchrony
       rest_client_request(method,request_path,options)
     end
-
-    def symbolize_keys(hash,keys_to_symbolize_values=nil)
-      keys_to_symbolize_values||={}
-      ret={}
-      hash.each do |k,v|
-        k=k.to_sym
-        v=v.to_sym if keys_to_symbolize_values[k]
-        ret[k]=v
-      end
-      ret
-    end
   end
 
   # see ReadAPI
@@ -164,14 +148,10 @@ module Monotable
   module ServerClientWriteAPI
     include WriteAPI
 
-    # this lists the KEYS of the returned JSON for which we want to automatically SYMBOLIZE their values.
-    KEYS_TO_SYMBOLIZE_VALUES={:result => true}
-
     # update_field exists to present an efficient way to write larger binary data over HTTP.
     def update_field(key,field,value)
       request :put, "#{path_prefix}records/#{ue key}?field=#{ue field}",
         :body => value,
-        :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES,
         :content_type => "application/octet-stream"
     end
 
@@ -179,18 +159,18 @@ module Monotable
     def set(key,fields)
       raise Monotable::ArgumentError.new("fields must be a Hash") unless fields.kind_of? Hash
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
+      request :post, "#{path_prefix}records/#{ue key}", :body => fields.to_json
     end
 
     # see WriteAPI
     def update(key,fields)
       fields = Tools.force_encoding(fields,"UTF-8")
-      request :put, "#{path_prefix}records/#{ue key}", :body => fields.to_json, :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
+      request :put, "#{path_prefix}records/#{ue key}", :body => fields.to_json
     end
 
     # see WriteAPI
     def delete(key)
-      request :delete, "#{path_prefix}records/#{ue key}", :keys_to_symbolize_values => KEYS_TO_SYMBOLIZE_VALUES
+      request :delete, "#{path_prefix}records/#{ue key}"
     end
   end
 
@@ -241,7 +221,7 @@ module Monotable
 
     # uri-encode string
     def ue(str)
-      URI.encode(str)
+      URI.encode(str.to_s)
     end
 
     #options

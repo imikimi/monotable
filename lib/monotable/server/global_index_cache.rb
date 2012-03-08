@@ -30,6 +30,12 @@ c) we need to determine the range_end for the chunk covered and note it in the
 module Monotable
   class GlobalIndexCache
     class << self
+      attr_accessor :cached_records
+
+      def evict(index_record)
+        cached_record.delete index_record.key
+      end
+
       def init
         @cache=Cache.global_cache
       end
@@ -41,7 +47,16 @@ module Monotable
       def [](internal_key) @cache.get(cache_key(internal_key)) end
       def []=(internal_key,value) @cache[cache_key(internal_key)]=value end
 
-      #def get(internal_key,&block) @cache.get(cache_key(internal_key),&block) end
+      def get_new(internal_key,&block)
+        candidate_record = cached_records.lower_bound(internal_key)
+        return candidate_record if candidate_record && (
+          !candidate_record.next_index_record_key ||  # TODO: remove this backward compatibility with not initializing next_index_record_key - this just means we'll invalidate the cache more often than we should
+          internal_key < candidate_record.next_index_record_key # eventual correct, more efficient behavior
+        )
+
+        cache[cache_key(internal_key)] = yield
+      end
+
       def get(internal_key,&block) yield end # caching disabled
 
       def delete(internal_key) @cache.delete(cache_key(interanl_key)) end

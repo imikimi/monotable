@@ -86,17 +86,18 @@ module Monotable
       #puts "#{self.class}#get_first(#{options.inspect}) normalized_options=#{normalized_options.inspect}"
       gte_key=normalized_options[:gte]
       lte_key=normalized_options[:lte]
-      limit=normalized_options[:limit]
+      limit = normalized_options[:limit]
       next_options = nil
 
       res=[]
       each_key do |k|
+        #puts "#{self.class}#get_first() object_id=#{self.object_id} k=#{k.inspect}"
         break if res.length>=limit || k > lte_key
         res << get_record(k) if k>=gte_key
       end
       if range_end!=:infinity && lte_key >= range_end && res.length < limit
         next_options=options.clone
-        next_options[:limit]-=res.length
+        next_options[:limit]=limit - res.length
         next_options[:gte]=range_end
         next_options.delete(:gt)
       end
@@ -119,9 +120,9 @@ module Monotable
       end
       if gte_key < range_start && res.length < limit
         next_options=options.clone
-        next_options[:limit]-=res.length
-        next_options[:lte]=range_start.binary_prev(DEFAULT_MAX_KEY_LENGTH)
-        next_options.delete(:lt)
+        next_options[:limit]=limit - res.length
+        next_options[:lt]=range_start
+        next_options.delete(:lte)
       end
       {:records=>res.reverse,:next_options=>next_options}
     end
@@ -146,7 +147,7 @@ module Monotable
       fields = ((record=get_record(key)) && record.fields) || {}
       fields.update(columns)
       ret=set(key,fields) # call set so DiskChunk can override it
-      ret[:result]=:updated if ret[:result]==:replaced
+      ret[:result]="updated" if ret[:result]=="replaced"
       ret
     end
 
@@ -353,18 +354,18 @@ module Monotable
     #################################
     # bulk edits
     #################################
-    # returns {:result => :replaced} or {:result => :created}
+    # returns {:result => "replaced"} or {:result => "created"}
     def set_internal(key,record)
       sub_delta = sub_size(key)
       @records[key]=record
       add_delta = add_size(key,record)
-      {:result=> sub_delta!=0 ? :replaced : :created, :size_delta=>add_delta-sub_delta, :size=>record.accounting_size}
+      {:result=> sub_delta!=0 ? "replaced" : "created", :size_delta=>add_delta-sub_delta, :size=>record.accounting_size}
     end
 
     def delete_internal(key)
       sub_delta = sub_size(key)
       records.delete(key)
-      {:result=> sub_delta!=0 ? :deleted : :noop, :size_delta=>-sub_delta}
+      {:result=> sub_delta!=0 ? "deleted" : "no-op", :size_delta=>-sub_delta}
     end
 
     def bulk_set(records)     records.each {|k,v| set_internal(k,v)} end

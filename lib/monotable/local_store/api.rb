@@ -76,10 +76,10 @@ module ReadAPI
     # set replaces the entire value of the record
     # fields must be a hash or a Monotable::Record
     # returns
-    #   record !existed: {:result=>:created, :size_delta=>#, :size=>#}
-    #   record existed: {:result=>:replaced, :size_delta=>#, :size=>#}
+    #   record !existed: {:result=>"created", :size_delta=>#, :size=>#}
+    #   record existed: {:result=>"replaced", :size_delta=>#, :size=>#}
     #
-    # :size_delta is the change in byte-size to the store. If :created, it will be >0. Otherwise, could be anything.
+    # :size_delta is the change in byte-size to the store. If "created", it will be >0. Otherwise, could be anything.
     # :size is the byte-size of the record afterward
     #
     def set(key,fields)
@@ -88,10 +88,10 @@ module ReadAPI
 
     # update will only overwrite the listed fields, other fields are left unchanged
     # returns
-    #   record !existed: {:result=>:created, :size_delta=>#, :size=>#}
-    #   record existed: {:result=>:updated, :size_delta=>#, :size=>#}
+    #   record !existed: {:result=>"created", :size_delta=>#, :size=>#}
+    #   record existed: {:result=>"updated", :size_delta=>#, :size=>#}
     #
-    # :size_delta is the change in byte-size to the store. If :created, it will be >0. Otherwise, could be anything.
+    # :size_delta is the change in byte-size to the store. If "created", it will be >0. Otherwise, could be anything.
     # :size is the byte-size of the record afterward
     #
     # Notes:
@@ -102,8 +102,8 @@ module ReadAPI
     end
 
     # returns
-    #   record existed: {:result=>:deleted, :size_delta=>#}
-    #   record !existed: {:result=>:noop, :size_delta=>#}
+    #   record existed: {:result=>"deleted", :size_delta=>#}
+    #   record !existed: {:result=>"no-op", :size_delta=>#}
     #
     # :size_delta is the change in byte-size to the store. It will be <0 or 0.
     def delete(key)

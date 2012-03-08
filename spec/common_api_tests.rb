@@ -56,10 +56,10 @@ shared_examples "monotable api" do |options|
   #*******************************************************
   it "should set" do
     store=blank_store
-    store.set("key1", {"field1" => "value1"}).should>={:result=>:created, :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
-    store.set("key1", {"field2" => "value2"}).should>={:result=>:replaced, :size_delta=>0, :size=>16+key_prefix_size}
+    store.set("key1", {"field1" => "value1"}).should>={:result=>"created", :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
+    store.set("key1", {"field2" => "value2"}).should>={:result=>"replaced", :size_delta=>0, :size=>16+key_prefix_size}
     store.get("key1").should>={:record=>{"field2" => "value2"},:size=>16+key_prefix_size,:num_fields=>1}
-    store.set("key1", {"field2" => "vv"}).should>={:result=>:replaced, :size_delta=>-4, :size=>12+key_prefix_size}
+    store.set("key1", {"field2" => "vv"}).should>={:result=>"replaced", :size_delta=>-4, :size=>12+key_prefix_size}
   end
 
   it "should set binary data" do
@@ -72,10 +72,10 @@ shared_examples "monotable api" do |options|
 
   it "should update" do
     store=blank_store #Monotable::MemoryChunk.new
-    store.update("key1", {"field1" => "value1"}).should>={:result=>:created, :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
-    store.update("key1", {"field2" => "value2"}).should>={:result=>:updated, :size_delta=>12, :size=>28+key_prefix_size}
+    store.update("key1", {"field1" => "value1"}).should>={:result=>"created", :size_delta=>16+key_prefix_size, :size=>16+key_prefix_size}
+    store.update("key1", {"field2" => "value2"}).should>={:result=>"updated", :size_delta=>12, :size=>28+key_prefix_size}
     store.get("key1").should>={:record=>{"field1" => "value1", "field2" => "value2"},:size=>28+key_prefix_size,:num_fields=>2}
-    store.update("key1", {"field2" => "v"}).should>={:result=>:updated, :size_delta=>-5, :size=>23+key_prefix_size}
+    store.update("key1", {"field2" => "v"}).should>={:result=>"updated", :size_delta=>-5, :size=>23+key_prefix_size}
   end
 
   #*******************************************************
@@ -84,9 +84,9 @@ shared_examples "monotable api" do |options|
   it "should get_record existing" do
     store=setup_store_with_test_keys
     store.get("key1")[:record].should_not==nil
-    store.delete("key1").should>={:result=>:deleted, :size_delta=>-12-key_prefix_size}
+    store.delete("key1").should>={:result=>"deleted", :size_delta=>-12-key_prefix_size}
     store.get("key1")[:record].should==nil
-    store.delete("key1").should>={:result=>:noop, :size_delta=>0}
+    store.delete("key1").should>={:result=>"no-op", :size_delta=>0}
   end
 
 

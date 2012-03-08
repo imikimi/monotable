@@ -3,11 +3,13 @@ module Monotable
 
     class ChunkIndexRecord < MemoryRecord # TODO - why doesn't this work? MemoryRecord not defined... ?
       attr_reader :servers
+      attr_reader :next_index_record_key
 
       # initialize from an existing monotable_record
       # OR a chunk
       # OR key for new chunk
-      def initialize(initializer,servers=nil)
+      def initialize(initializer,servers=nil,next_index_record_key=nil)
+        @next_index_record_key = next_index_record_key
         case initializer
         when Chunk, String then self.key = GlobalIndex.index_key(initializer)
         when nil then
@@ -18,6 +20,10 @@ module Monotable
         end
 
         @servers ||= servers || []
+      end
+
+      def evict
+        GlobalIndexCache.evict(self)
       end
 
       def fields(columns_hash=nil)
