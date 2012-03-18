@@ -114,7 +114,10 @@ module Monotable
     def find(internal_key,work_log=nil)
       return first_record if (internal_key[/^\+*/]).length >= index_depth
       index_record_key=INDEX_KEY_PREFIX+internal_key # note, this doesn't have to be the exact key, just >= they key and < the next key
+
+      # remote request
       response = request_router.get_last(:lte=>index_record_key,:limit=>1)
+
       response[:work_log].each {|e| work_log<<e} if work_log
       record = response[:records][0]
       return ChunkIndexRecord.new(record) if record
