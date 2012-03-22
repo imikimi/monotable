@@ -63,7 +63,6 @@ describe Monotable::EventMachineServer do
     res[:next_options].should=={"limit"=>2, "gte"=>"key3"}
 
     # get_first test "next"
-    puts "daemon_spec| res[:next_options]=#{res[:next_options].inspect}"
     res = server_client.get_first(Monotable::Tools.indifferentize res[:next_options])
     res[:records].collect{|a|a.to_ruby}.should==[["key3", {"field"=>"3"}], ["key4", {"field"=>"4"}]]
     res[:next_options].should==nil

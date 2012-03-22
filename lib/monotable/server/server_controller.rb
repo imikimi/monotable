@@ -83,7 +83,7 @@ class ServerController < RequestHandler
     return handle_invalid_request("chunk-id required") unless @resource_id
     chunk = server.local_store.get_chunk(@resource_id)
     if chunk
-      respond 200, :status => "found", :chunk_info => chunk_info(chunk)
+      respond 200, :status => "found", :chunk_info => chunk.status
     else
       respond 404, {:status => "chunk not on server"}
     end
@@ -102,15 +102,6 @@ class ServerController < RequestHandler
     end
   end
 
-  def chunk_info(chunk)
-    {
-      :range_start => chunk.range_start,
-      :range_end => chunk.symbolless_range_end,
-      :accounting_size => chunk.accounting_size,
-      :record_count => chunk.length
-    }
-  end
-
   def split_chunk
     on_key = @resource_id
     return handle_invalid_request("split-on key required") unless on_key
@@ -118,7 +109,7 @@ class ServerController < RequestHandler
     if chunk
       right_chunk = chunk.split(on_key)
       server.global_index.add_local_replica(right_chunk,true)
-      respond 200, :status => "success", :chunks => [chunk_info(chunk), chunk_info(right_chunk)]
+      respond 200, :status => "success", :chunks => [chunk.status, right_chunk.status]
     else
       respond 404, {:status => "chunk not on server"}
     end

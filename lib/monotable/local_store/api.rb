@@ -1,3 +1,59 @@
+=begin
+
+SBD: I'd like to split up the api clearly into an api that deals with Record
+objects and one that deals with the raw ruby structures. Further, the raw api
+won't automatically perform repeat requests to fetch all the requested data
+whereas the Record api will.
+
+Further, the Record objects should support the "Save" operation - setting the
+current values back to the monotable. We may want some additional features:
+
+  save-only-changed-fields
+  safe-save (save only if fields didn't change in the monotable)
+  save! - just save, overwriting all with the current records
+
+These can all be simulated by the more basic set, update, and cas operations.
+
+  #**************************
+  # raw api
+  #**************************
+
+  # returns:
+  #   exists: {:record=>{hash-of-fields}, ...}
+  #   !exist: {:record=>nil}
+  def get_raw(key,fields={}) end
+
+  # Fetches only the first batch of records and returns the options for the next batch in :next_options
+  # Returns
+  #   {:records=>[[key,{fields_hash}]], :next_options=>{...}}
+  def get_first_raw(options={}) end
+
+  # Fetches only the first batch of records and returns the options for the next batch in :next_options
+  # Returns
+  #   {:records=>[[key,{fields_hash}]], :next_options=>{...}}
+  def get_last_raw(options={}) end
+
+  #**************************
+  # record api
+  #**************************
+
+  # Automatically makes repeated calls to fetch all requested records up to :limit
+  # Returns
+  #   Record
+  def get(key,fields={})
+
+  # Automatically makes repeated calls to fetch all requested records up to :limit
+  # Returns
+  #   [Records]
+  def get_first(options={}) end
+
+  # Returns
+  #   [Records]
+  def get_last(options={}) end
+
+=end
+
+
 module Monotable
 module ReadAPI
 
@@ -26,7 +82,6 @@ module ReadAPI
       end
     end
 
-    # returns array in format: {:records=>[[key,record],...],:next_options}
     # get_first :gte => key
     # options
     #   :limit => # (default = 1)
@@ -38,7 +93,7 @@ module ReadAPI
     #   :columns => nil / {...}
     #
     # Returns
-    #   {:records=>[[key,{fields_hash}],[...],...], :next_options=>{...}}
+    #   {:records=>[[key,record],...],:next_options}
     def get_first(options={})
       raise "stub"
     end
@@ -54,16 +109,16 @@ module ReadAPI
     #   :columns => nil / {...}
     #
     # Returns
-    #   {:records=>[[key,{fields_hash}],[...],...], :next_options=>{...}}
+    #   {:records=>[[key,Record],[...],...], :next_options=>{...}}
     #
     # Examples
-    #   store.get_first(:gte=>"key2") => {:records=>[["key2",{"field"=>"value"}]], ...}
-    #   store.get_first(:gt=>"key2") => {:records=>[["key3",{"field"=>"value"}]], ...}
-    #   store.get_first(:with_prefix=>"key2") => {:records=>[["key3",{"field"=>"value"}]], ...}
+    #   store.get_first(:gte=>"key2") => {:records=>[["key2",Record.new("field"=>"value")]], ...}
+    #   store.get_first(:gt=>"key2") => {:records=>[["key3",Record.new("field"=>"value")]], ...}
+    #   store.get_first(:with_prefix=>"key2") => {:records=>[["key3",Record.new("field"=>"value")]], ...}
     #   store.get_first(:gt=>"key2", :limit=>3) => {:records=>[
-    #     ["key3",{"field"=>"value"}],
-    #     ["key4",{"field"=>"value"}],
-    #     ["key5",{"field"=>"value"}]
+    #     ["key3",Record.new("field"=>"value")],
+    #     ["key4",Record.new("field"=>"value")],
+    #     ["key5",Record.new("field"=>"value")]
     #   ],...}
     def get_last(options={})
       raise "stub"

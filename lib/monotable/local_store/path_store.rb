@@ -37,6 +37,15 @@ module Monotable
       @chunks.inject(0) {|total,keychunk| keychunk[1].length + total}
     end
 
+    def status
+      {
+      :chunk_count => @chunks.length,
+      :accounting_size => accounting_size,
+      :record_count => record_count,
+      :path => path,
+      }
+    end
+
     # load the config file on disk if it exists
     # returns true if the file was loaded, false if it didn't exist
     def load_config

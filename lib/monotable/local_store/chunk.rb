@@ -211,6 +211,15 @@ module Monotable
       [range_start,range_end]
     end
 
+    def status
+      {
+      :range_start => range_start,
+      :range_end => symbolless_range_end,
+      :accounting_size => accounting_size,
+      :record_count => length
+      }
+    end
+
     def info; @info||=Xbd::Tag.new("info") end
 
     def []=(key,value) set(key,value); end

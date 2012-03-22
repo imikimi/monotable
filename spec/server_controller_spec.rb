@@ -13,7 +13,7 @@ describe Monotable::HttpServer::ServerController do
   include DaemonTestHelper
 
   before(:all) do
-    start_daemon
+    start_daemon(:num_store_paths => 1,:initialize_new_test_store => true)
   end
 
   after(:all) do
@@ -78,4 +78,8 @@ describe Monotable::HttpServer::ServerController do
     server_client.split_chunk("foo")
     server_client.chunks.should == ["","foo"]
   end
+
+#  it "server/local_store_status should return multiple store_paths" do
+#    server_client.local_store_status["path_stores"].should=="boo"
+#  end
 end

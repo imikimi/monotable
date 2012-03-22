@@ -35,6 +35,7 @@ module DaemonTestHelper
   end
 
   def start_daemon(options={:initialize_new_test_store => true})
+    num_store_paths = options[:num_store_paths] || 1
     print "<"
     # Start up the daemon
     daemon_number = server_pids.length
@@ -43,7 +44,7 @@ module DaemonTestHelper
 #      Monotable::EventMachineServer::HttpServer.start({
         :port=>port + daemon_number,
         :host=>host,
-        :store_paths => [local_store_path],
+        :store_paths => num_store_paths.times.collect {local_store_path},
 #        :verbose => true,
       }.merge(options)
       )

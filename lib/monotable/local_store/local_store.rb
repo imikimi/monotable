@@ -132,11 +132,12 @@ module Monotable
 
     # return a simple, human and machine-readable ruby structure describing the status of the cluster
     def status
+      path_store_status = @path_stores.collect {|ps| ps.status}
       {
-      "chunk_count" => @chunks.length,
-      "store_paths" => @path_stores.collect {|a| a.path},
-      "accounting_size" => accounting_size,
-      "record_count" => record_count,
+      :chunk_count => @chunks.length,
+      :path_stores => @path_stores.collect {|ps| ps.status},
+      :accounting_size => path_store_status.inject(0) {|total,ps| total+ps[:accounting_size]},
+      :record_count => path_store_status.inject(0) {|total,ps| total+ps[:record_count]},
       }
     end
 
@@ -163,7 +164,6 @@ module Monotable
       verify_store_is_blank_for_init
       add_chunk MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
     end
-
 
     #*************************************************************
     # Internal API

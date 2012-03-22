@@ -38,7 +38,7 @@ describe Monotable::EventMachineServer do
   it "both daemons should have different local stores" do
     local_store1_stats=server_client(0).local_store_status
     local_store2_stats=server_client(1).local_store_status
-    local_store1_stats[:store_paths].should_not==local_store2_stats[:store_paths]
+    local_store1_stats[:path_stores].should_not==local_store2_stats[:path_stores]
   end
 
   class ScanningClient

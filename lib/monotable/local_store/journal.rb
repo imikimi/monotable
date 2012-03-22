@@ -44,6 +44,8 @@ module Monotable
       when "del" then {:command=>:delete,:chunk_file=>strings[1],:key=>strings[2]}
       when "delete_chunk" then {:command=>:delete_chunk,:chunk_file=>strings[1]}
       when "split" then {:command=>:split,:chunk_file=>strings[1],:key=>strings[2],:to_file => strings[3]}
+      when "move_chunk" then
+        {:command => :move_chunk, :chunk_file => strings[1], :path_store_path => strings[2]}
       when "set" then
         fields={}
         i=3
@@ -53,7 +55,7 @@ module Monotable
         end
         {:command=>:set,:chunk_file=>strings[1],:key=>strings[2],:fields=>fields}
       else
-        raise "invalid Journal Chunk command: #{command.inspect}"
+        raise InternalError.new "Journal.parse_entry: invalid journal entry command: #{command.inspect}"
       end
     end
 
@@ -62,9 +64,14 @@ module Monotable
       when :set then chunk.set(journal_entry[:key],journal_entry[:fields])
       when :delete then chunk.delete(journal_entry[:key])
       when :delete_chunk then File.delete journal_entry[:chunk_file]
+      when :move_chunk then
+        chunk.
+        local_store.get_path_store(journal_entry[:path_store_path])
       when :split then
         chunk2=chunk.split(journal_entry[:key])
         chunks[journal_entry[:to_file]] = chunk2
+      else
+        raise InternalError.new "Journal.apply_entry: invalid journal_entry[:command]: #{journal_entry[:command].inspect}"
       end
     end
 
@@ -94,6 +101,10 @@ module Monotable
 
     def delete_chunk(chunk_file)
       save_entry ["delete_chunk",chunk_file.to_s]
+    end
+
+    def move_chunk(chunk_file,path_store)
+      save_entry ["move_chunk",chunk_file.to_s,path_store.path]
     end
 
     def split(chunk_file,key,to_filename)
@@ -166,7 +177,7 @@ module Monotable
       completed_chunks={}
       entries_by_chunk.each do |chunk_filename,entries|
         # chunks involved in merges and splits will be processed together when the first representative of that
-        # cluster is processed. Hense, when we attempt to process the other members later, we just skip them.
+        # cluster is processed. Hence, when we attempt to process the other members later, we just skip them.
         next if completed_chunks[chunk_filename]
 
         chunks = apply_entries_in_memory entries
@@ -187,10 +198,13 @@ module Monotable
     # file is a FileHandle or filename
     # phase 1 does 99% of the work:
     #   * reads the journal
-    #   * reads all the effected chunks
-    #   * generates the new versions of the chunks in a temporary directory.
-    # Phase 1 can safely be run as long as the journal_file is no longer being written to.
-    # It is safe to continue to read from the journal and the effected chunks during Phase 1.
+    #   * reads all the affected chunks
+    #   * generates and writes the new versions of the chunks to a temporary directory.
+    # Phase 1 can safely be run without blocking any server requests as long as one condition holds:
+    #   The journal_file being compacted can no longer be written to.
+    # In Phase 1, it is safe to:
+    #   Read from the affected chunks (which includes reading from the journal file)
+    #   Write to the affected chunks (as long as they are writing to a new journal)
     def Journal.compact_phase_1(journal_file)
       journal_file = FileHandle.new(journal_file) unless journal_file.kind_of?(FileHandle)
       compacted_chunks_path = Journal.compaction_dir(journal_file.to_s)
@@ -277,7 +291,7 @@ module Monotable
       # move all the compacted files back into position
       base_path=File.dirname(journal_file.filename)
       Dir.glob(File.join(compacted_chunks_path,"*#{CHUNK_EXT}")).each do |compacted_file|
-        chunk_file=File.join(base_path,File.basename(compacted_file))
+        chunk_file = File.join(base_path,File.basename(compacted_file))
         # TODO: lock chunk_file's matching DiskChunk object
         FileUtils.rm [chunk_file] if File.exists?(chunk_file)
         FileUtils.mv compacted_file,chunk_file
@@ -285,7 +299,7 @@ module Monotable
         # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
         #   Then we can just:
         #     Chunk[chunk_file].reset
-        (cf=DiskChunk[chunk_file]) && cf.reset
+        (cf = DiskChunk[chunk_file]) && cf.reset
       end
 
       FileUtils.rm success_filename

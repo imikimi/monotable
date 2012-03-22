@@ -96,6 +96,10 @@ module Monotable
       @current_journal.split(chunk_file,key,to_filename)
     end
 
+    def move_chunk(chunk_file,path_store)
+      @current_journal.move_chunk(chunk_file,path_store)
+    end
+
     #**********************************************
     #**********************************************
     private

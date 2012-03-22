@@ -81,6 +81,10 @@ module Monotable
       @file_handle.read(0)
     end
 
+    def move(new_path_store)
+      journal.move_chunk(file_handle,new_path_store)
+    end
+
     #*************************************************************
     # Write API
     #*************************************************************
