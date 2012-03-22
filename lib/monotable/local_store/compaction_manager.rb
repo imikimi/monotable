@@ -35,13 +35,13 @@ module Monotable
       def compact(journal_file,&block)
         async_task = Proc.new do
           Tools.log_time("async:Journal.compact_phase_1_external(#{journal_file.inspect})",true) do
-            Journal.compact_phase_1_external(journal_file)
+            Compactor.new(journal_file).compact_phase_1_external
           end
         end
 
         post_task = Proc.new do
           Tools.log_time("sync:Journal.compact_phase_2(#{journal_file.inspect})") do
-            Journal.compact_phase_2(journal_file)
+            Compactor.new(journal_file).compact_phase_2
             yield if block
           end
           start_next_compaction

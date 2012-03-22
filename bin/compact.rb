@@ -29,7 +29,7 @@ def compact(journal_file)
     return 2
   end
   begin
-    Monotable::Journal.compact_phase_1(journal_file)
+    Monotable::Compactor.new(journal_file).compact_phase_1
     puts "SUCCESS"
     return 0
   rescue Exception => e

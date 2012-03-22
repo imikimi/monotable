@@ -24,6 +24,7 @@ monotable_require :local_store, %w{
   tools
   file_handle
   journal
+  compactor
   journal_manager
   compaction_manager
   logger
