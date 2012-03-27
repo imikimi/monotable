@@ -187,6 +187,7 @@ module Monotable
     end
 
     def init_chunk(options={})
+      @file_handle = FileHandle.new(options[:filename]) if options[:filename]
       @path_store = options[:path_store]
       @max_chunk_size = options[:max_chunk_size] || ((ps=options[:path_store]) && ps.max_chunk_size) || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || ((ps=options[:path_store]) && ps.max_index_block_size) ||  DEFAULT_MAX_INDEX_BLOCK_SIZE
@@ -196,6 +197,19 @@ module Monotable
       @records=options[:records] || {}
       @accounting_size=0
       @loaded_record_count=0
+    end
+
+    def filename=(fn)
+      self.file_handle = fn
+    end
+
+    def filename
+      @file_handle.to_s
+    end
+
+    # fh can be a FileHandle or the filename (as a string)
+    def file_handle=(fh)
+      @file_handle = fh.kind_of?(FileHandle) ? fh : FileHandle.new(fh)
     end
 
     # the key for the index record for this chunk
@@ -563,7 +577,9 @@ module Monotable
       [HEADER, checksum_prefix, entry_body].join
     end
 
-    def save(filename)
+    # saves to the specified filename or self.filename if non provided
+    def save(filename=nil)
+      filename ||= self.filename
       filename += CHUNK_EXT unless filename[-CHUNK_EXT.length..-1]==CHUNK_EXT
       File.open(filename,"wb") {|f| f.write to_binary}
       filename

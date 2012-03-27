@@ -14,8 +14,9 @@ module Monotable
     # options
     #   :data => string
     def initialize(options={})
-      data=options[:data]
+      data = options[:data]
       init_chunk(options)
+      data ||= file_handle && file_handle.read
       if data
         io_stream = data.kind_of?(String) ? StringIO.new(data) : data
         parse(io_stream)
@@ -23,7 +24,7 @@ module Monotable
     end
 
     def MemoryChunk.load(filename)
-      File.open(filename,"rb") {|f|MemoryChunk.new(:data=>f)}
+      MemoryChunk.new(:filename => filename)
     end
 
     #***************************************************

@@ -59,7 +59,6 @@ module Monotable
     def init_disk_chunk_base(options={})
       raise ":filename require" unless options[:filename]
       init_chunk(options)
-      @file_handle=FileHandle.new(options[:filename])
       @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       init_from_disk

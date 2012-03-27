@@ -14,11 +14,14 @@ module Monotable
       when :delete then chunk.delete(journal_entry[:key])
       when :delete_chunk then File.delete journal_entry[:chunk_file]
       when :move_chunk then
-        chunk.
+        raise "hell"
+#        chunk.
         local_store.get_path_store(journal_entry[:path_store_path])
       when :split then
+        to_filename = journal_entry[:to_file]
         chunk2=chunk.split(journal_entry[:key])
-        chunks[journal_entry[:to_file]] = chunk2
+        chunk2.filename = File.join(compaction_working_path, File.basename(to_filename))
+        chunks[to_filename] = chunk2
       else
         raise InternalError.new "apply_entry: invalid journal_entry[:command]: #{journal_entry[:command].inspect}"
       end
@@ -76,8 +79,16 @@ module Monotable
     def apply_entries_in_memory(entries)
       entries.each do |entry|
         chunk_filename = entry[:chunk_file]
-        chunks[chunk_filename] ||= MemoryChunk.load(chunk_filename)
+
+        if !chunks[chunk_filename]
+          new_chunk = MemoryChunk.new(:filename => chunk_filename)
+          new_chunk.filename = File.join(compaction_working_path, File.basename(new_chunk.filename))
+          chunks[chunk_filename] = new_chunk
+        end
+
         chunk = chunks[chunk_filename]
+
+        #puts "apply_entries_in_memory chunk.filename=#{chunk.filename.inspect} chunk_filename=#{chunk_filename.inspect}"
         apply_entry(entry,chunk)
       end
     end
@@ -101,7 +112,8 @@ module Monotable
     # TODO: Write comacted_chunks to most-empty/least-loaded PathStores to Balance them
     def write_compacted_chunks
       chunks.each do |chunk_filename,chunk|
-        new_chunk_filename=File.join(compaction_working_path, File.basename(chunk_filename))
+        new_chunk_filename = File.join(compaction_working_path, File.basename(chunk_filename))
+        puts "ERROR write_compacted_chunks new_chunk_filename=#{new_chunk_filename.inspect} chunk.filename=#{chunk.filename.inspect}" unless new_chunk_filename==chunk.filename
         chunk.save new_chunk_filename
       end
     end
