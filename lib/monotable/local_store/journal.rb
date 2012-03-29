@@ -46,7 +46,7 @@ module Monotable
         when "delete_chunk" then {:command=>:delete_chunk,:chunk_file=>strings[1]}
         when "split" then {:command=>:split,:chunk_file=>strings[1],:key=>strings[2],:to_file => strings[3]}
         when "move_chunk" then
-          {:command => :move_chunk, :chunk_file => strings[1], :path_store_path => strings[2]}
+          {:command => :move_chunk, :chunk_file => strings[1], :to_store_path => strings[2]}
         when "set" then
           fields={}
           i=3

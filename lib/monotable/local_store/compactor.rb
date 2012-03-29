@@ -15,8 +15,11 @@ module Monotable
       when :delete_chunk then File.delete journal_entry[:chunk_file]
       when :move_chunk then
         raise "hell"
-#        chunk.
-        local_store.get_path_store(journal_entry[:path_store_path])
+=begin
+        # this should work...
+        to_store_path = journal_entry[:to_store_path]
+        chunk.filename = compaction_working_path(to_store_path)
+=end
       when :split then
         to_filename = journal_entry[:to_file]
         chunk2=chunk.split(journal_entry[:key])
@@ -35,7 +38,10 @@ module Monotable
       end
     end
 
-    def compaction_working_path
+    def compaction_working_path(other_store_path=nil)
+      if other_store_path
+        return File.join(other_store_path, File.basename(journal_filename) + COMPACT_DIR_EXT)
+      end
       @compaction_working_path ||= journal_filename + COMPACT_DIR_EXT
     end
 
