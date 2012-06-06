@@ -10,7 +10,7 @@ describe Monotable::LocalStore do
     cleanup
   end
 
-  class VirtualSizeFileSystem < Monotable::Tools::FileSystem
+  class VirtualSizeFileSystemMock < Monotable::Tools::FileSystem
     def initialize(virtual_size)
       @virtual_size = virtual_size
     end
@@ -20,7 +20,7 @@ describe Monotable::LocalStore do
     end
   end
 
-  class FixedFreeSpaceFileSystem < Monotable::Tools::FileSystem
+  class FixedFreeSpaceFileSystemMock < Monotable::Tools::FileSystem
     def initialize(free_space)
       @free_space = free_space
     end
@@ -56,7 +56,7 @@ describe Monotable::LocalStore do
 
   it "should be able to get free_space on multiple file systems" do
     server = blank_server_with_two_path_stores(
-      :file_system => VirtualSizeFileSystem.new(10*1024**2) # 10 megs
+      :file_system => VirtualSizeFileSystemMock.new(10*1024**2) # 10 megs
       )
     local_store = server.local_store
     path_stores = local_store.path_stores
@@ -72,7 +72,7 @@ describe Monotable::LocalStore do
 
   it "new chunks should distribute evenly across multiple path_stores" do
     server = blank_server_with_two_path_stores(
-      :file_system => VirtualSizeFileSystem.new(10*1024**2) # 10 megs
+      :file_system => VirtualSizeFileSystemMock.new(10*1024**2) # 10 megs
       )
     local_store = server.local_store
     path_stores = local_store.path_stores
@@ -84,7 +84,7 @@ describe Monotable::LocalStore do
 
   it "should work to move a chunk to a new path_store" do
     server = blank_server_with_two_path_stores(
-      :file_system => FixedFreeSpaceFileSystem.new(10*1024**2) # 10 megs
+      :file_system => FixedFreeSpaceFileSystemMock.new(10*1024**2) # 10 megs
       )
     local_store = server.local_store
 
