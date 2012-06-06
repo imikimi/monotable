@@ -127,6 +127,7 @@ Valid Patterns:
     #   Real example: {:error=>"key not covered by local chunks"}
     def get_first(options={})
       content=deobjectify_records @store.get_first(options)
+      Tools.debug :options => options, :content => content
       respond(200,content)
     end
 

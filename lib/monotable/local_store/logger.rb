@@ -3,7 +3,7 @@ module Monotable
     class << self
       def <<(level,info=nil)
         level,info = :info,level unless info
-        info = "#{Time.now.to_s}: #{info}"
+        info = "#{Process.pid}:#{Time.now.to_s}: #{info}"
         print info
 #        log level,info
       end

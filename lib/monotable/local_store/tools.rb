@@ -28,6 +28,23 @@ module Monotable
       a[0].reverse.gsub(/(\d{3})/,'\1,').chomp(',').reverse+"#{'.'+a[1] if a[1]}"
     end
 
+    def Tools.debug_info(str)
+      caller=Kernel.caller[1].split(/.*\/monotable.*\//)[-1]
+      caller=caller.split(":")
+      method=caller[2][4..-2].split("block in ")[-1]
+      caller=sprintf("#{Process.pid}:%-30s%s: ","#{caller[0]}(#{caller[1]})",method)
+      str = str.inspect unless str.kind_of?(String)
+      caller+str
+    end
+
+    def Tools.debug_raise(str="(execution reached this line)")
+      raise Monotable::InternalError.new debug_info(str)
+    end
+
+    def Tools.debug(str="(execution reached this line)")
+#      $stderr.puts debug_info(str)
+    end
+
     # convert all Hashes datastructure of Arrays and Hashs to indifferent hashes
     def Tools.indifferentize(obj)
       case obj

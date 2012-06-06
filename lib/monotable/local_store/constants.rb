@@ -10,6 +10,9 @@ module Monotable
   DEFAULT_MAX_INDEX_BLOCK_SIZE = 64 * 1024
   JOURNAL_COMPACTION_SUCCESS_FILENAME = "journal_compaction_was_successful"
 
+  FIRST_POSSIBLE_KEY=""
+  LAST_POSSIBLE_KEY="~"
+
   FIRST_DATA_KEY="0"
   INDEX_KEY_PREFIX="+"
 end

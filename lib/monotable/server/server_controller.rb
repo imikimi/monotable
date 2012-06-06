@@ -129,6 +129,7 @@ class ServerController < RequestHandler
   def up_replicate_chunk
     # compact chunk
     current_async_compaction = Journal.async_compaction
+    Journal.async_compaction = false
     server.local_store.compact
     Journal.async_compaction = current_async_compaction
 

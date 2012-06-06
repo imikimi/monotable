@@ -70,7 +70,7 @@ class Server
         :max_chunk_size=>max_chunk_size,
         :max_index_block_size=>max_index_block_size,
         :range_start=>range_start,
-        :range_end=>chunk_starts[i+1] || :infinity
+        :range_end=>chunk_starts[i+1] || LAST_POSSIBLE_KEY
       )
       global_index.add_local_replica chunk, true
     end

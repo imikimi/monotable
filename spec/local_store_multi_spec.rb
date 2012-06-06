@@ -30,9 +30,9 @@ describe Monotable::LocalStore do
     server.local_store.get_chunk("abc").status.should >= {:range_start => "0", :record_count => 0, :accounting_size => 0} # an empty chunk
   end
 
-=begin
   it "should work to move a chunk to a new path_store" do
     server = blank_server_with_two_path_stores
+    a||=0;puts "here #{a+=1}"
     local_store = server.local_store
 
     local_store.status[:path_stores].length.should == 2
@@ -51,5 +51,4 @@ describe Monotable::LocalStore do
     local_store.status[:path_stores][0][:chunk_count].should == 4
     local_store.status[:path_stores][1][:chunk_count].should == 1
   end
-=end
 end

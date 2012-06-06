@@ -47,7 +47,7 @@ describe Monotable::LocalStore do
   it "should be possible to attach a localstore to a path with existing data" do
     local_store=blank_store
     load_test_data_directory(local_store)
-    local_store.get_chunk("").journal.compact
+    local_store.compact #get_chunk("").journal.compact
 
     #load LocalStore anew
     local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
@@ -61,8 +61,9 @@ describe Monotable::LocalStore do
     load_test_data_directory(local_store)
 
     #load LocalStore anew
-    local_store2=Monotable::LocalStore.new(:store_paths=>[temp_dir])
+    local_store2 = Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
+    puts "in test chunk.filename=#{local_store2.get_chunk("").filename}"
     local_store2.get_chunk("").length.should == 5
     Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 147095
 

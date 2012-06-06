@@ -10,7 +10,6 @@ module Monotable
   # Internally, it will load the entire chunk into memory on Init.
   # This is obviously much slower, but it is simpler and useful for testing.
   class DiskChunkBase < Chunk
-    attr_accessor :file_handle
     attr_accessor :path_store
     attr_accessor :journal
 
@@ -20,7 +19,7 @@ module Monotable
       end
 
       def debug_chunks(info=nil)
-        puts "DiskChunkBase(#{info.inspect}).disk_chunks: #{(@disk_chunks && @disk_chunks.keys).inspect}"
+        #puts "DiskChunkBase(#{info.inspect}).disk_chunks: #{(@disk_chunks && @disk_chunks.keys).inspect}"
       end
 
       def disk_chunks
@@ -48,8 +47,7 @@ module Monotable
       init_disk_chunk_base(options)
     end
 
-    def reset
-      file_handle.close
+    def reset(updated_location=nil)
       super
       init_from_disk
     end
@@ -57,14 +55,15 @@ module Monotable
     # options
     #   :filename => required
     def init_disk_chunk_base(options={})
-      raise ":filename require" unless options[:filename]
+      raise ":filename required" unless options[:filename]
       init_chunk(options)
-      @journal=options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
+      @journal = options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       init_from_disk
     end
 
     def init_from_disk
+      #puts "#{self.class}#init_from_disk"
       # parse the file on disk
       # it is legal for the file on disk to not exist - which is equivelent to saying the chunk starts out empty. All writes go to the journal anyway and the file will be created when compaction occures.
       file_handle.read(0) {|f|parse(f)} if file_handle.exists?
@@ -81,7 +80,7 @@ module Monotable
     end
 
     def move(new_path_store)
-      journal.move_chunk(file_handle,new_path_store)
+      journal.move_chunk(self,new_path_store)
     end
 
     #*************************************************************
@@ -92,20 +91,54 @@ module Monotable
     # see WriteAPI
     def set(key,columns)
       ret=set_internal(key,journal.set(self,key,columns))
-      EM.next_tick {self.split} if accounting_size > max_chunk_size
+      Tools.debug :accounting_size => accounting_size, :max_chunk_size => max_chunk_size
+      if accounting_size > max_chunk_size
+        Tools.debug "queue split #{accounting_size} > #{max_chunk_size} self.range=#{self.range.inspect} keys=#{self.keys}"
+        EM.next_tick {self.split}
+      end
       ret
     end
 
     # see WriteAPI
     def delete(key)
-      journal.delete(file_handle,key)
+      journal.delete(self,key)
       delete_internal(key)
     end
 
     # delete this chunk
     # TODO: this should actually move the chunk into the "Trash" - a holding area where we can later do a verification against the cluster to make sure it is safe to delete this chunk.
     def delete_chunk
-      journal.delete_chunk(file_handle)
+      journal.delete_chunk(self)
+    end
+
+    #*************************************************************
+    # chunk splitting
+    #*************************************************************
+    # all keys >= on_key are put into a new chunk
+    # TODO: the "self.clone" needs to correctly split all the sub data structures including @records and @deleted_records
+    # TODO: Then we also need to correctly update the record-counts in addition to the accounting-size.
+    # returns the new chunk
+    def split(on_key=nil,to_basename=nil)
+      Tools.debug :on_key => on_key, :cover? => on_key && cover?(on_key)
+      Tools.debug_raise :error => "on_key not covered", :on_key => on_key, :range => range unless cover?(on_key) if on_key
+      split_helper(on_key) do |on_key|
+        new_chunk = self.clone
+        new_chunk.basename = nil
+
+        setup_newly_split_chunk on_key, new_chunk
+
+        if local_store
+          Tools.debug "add to localstore" => new_chunk.range_start
+          new_chunk = local_store.add_chunk new_chunk
+          Tools.debug local_store.chunks.keys
+        else
+          Tools.debug "no localstore"
+        end
+
+        Tools.debug :on_key => on_key, :to_basename => to_basename, "new_chunk:basename"=> new_chunk.basename
+        journal.split self, on_key, new_chunk.basename
+        new_chunk
+      end
     end
 
     #*************************************************************

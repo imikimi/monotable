@@ -64,7 +64,16 @@ module Monotable
       @memory_revision=(@memory_revision||0)+1
     end
 
-    def reset
+    def reset(updated_location=nil)
+      @saved_chunk_info=nil
+      if updated_location
+        @file_handle && @file_handle.close
+        @file_handle = FileHandle.new updated_location
+      elsif file_handle
+        @file_handle.close
+      else
+        #puts "#{self.class}#reset huh?"
+      end
       @records={}
       next_memory_revision
     end
@@ -95,7 +104,7 @@ module Monotable
         break if res.length>=limit || k > lte_key
         res << get_record(k) if k>=gte_key
       end
-      if range_end!=:infinity && lte_key >= range_end && res.length < limit
+      if lte_key >= range_end && res.length < limit
         next_options=options.clone
         next_options[:limit]=limit - res.length
         next_options[:gte]=range_end
@@ -168,43 +177,75 @@ module Monotable
     attr_accessor :records
     attr_accessor :accounting_size         # the bytesize of all keys, field-names and field-values
 
-    attr_accessor :range_start  # all keys are >= range_start; nil == first possible key
-    attr_accessor :range_end    # all keys are < range_end; nil or :infinity == last possible key
+    attr_accessor :range_start  # all keys are >= range_start; always non-nil
+    attr_accessor :range_end    # all keys are < range_end; always non-nil
 
     attr_accessor :data_block_offset
     attr_accessor :file_handle
+    attr_accessor :basename
 
     attr_accessor :max_chunk_size
     attr_accessor :max_index_block_size
+
+    # compact_to_store_path is used temporarilly during compaction to note the root-path
+    # of the store the compacted chunk will be written to
+    attr_accessor :compact_to_store_path
 
     include ChunkMemoryRevisions
     include ChunkReadAPI
     include ChunkWriteAPI
 
-    # return a json-friendly version of the range_end
-    def symbolless_range_end;
-      @range_end == :infinity ? nil : @range_end
-    end
-
     def init_chunk(options={})
+      #puts "#{self.class}#init_chunk(#{options.inspect})"
+      # full_path
+      # file_handle
+      # filename
       @file_handle = FileHandle.new(options[:filename]) if options[:filename]
+      @basename = options[:basename] || (filename && File.basename(filename))
+
+      @compact_to_store_path = options[:compact_to_store_path]
       @path_store = options[:path_store]
       @max_chunk_size = options[:max_chunk_size] || ((ps=options[:path_store]) && ps.max_chunk_size) || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || ((ps=options[:path_store]) && ps.max_index_block_size) ||  DEFAULT_MAX_INDEX_BLOCK_SIZE
 
-      @range_start=options[:range_start] || ""
-      @range_end=options[:range_end] || :infinity
-      @records=options[:records] || {}
-      @accounting_size=0
-      @loaded_record_count=0
+      @range_start = options[:range_start] || FIRST_POSSIBLE_KEY
+      @range_end = options[:range_end] || LAST_POSSIBLE_KEY
+      @records = options[:records] || {}
+      @accounting_size =0
+      @loaded_record_count = 0
     end
 
-    def filename=(fn)
-      self.file_handle = fn
+    def valid_range?
+      range_start < range_end
+    end
+
+    def valid?
+      valid_range?
+    end
+
+    # Does this chunk's range cover the provided key?
+    # i.e. If they key exists, would it be contained in this chunk?
+    def cover?(key)
+      range.cover? key
+    end
+
+    def Chunk.cover?(range,key)
+      key >= range.first && key < range.last
+    end
+
+    def path_store_changed?
+      raise "#{self.class}#path_store_chaned? path_store is nil" unless path_store
+      #puts "path_store_changed? path_store.path = #{path_store.path} filename = #{filename}"
+      !path_store.contains_file? filename
+    end
+
+    # note that this range is inclusive left, exclusive right: [a..b)
+    def range
+      range_start...range_end
     end
 
     def filename
-      @file_handle.to_s
+      @file_handle && @file_handle.to_s
     end
 
     # fh can be a FileHandle or the filename (as a string)
@@ -221,14 +262,10 @@ module Monotable
       @local_store||=@path_store && @path_store.local_store
     end
 
-    def range
-      [range_start,range_end]
-    end
-
     def status
       {
       :range_start => range_start,
-      :range_end => symbolless_range_end,
+      :range_end => range_end,
       :accounting_size => accounting_size,
       :record_count => length
       }
@@ -292,7 +329,7 @@ module Monotable
     # returns true if the key is within the range covered by this chunk
     # if either range_start or range_end is not set, it is a while-card - always matches
     def in_range?(key)
-      (key>=range_start) && (range_end==:infinity || key < range_end)
+      (key>=range_start) && (range_end==LAST_POSSIBLE_KEY || key < range_end)
     end
 
     def to_s
@@ -312,17 +349,19 @@ module Monotable
     def load_saved_chunk_info
       sci=saved_chunk_info
       @range_start = sci["range_start"] || ""
-      @range_end = sci["range_end"] || :infinity
+      @range_end = sci["range_end"] || LAST_POSSIBLE_KEY
       @accounting_size = (sci["accounting_size"] || 0).to_i
       @loaded_record_count = (sci["record_count"] || 0).to_i
       @max_chunk_size = (sci["max_chunk_size"] || DEFAULT_MAX_CHUNK_SIZE).to_i
       @max_index_block_size = (sci["max_index_block_size"] || DEFAULT_MAX_INDEX_BLOCK_SIZE).to_i
+      #puts "#{self.class}#load_saved_chunk_info sci=#{sci.inspect}"
     end
 
     def save_saved_chunk_info
+      #puts "#{self.class}#save_saved_chunk_info length=#{length}"
       sci=saved_chunk_info
       sci["range_start"] = @range_start
-      sci["range_end"] = symbolless_range_end
+      sci["range_end"] = @range_end
       sci["accounting_size"] = @accounting_size
       sci["record_count"] = length
       sci["max_chunk_size"] = @max_chunk_size
@@ -399,64 +438,73 @@ module Monotable
     # MemoryChunk Splitting
     #***************************************************
     # all keys >= on_key are put into a new entry
-    def split_into(on_key,second_chunk)
-      # TODO: if @records where an RBTree, couldn't we just do a spit in O(1) ?
-      @records.keys.each do |key|
-        second_chunk.records[key] = @records.delete(key) if key >= on_key
+    def split_into(on_key,new_chunk)
+      # TODO: if @records where an RBTree, couldn't we just jump to the split-key and only iterate over keys moving ?
+      Tools.debug "#{self.class}#split_into(#{on_key.inspect})"
+      keys.each do |key|
+        if key >= on_key
+          new_chunk.records[key] = self.get_record(key)
+          delete key
+        end
       end
 
-      # update ranges of both chunks
-      second_chunk.range_end = @range_end
-      second_chunk.range_start = @range_end = on_key
+      new_chunk
+    end
 
-      # return second_chunk
-      second_chunk
+    # returns array: [sizes < on_key, sizes >= on_key]
+    def split_on_key(on_key)
+      size1=size2=0
+      count1=count2=0
+      records.each do |k,v|
+        asize=v.accounting_size
+        if k < on_key
+          count1+=1
+          size1+=asize
+        else
+          count2+=1
+          size2+=asize
+        end
+      end
+      {:size1 => size1,:size2 => size2, :count1 => count1, :count2 => count2}
+    end
+
+    def setup_newly_split_chunk(on_key, new_chunk)
+      new_chunk.range_end = @range_end
+      new_chunk.range_start = @range_end = on_key
+      new_chunk.compact_to_store_path = compact_to_store_path
+
+      Tools.debug "self.range" => self.range
+      Tools.debug "new_chunk.range" => new_chunk.range
+      Tools.debug_raise "invalid range for new_chunk #{new_chunk.range.inspect}" unless new_chunk.valid_range?
+      Tools.debug_raise "invalid range for self #{self.range.inspect}" unless self.valid_range?
+
+      new_chunk
+    end
+
+    def split_helper(on_key=nil)
+      Tools.debug "on_key" => on_key, :range => self.range
+      Tools.debug :cover? => cover?(on_key) if on_key
+      split_info = if on_key
+        split_on_key(on_key)
+      else
+        split_without_key
+      end
+      on_key ||= split_info[:on_key]
+
+      Tools.debug_raise :error => "cannot split chunk at its boundaries", :on_key => on_key, :range => range unless cover?(on_key) && on_key!=range_start
+      new_chunk = yield on_key
+
+      self.accounting_size = split_info[:size1] || self.calculate_accounting_size
+      new_chunk.accounting_size = split_info[:size2] || new_chunk.calculate_accounting_size
+      new_chunk
     end
 
     # all keys >= on_key are put into a new chunk
     # returns the new chunk
-    def split(on_key=nil,to_filename=nil)
-      if on_key
-        size1,size2=split_on_key_sizes(on_key)
-      else
-        on_key,size1,size2=middle_key_and_sizes
-      end
-      to_filename||=path_store.generate_filename
-
-      # create new chunk
-      second_chunk_file=DiskChunk.init(:filename=>to_filename,:journal=>journal,:max_chunk_size=>max_chunk_size,:path_store => path_store)
-
-      # do the actual split
-      # NOTE: this just splits the in-memory Records. If they are DiskRecords, they will still point to the same file, which is correct for reading.
-      split_into(on_key,second_chunk_file)
-
-      # update the path_store (which will also update the local_store)
-      local_store.add_chunk(second_chunk_file) if local_store
-
-      # set entry
-      journal.split(file_handle,on_key,to_filename)
-
-      # update sizes
-      self.accounting_size=size1 || self.calculate_accounting_size
-      second_chunk_file.accounting_size=size2 || second_chunk_file.calculate_accounting_size
-
-      # return the new DiskChunk object
-      second_chunk_file
+    def split(on_key=nil,to_basename=nil)
+      raise "not supported for #{self.class}"
     end
 
-    # returns array: [sizes < on_key, sizes >= on_key]
-    def split_on_key_sizes(on_key)
-      size1=size2=0
-      records.each do |k,v|
-        asize=v.accounting_size
-        if k < on_key
-          size1+=asize
-        else
-          size2+=asize
-        end
-      end
-      [size1,size2]
-    end
 
     # Find the middle-most key of the chunk
     #
@@ -472,19 +520,32 @@ module Monotable
     #   if records.length > 0 then size1 is > 0
     #   if records.length > 1 then size2 is also > 0
     #   size1 + size2 == accounting_size
-    def middle_key_and_sizes_slow
+    def split_without_key_slow
       chunk_accounting_size = accounting_size
       half_size  = chunk_accounting_size/2
       accounting_offset = 0
 
+      Tools.debug :half_size => half_size, :chunk_accounting_size => chunk_accounting_size
+
+      count = 0
       each_record do |record|
         asize = record.accounting_size
-        return [record.key, accounting_offset, chunk_accounting_size-accounting_offset] if accounting_offset + asize/2 > half_size
+        Tools.debug :key => record.key, :asize => asize, :accounting_offset => accounting_offset
+        if accounting_offset + asize/2 > half_size
+          return {
+            :on_key => record.key,
+            :size1 => accounting_offset,
+            :size2 => chunk_accounting_size-accounting_offset,
+            :count1 => count,
+            :count2 => self.length - count,
+            }
+        end
+        count += 1
         accounting_offset += asize
       end
       raise "this should never happen"
     end
-    alias :middle_key_and_sizes :middle_key_and_sizes_slow
+    alias :split_without_key :split_without_key_slow
 
     #***************************************************
     # Parsing Helpers

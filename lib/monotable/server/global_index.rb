@@ -73,9 +73,11 @@ module Monotable
       @first_server ||= begin
         if local_store.get_chunk ""
           #puts "paxos server is local"
+          Tools.debug "first_server is self"
           local_store
         else
           cluster_manager.locate_first_chunk.tap do |first_server|
+            Tools.debug :first_server => first_server, :local_server => cluster_manager.local_server
             raise MonotableDataStructureError.new "could not locate the first-chunk on any server: #{cluster_manager.servers.keys.inspect}" unless first_server
           end
         end
@@ -87,11 +89,13 @@ module Monotable
       first_record = server.get_first(:gte=>"",:limit=>1)[:records][0]
       unless first_record
         #puts "first_server may have changed. Was: #{first_server}"
-        @first_server=nil
+        @first_server = nil
         server = first_server
         first_record = server.get_first(:gte=>"",:limit=>1)[:records][0]
+        Tools.debug :server => server, "server.chunks" => server.chunks, :first_record => first_record
         raise MonotableDataStructureError.new "paxos server (#{first_server}) does not have a first-record" unless first_record
       end
+      Tools.debug :server => server, "server.chunks" => server.chunks, :first_record => first_record
       GlobalIndex::ChunkIndexRecord.new(first_record)
     end
 

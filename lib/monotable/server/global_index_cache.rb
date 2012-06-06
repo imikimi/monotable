@@ -59,7 +59,7 @@ module Monotable
 
       def get(internal_key,&block) yield end # caching disabled
 
-      def delete(internal_key) @cache.delete(cache_key(interanl_key)) end
+      def delete(internal_key) @cache.delete(cache_key(internal_key)) end
     end
   end
   GlobalIndexCache.init

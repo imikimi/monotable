@@ -1,6 +1,7 @@
 require File.join(File.dirname(__FILE__),"xbd")
 require File.join(File.dirname(__FILE__),"version")
 
+require 'digest/md5'
 require 'yaml'
 require 'cgi'
 require 'fileutils'

@@ -41,6 +41,10 @@ module Monotable
 
     #**********************************************
     #**********************************************
+    def local_store
+      path_store.local_store
+    end
+
     def freeze_journal(journal)
       if current_journal==journal
         @frozen_journals<<journal
@@ -80,24 +84,24 @@ module Monotable
     #**********************************************
     # Journal API
     #**********************************************
-    def set(chunk_file,key,record)
-      @current_journal.set(chunk_file,key,record)
+    def set(chunk,key,record)
+      @current_journal.set(chunk,key,record)
     end
 
-    def delete(chunk_file,key)
-      @current_journal.delete(chunk_file,key)
+    def delete(chunk,key)
+      @current_journal.delete(chunk,key)
     end
 
-    def delete_chunk(chunk_file)
-      @current_journal.delete_chunk(chunk_file)
+    def delete_chunk(chunk)
+      @current_journal.delete_chunk(chunk)
     end
 
-    def split(chunk_file,key,to_filename)
-      @current_journal.split(chunk_file,key,to_filename)
+    def split(chunk,key,to_filename)
+      @current_journal.split(chunk,key,to_filename)
     end
 
-    def move_chunk(chunk_file,path_store)
-      @current_journal.move_chunk(chunk_file,path_store)
+    def move_chunk(chunk,path_store)
+      @current_journal.move_chunk(chunk,path_store)
     end
 
     #**********************************************

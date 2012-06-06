@@ -31,12 +31,17 @@ class MTTChunk
     #puts "DiskChunk init: #{Time.now-time}"
   end
 
-  def basics
+  def basics(options={})
     status = @chunk.status
     status[:file_size] = @chunk.file_handle.size
     status[:columns] = @chunk.columns.array.sort
     units = {accounting_size: :bytes, file_size: :bytes}
-    [:record_count,:accounting_size,:file_size,:range_start,:range_end, :columns].each do |key|
+    fields = [:record_count,:accounting_size,:file_size,:range_start,:range_end, :columns]
+    if options[:keys]
+      fields << :keys
+      status[:keys] = @chunk.keys
+    end
+    fields.each do |key|
       label = "#{key.to_s.gsub('_',' ')}:"
       value = status[key].inspect
       value += " #{units[key]}" if units[key]
@@ -69,6 +74,7 @@ class MTTChunk
   end
 
   def ls
+    iputs "#{chunk.length} key(s) in chunk"
     chunk.each_key do |key|
       iputs key.inspect
     end
@@ -152,6 +158,7 @@ Usage:
 
 Options:
 ENDBANNER
+    opt :keys, "List chunk keys"
     opt :list, "List all keys in chunk"
     opt :dump, "Dump chunk's info"
     opt :get, "Get value for key in chunk", :type=>:string
@@ -165,7 +172,7 @@ ENDBANNER
       mtt.indent("get(#{opts[:get].inspect})") {basics=false;mtt.get(opts[:get])} if opts[:get]
       mtt.indent("dump info-block:"          ) {basics=false;mtt.info_block_dump} if opts[:dump]
       mtt.indent("dump index:"               ) {basics=false;mtt.index_dump} if opts[:dump]
-      mtt.basics if basics
+      mtt.basics(:keys => opts[:keys]) if basics
     end
   end
 end

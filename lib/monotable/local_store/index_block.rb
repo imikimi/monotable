@@ -89,12 +89,20 @@ module Monotable
       sub_index_block(index_record).locate(key)
     end
 
-    def each(&block)
+    # start_key could be implemented much more efficiently - we should only recurse down the first block that may contain it
+    def each(start_key=nil,end_key=nil,&block)
+      Tools.debug :range => [start_key...end_key]
       if @leaf
-        @index_records.each(&block)
+        @index_records.each do |key,record|
+          Tools.debug :key => key, :record => record
+          unless (start_key && record.key < start_key) || (end_key && record.key >= end_key)
+            Tools.debug
+            yield key,record
+          end
+        end
       else
         @index_records.each do |key,ir|
-          sub_index_block(ir).each(&block)
+          sub_index_block(ir).each(start_key,&block)
         end
       end
     end

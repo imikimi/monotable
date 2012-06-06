@@ -1,33 +1,64 @@
 module Monotable
   class Compactor
 
-    attr_accessor :chunks,:journal_file,:journal_filename
+    attr_accessor :chunks,:journal_file,:journal_filename,:local_store
 
-    def initialize(journal_filename)
+    # options - :local_store
+    def initialize(journal_filename,options={})
       @journal_filename=journal_filename.to_s
       @chunks={}
+      @local_store = options[:local_store]
+    end
+
+    def journal_dirname
+      @journal_dirname ||= File.dirname(journal_filename)
+    end
+
+    def store_paths
+      @store_paths ||= if @local_store then
+        @local_store.store_paths
+      else
+        [journal_dirname]
+      end
     end
 
     def apply_entry(journal_entry,chunk)
+      Tools.debug :chunk => chunk.range, :journal_entry => journal_entry
+      #$stderr.puts "#{self.class}#apply_entry journal_entry[:command]=#{journal_entry[:command]}, journal_entry=#{journal_entry.inspect}"
       case journal_entry[:command]
       when :set then chunk.set(journal_entry[:key],journal_entry[:fields])
       when :delete then chunk.delete(journal_entry[:key])
-      when :delete_chunk then File.delete journal_entry[:chunk_file]
+      when :delete_chunk then File.delete chunk.filename
       when :move_chunk then
-        raise "hell"
-=begin
         # this should work...
         to_store_path = journal_entry[:to_store_path]
-        chunk.filename = compaction_working_path(to_store_path)
-=end
+        #puts "moving chunk from #{chunk.compact_to_store_path} to #{store_path_from_filename(to_store_path)}"
+        chunk.compact_to_store_path = store_path_from_filename(to_store_path)
+
       when :split then
-        to_filename = journal_entry[:to_file]
-        chunk2=chunk.split(journal_entry[:key])
-        chunk2.filename = File.join(compaction_working_path, File.basename(to_filename))
-        chunks[to_filename] = chunk2
+        chunk2 = chunk.split(journal_entry[:key],journal_entry[:to_basename])
+        raise "chunk2 must have its basename set. journal_entry[:to_basename]=#{journal_entry[:to_basename].inspect}" unless chunk2.basename
+        chunks[chunk2.basename] = chunk2
       else
         raise InternalError.new "apply_entry: invalid journal_entry[:command]: #{journal_entry[:command].inspect}"
       end
+    end
+
+    def load_chunk(basename)
+      store_paths.each do |path|
+        filename = PathStore.full_chunk_path(path,basename)
+        if File.exists?(filename)
+          return MemoryChunk.new :basename => basename, :filename => filename, :compact_to_store_path => path
+        end
+      end
+      raise InternalError.new "#{self.class}#load_chunk(#{basename.inspect}} could not find the chunk file in any store_path: #{store_paths.insect}"
+    end
+
+    def store_path_from_filename(filename)
+      store_paths.each do |path|
+        return path if filename.index(path)==0
+      end
+      raise InternalError.new "#{self.class}#store_path_from_filename(#{filename.inspect}) could not find matching store_path from: #{store_paths.inspect}"
     end
 
     def each_entry
@@ -49,26 +80,28 @@ module Monotable
       @successful_compaction_filename ||= File.join compaction_working_path, JOURNAL_COMPACTION_SUCCESS_FILENAME
     end
 
-    # load all entries from a journal and cluster them by chunk_filename
-    # Returns hash with exactly one entry per chunk_filename touched (including merged from or split-to)
+    # load all entries from a journal and cluster them by chunk_basename
+    # Returns hash with exactly one entry per chunk_basename touched (including merged from or split-to)
     # NOTE: all chunks involved in merges and splits will share the same list of entries,
     #   though each will have its own entry in the returned structure.
     def load_entries
       entries_by_chunk={}
+      linked_chunks = {}  # link from => to chunk_basename
       each_entry do |entry|
-        chunk_filename = entry[:chunk_file]
+        chunk_basename = entry[:chunk_basename]
 
-        if jes = entries_by_chunk[chunk_filename]
+        chunk_basename = linked_chunks[chunk_basename] || chunk_basename
+
+        if jes = entries_by_chunk[chunk_basename]
           jes<<entry
         else
-          entries_by_chunk[chunk_filename]=[entry]
+          entries_by_chunk[chunk_basename]=[entry]
         end
 
         # All chunks involved in some combination of splits and merges will have all their journal entries
-        # merged into one list to be processed in concert
+        # merged into one list to be processed together
         if entry[:command]==:split
-          chunk2_filename = entry[:to_file]
-          entries_by_chunk[chunk2_filename] = entries_by_chunk[chunk_filename]
+          linked_chunks[entry[:to_basename]] = chunk_basename
         end
       end
       journal_file.close
@@ -84,48 +117,73 @@ module Monotable
     #   The order of the entries may not be the original order written to disk, but it will be a consitent ordering such that they can be processed in order safely.
     def apply_entries_in_memory(entries)
       entries.each do |entry|
-        chunk_filename = entry[:chunk_file]
+        chunk_basename = entry[:chunk_basename]
 
-        if !chunks[chunk_filename]
-          new_chunk = MemoryChunk.new(:filename => chunk_filename)
-          new_chunk.filename = File.join(compaction_working_path, File.basename(new_chunk.filename))
-          chunks[chunk_filename] = new_chunk
-        end
+        chunk = chunks[chunk_basename] ||= load_chunk(chunk_basename)
 
-        chunk = chunks[chunk_filename]
-
-        #puts "apply_entries_in_memory chunk.filename=#{chunk.filename.inspect} chunk_filename=#{chunk_filename.inspect}"
-        apply_entry(entry,chunk)
+        apply_entry entry, chunk
       end
     end
 
-    # given a hash {chunk_filename => entries},
+    # given a hash {chunk_basename => entries},
     # Runs apply_entries_in_memory on each entries
     def compact_by_chunk(entries_by_chunk)
       completed_chunks={}
-      entries_by_chunk.each do |chunk_filename,entries|
+      entries_by_chunk.each do |chunk_basename,entries|
         # chunks involved in merges and splits will be processed together when the first representative of that
         # cluster is processed. Hence, when we attempt to process the other members later, we just skip them.
-        next if completed_chunks[chunk_filename]
-
+        next if completed_chunks[chunk_basename]
         apply_entries_in_memory entries
-        chunks.each {|k,v| completed_chunks[k]=true}
-        write_compacted_chunks
+        write_compacted_chunks(completed_chunks)
+        completed_chunks[chunk_basename]=true
       end
     end
 
     # write all compacted chunks to disk
     # TODO: Write comacted_chunks to most-empty/least-loaded PathStores to Balance them
-    def write_compacted_chunks
-      chunks.each do |chunk_filename,chunk|
-        new_chunk_filename = File.join(compaction_working_path, File.basename(chunk_filename))
-        puts "ERROR write_compacted_chunks new_chunk_filename=#{new_chunk_filename.inspect} chunk.filename=#{chunk.filename.inspect}" unless new_chunk_filename==chunk.filename
-        chunk.save new_chunk_filename
+    def write_compacted_chunks(completed_chunks)
+      chunks.each do |chunk_basename,chunk|
+        next if completed_chunks[chunk_basename]
+        raise "chunk must have its basename set" unless chunk.basename
+        #puts "write_compacted_chunks : #{PathStore.full_chunk_path(compaction_working_path(chunk.compact_to_store_path),chunk.basename)}"
+        chunk.save PathStore.full_chunk_path(compaction_working_path(chunk.compact_to_store_path),chunk.basename)
       end
     end
 
     def journal_file
       @journal_file ||= FileHandle.new(journal_filename)
+    end
+
+    def make_compaction_working_dirs
+      store_paths.each do |path|
+        cp = compaction_working_path(path)
+        FileUtils.mkdir cp unless File.exists?(cp)
+      end
+    end
+
+    def move_compacted_chunks_into_place
+      store_paths.each do |path|
+        cp = compaction_working_path(path)
+        Dir.glob(File.join(cp,"*#{CHUNK_EXT}")).each do |compacted_file|
+          basename = File.basename(compacted_file)
+          src_chunk_file = File.join(journal_dirname,basename)
+          dst_chunk_file = File.join(path,basename)
+      #puts "#{self.class}#compact_phase_2 path=#{path} compacted_file=#{compacted_file} dst_chunk_file=#{dst_chunk_file}"
+
+          # TODO: lock chunk
+          FileUtils.rm [src_chunk_file] if File.exists?(src_chunk_file)
+          FileUtils.mv compacted_file,dst_chunk_file
+          local_store && local_store.reset_chunk(dst_chunk_file)
+          # TODO: unlock chunk
+        end
+      end
+    end
+
+    def delete_compaction_working_dirs
+      store_paths.each do |path|
+        cp = compaction_working_path(path)
+        Dir.rmdir cp
+      end
     end
 
     # file is a FileHandle or filename
@@ -144,8 +202,7 @@ module Monotable
       return if compact_phase_1_succeeded
 
       self.chunks={}
-      base_path=File.dirname(journal_filename)
-      FileUtils.mkdir compaction_working_path unless File.exists?(compaction_working_path)
+      make_compaction_working_dirs
 
       if journal_file.exists?
         # apply journal to every chunk
@@ -180,7 +237,7 @@ module Monotable
       ensure
         Process.detach pid if pid
       end
-      raise "compact_phase_1_external failed (ret=#{ret.inspect})" unless ret.strip=="SUCCESS"
+      raise "compact_phase_1_external failed (ret=#{ret.inspect})" unless ret.split("\n")[-1].strip=="SUCCESS"
       true
     end
 
@@ -197,6 +254,7 @@ module Monotable
     # TODO: Chunks effected should be "reset" after compaction
     def compact_phase_2
       # check to see if there is anything to do
+      #puts "#{self.class}#compact_phase_2 a #{journal_file}"
       return unless journal_file.exists? || File.exists?(compaction_working_path)
 
       # verify the successfile exists
@@ -210,25 +268,11 @@ module Monotable
       # this commits the compaction
       journal_file.delete if journal_file.exists?
 
-
-      # move all the compacted files back into position
-      base_path=File.dirname(journal_filename)
-      Dir.glob(File.join(compaction_working_path,"*#{CHUNK_EXT}")).each do |compacted_file|
-        chunk_file = File.join(base_path,File.basename(compacted_file))
-        # TODO: lock chunk_file's matching DiskChunk object
-        FileUtils.rm [chunk_file] if File.exists?(chunk_file)
-        FileUtils.mv compacted_file,chunk_file
-        # TODO: reset and then unlock chunk_file's matching DiskChunk object
-        # PLAN: implement a global has of chunk filenames => chunk objects. Only ever have at most one in memory chunk object per chunk file.
-        #   Then we can just:
-        #     Chunk[chunk_file].reset
-        (cf = DiskChunk[chunk_file]) && cf.reset
-      end
+      move_compacted_chunks_into_place
 
       FileUtils.rm successful_compaction_filename
 
-      # remove compaction_working_path
-      Dir.rmdir compaction_working_path
+      delete_compaction_working_dirs
     end
   end
 end

@@ -61,8 +61,11 @@ module Monotable
     # returns the chunk responsible for storing records at location "key"
     # returns nil for chunks not present
     def get_chunk(key) # rename chunk_for_record
+      # find closest chunk
       chunk_key,chunk=@chunks.upper_bound(key)
-      chunk if chunk && (chunk.range_end==:infinity || key < chunk.range_end)
+
+      # return if it covers key
+      chunk && chunk.cover?(key) && chunk
     end
 
     # Returns "true" if a local chunk covers the key-range for a given key.
@@ -84,7 +87,12 @@ module Monotable
     attr_accessor :chunks
     attr_accessor :max_index_block_size
     attr_accessor :max_chunk_size
-    attr_accessor :path_stores
+    attr_reader :path_stores
+    attr_reader :store_paths
+
+    #keep track of the chunk filenames so we can generate new, unique ones
+    attr_accessor :chunks_by_basename
+
     include LocalStoreReadAPI
     include LocalStoreWriteAPI
     include LocalStoreChunkApi
@@ -101,19 +109,24 @@ module Monotable
 
     def init_local_store(options={})
       puts "LocalStore initializing..." if options[:verbose]
+      @chunks_by_basename={}
       @options=options
       Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
 
       @chunks=RBTree.new
-      store_paths = options[:store_paths] || []
-      @path_stores=store_paths.collect do |path|
+      @store_paths = options[:store_paths] || []
+      @path_stores=@store_paths.collect do |path|
         ps=PathStore.new(path,options.merge(:local_store=>self))
-        ps.chunks.each do |filename,chunk_file|
-          chunks[chunk_file.range_start]=chunk_file
+        ps.chunks.each do |filename,chunk|
+          #puts "#{self.class}#init_local_store add_chunk_internal filename=#{filename}"
+          add_chunk_internal chunk
         end
         ps
+      end
+      @path_stores.each do |ps|
+        ps.compact_existing_journals
       end
       initialize_new_test_store if options[:initialize_new_test_store]
       if options[:verbose]
@@ -165,18 +178,40 @@ module Monotable
       add_chunk MemoryChunk.new(:max_chunk_size=>max_chunk_size,:max_index_block_size=>max_index_block_size)
     end
 
+    private
+    def add_chunk_internal(chunk)
+      raise InternalError.new "Non-unique chunk filename found! Chunks:\n"+
+        "Chunk1: #{chunks_by_basename[chunk.basename].basename.inspect}\n"+
+        "Chunk2: #{chunk.basename.inspect}\n" if chunks_by_basename[chunk.basename]
+      raise "chunk does not have a path_store" unless chunk.path_store
+      chunks_by_basename[chunk.basename] =
+      chunks[chunk.range_start] = chunk
+    end
+    public
     #*************************************************************
     # Internal API
     #*************************************************************
+
+    # generate a unique filename, ideally just an MD5 hash of the range_start, but if not, add a salt until it is unique
+    def generate_basename(chunk)
+      salt = nil
+      while true
+        filename = Digest::MD5.hexdigest("#{chunk.range_start}#{salt}") + CHUNK_EXT
+        return filename unless chunks_by_basename[filename]
+        salt = (salt||0) + 1
+      end
+    end
+
     def most_empty_path_store
       path_stores[0]  # temporary hack
     end
 
     def add_chunk(chunk)
+      chunk.basename ||= generate_basename chunk
       path_store = chunk.kind_of?(DiskChunk) ? chunk.path_store : most_empty_path_store
       disk_chunk = path_store.add_chunk chunk
 
-      chunks[disk_chunk.range_start] = disk_chunk
+      add_chunk_internal disk_chunk
     end
 
     def delete_chunk(chunk_id)
@@ -188,6 +223,30 @@ module Monotable
       path_store.delete_chunk(chunk)
 
       chunks.delete(chunk_id)
+    end
+
+    def update_path_store(chunk)
+      if chunk.path_store
+        return unless chunk.path_store_changed?
+        chunk.path_store.remove_chunk(chunk)
+      end
+      path_stores.each do |ps|
+        return ps.add_chunk(chunk) if ps.contains_chunk?(chunk)
+      end
+      raise InternalError.new "PathStore for chunk #{chunk.filename.inspect} could not be found"
+    end
+
+    def reset_chunk(full_chunk_path)
+      #puts "reset_chunk full_chunk_path=#{full_chunk_path}"
+      raise InternalError.new "chunk #{full_chunk_path.inspect} doesn't exist" unless File.exists?(full_chunk_path)
+      basename = File.basename(full_chunk_path)
+
+      # the only time a chunk won't exist in chunks_by_basename is if we are doing a
+      # compaction as part of the local_store init.
+      chunk = chunks_by_basename[basename]
+      raise "chunk not set" unless chunk
+      chunk.reset full_chunk_path
+      update_path_store chunk
     end
 
     def length
@@ -204,7 +263,7 @@ module Monotable
     def verify_chunk_ranges
       last_key=nil
       chunks.each do |key,chunk|
-        raise "key=#{key.inspect} doesn't match chunk.range_start=#{chunk.range_start.inspect}" unless key==chunk.range_start
+        raise "key=#{key.inspect} doesn'chunks_by_basename match chunk.range_start=#{chunk.range_start.inspect}" unless key==chunk.range_start
         raise "consecutive range keys out of order last_key=#{last_key.inspect} chunk.range_start=#{chunk.range_start.inspect} chunk.range_end=#{chunk.range_end.inspect}" unless
           last_key==nil || last_key<=chunk.range_start
       end

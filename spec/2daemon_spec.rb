@@ -80,6 +80,19 @@ describe Monotable::EventMachineServer do
 
     validate_index_records_for_chunks_on_server server_client(0)
 
+    #BEGIN
+    Monotable::ServerClient.use_synchrony = false
+    server = Monotable::Server.new
+    cluster_manager = server.cluster_manager
+    cluster_manager.add daemon_address(1)
+    cluster_manager.add daemon_address(0)
+
+    first_record = server.global_index.first_record
+    first_record.key.should == "+++0"
+    first_record["servers"].should == daemon_address(0)
+    Monotable::Tools.debug
+    #END
+
     res = server_client(1).balance
     res[:chunks_moved].length.should == 2
 

@@ -44,7 +44,7 @@ module Monotable
       init_disk_chunk_base(options)
     end
 
-    def reset
+    def reset(updated_location=nil)
       @deleted_records={}
       super
     end
@@ -56,8 +56,9 @@ module Monotable
     # this is very inefficient - it has to load the entire index into memory, but there is no other way to do it.
     # Just don't use this for any real work ;).
     def keys
+      Tools.debug :range => range
       keys=[]
-      each_key_unsorted {|key| keys<<key}
+      each_key {|key| keys<<key}
       keys
     end
 
@@ -69,28 +70,22 @@ module Monotable
       each_record {|r| yield r.key}
     end
 
-    # yields each key in the chunk, not necessarilly in sorted order
-    # this is (potentially) faster than each_key
-    def each_key_unsorted
-      @records.each {|key,value| yield key}
-      (@top_index_block||[]).each {|key,record| yield key unless @deleted_records[key]}
-    end
-
     # yields every record in the chunk in sorted Key-order
-    def each_record
+    def each_record(start_key=range_start,end_key=range_end)
       # if each_record is used much, we should store @records in a sorted data structure to avoid the .sort
-      mem_record_keys = @records.keys.sort
+      mem_record_keys = @records.keys.select {|key| key >= start_key && key < end_key}.sort
       mrk_index = 0
 
       # syncronized, step through both @records (sorted by key) and @top_index_block.each
       # skips records in @deleted_records
-      (@top_index_block||[]).each do |disk_key,record|
+      @top_index_block.each(start_key,end_key) do |disk_key,record|
 
         # yield all memory records before "record"
         while (key=mem_record_keys[mrk_index]) && key < disk_key
           yield @records[key]
           mrk_index+=1
         end
+        Tools.debug :disk_key => disk_key, :deleted => @deleted_records[disk_key]
 
         # yield "record" unless it is deleted
         yield record unless @deleted_records[disk_key]
@@ -155,6 +150,8 @@ module Monotable
         cur_offset+=length
       end
 
+      #puts "#{self.class}#partially_parse_index #{filename}"
+
       # load the first block
       @top_index_block = IndexBlock.new(self,"",0,@index_level_lengths[0],:io_stream=>io_stream)
     end
@@ -171,6 +168,7 @@ module Monotable
       parse_base(io_stream)
       partially_parse_index(io_stream)
       @records = {}
+      #puts "#{self.class}.parse self.length = #{self.length}"
     end
 
     #*************************************************************

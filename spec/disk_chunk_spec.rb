@@ -180,11 +180,12 @@ describe Monotable::DiskChunk do
     end
   end
 
-  it "each_key should work and records should be fetchable if there data is in the chunkfile" do
-    result=setup_store_with_test_keys(5)
-    result.journal.compact
-    result.each_key do |k|
-      record=result.get_record(k)
+  it "each_key should work and records should be fetchable if their data is in the chunkfile" do
+    chunk_store=setup_store_with_test_keys(5)
+    chunk_store.journal.compact
+    chunk_store.reset
+    chunk_store.each_key do |k|
+      record=chunk_store.get_record(k)
       record.class.should==Monotable::DiskRecord
       record.keys.should==["data"]
       record.should_not == nil
