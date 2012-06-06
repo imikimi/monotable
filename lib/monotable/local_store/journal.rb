@@ -44,7 +44,7 @@ module Monotable
         case command
         when "del"          then {:command=>:delete,      :chunk_basename=>strings[1], :key=>strings[2]}
         when "delete_chunk" then {:command=>:delete_chunk,:chunk_basename=>strings[1]}
-        when "split"        then {:command=>:split,       :chunk_basename=>strings[1], :key=>strings[2], :to_basename => strings[3]}
+        when "split"        then {:command=>:split,       :chunk_basename=>strings[1], :on_key=>strings[2], :to_basename => strings[3]}
         when "move_chunk" then
           {:command => :move_chunk, :chunk_basename => strings[1], :to_store_path => strings[2]}
         when "set" then

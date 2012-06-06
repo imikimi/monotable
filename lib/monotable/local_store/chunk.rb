@@ -190,6 +190,7 @@ module Monotable
     # compact_to_store_path is used temporarilly during compaction to note the root-path
     # of the store the compacted chunk will be written to
     attr_accessor :compact_to_store_path
+    attr_accessor :record_count_on_disk
 
     include ChunkMemoryRevisions
     include ChunkReadAPI
@@ -212,7 +213,7 @@ module Monotable
       @range_end = options[:range_end] || LAST_POSSIBLE_KEY
       @records = options[:records] || {}
       @accounting_size =0
-      @loaded_record_count = 0
+      @record_count_on_disk = 0
     end
 
     def valid_range?
@@ -351,7 +352,7 @@ module Monotable
       @range_start = sci["range_start"] || ""
       @range_end = sci["range_end"] || LAST_POSSIBLE_KEY
       @accounting_size = (sci["accounting_size"] || 0).to_i
-      @loaded_record_count = (sci["record_count"] || 0).to_i
+      @record_count_on_disk = (sci["record_count"] || 0).to_i
       @max_chunk_size = (sci["max_chunk_size"] || DEFAULT_MAX_CHUNK_SIZE).to_i
       @max_index_block_size = (sci["max_index_block_size"] || DEFAULT_MAX_INDEX_BLOCK_SIZE).to_i
       #puts "#{self.class}#load_saved_chunk_info sci=#{sci.inspect}"
@@ -437,72 +438,54 @@ module Monotable
     #***************************************************
     # MemoryChunk Splitting
     #***************************************************
-    # all keys >= on_key are put into a new entry
-    def split_into(on_key,new_chunk)
-      # TODO: if @records where an RBTree, couldn't we just jump to the split-key and only iterate over keys moving ?
-      Tools.debug "#{self.class}#split_into(#{on_key.inspect})"
-      keys.each do |key|
-        if key >= on_key
-          new_chunk.records[key] = self.get_record(key)
-          delete key
-        end
+
+    # Alter SELF and create a new object of the same type, updating all data-structures to
+    # represent the split. SELF is everything < on_key. new_chunk is everything >= on_key
+    # Required Options
+    #   :new_chunk_accounting_size => the accounting_size for the new chunk
+    #   :new_chunk_record_count => number of records in the new chunk
+    #   :on_key
+    # Optional Options
+    #   :new_chunk => a new chunk object or nil, in which case a new object will be created
+    #   :to_basename => override basename in new_chunk
+    def split_simple(options={})
+      Tools.debug options
+      Tools.required options, :on_key, :new_chunk_accounting_size, :new_chunk_record_count, :old_chunk_accounting_size, :old_chunk_record_count
+
+      (options[:new_chunk]||=self.clone).tap do |new_chunk|
+
+        on_key = options[:on_key]
+        # update range
+        new_chunk.range_end   = self.range_end
+        new_chunk.range_start = self.range_end = on_key
+
+        # split records
+        new_chunk.records = records.select {|key,value| key >= on_key}
+        self.records      = records.select {|key,value| key < on_key}
+
+        # update accounting size
+        new_chunk.accounting_size = options[:new_chunk_accounting_size]
+        self.accounting_size = options[:old_chunk_accounting_size]
+
+        # update misc
+        new_chunk.basename = options[:to_basename] if options[:to_basename]
       end
-
-      new_chunk
-    end
-
-    # returns array: [sizes < on_key, sizes >= on_key]
-    def split_on_key(on_key)
-      size1=size2=0
-      count1=count2=0
-      records.each do |k,v|
-        asize=v.accounting_size
-        if k < on_key
-          count1+=1
-          size1+=asize
-        else
-          count2+=1
-          size2+=asize
-        end
-      end
-      {:size1 => size1,:size2 => size2, :count1 => count1, :count2 => count2}
-    end
-
-    def setup_newly_split_chunk(on_key, new_chunk)
-      new_chunk.range_end = @range_end
-      new_chunk.range_start = @range_end = on_key
-      new_chunk.compact_to_store_path = compact_to_store_path
-
-      Tools.debug "self.range" => self.range
-      Tools.debug "new_chunk.range" => new_chunk.range
-      Tools.debug_raise "invalid range for new_chunk #{new_chunk.range.inspect}" unless new_chunk.valid_range?
-      Tools.debug_raise "invalid range for self #{self.range.inspect}" unless self.valid_range?
-
-      new_chunk
-    end
-
-    def split_helper(on_key=nil)
-      Tools.debug "on_key" => on_key, :range => self.range
-      Tools.debug :cover? => cover?(on_key) if on_key
-      split_info = if on_key
-        split_on_key(on_key)
-      else
-        split_without_key
-      end
-      on_key ||= split_info[:on_key]
-
-      Tools.debug_raise :error => "cannot split chunk at its boundaries", :on_key => on_key, :range => range unless cover?(on_key) && on_key!=range_start
-      new_chunk = yield on_key
-
-      self.accounting_size = split_info[:size1] || self.calculate_accounting_size
-      new_chunk.accounting_size = split_info[:size2] || new_chunk.calculate_accounting_size
-      new_chunk
     end
 
     # all keys >= on_key are put into a new chunk
     # returns the new chunk
-    def split(on_key=nil,to_basename=nil)
-      raise "not supported for #{self.class}"
+    # Options can be the on_key string, or a hash:
+    # Options-Hash:
+    #   :on_key
+    #   :to_basename
+    def split(options={})
+      Tools.debug options
+      options = {on_key:options} if options.kind_of? String
+      options = split_setup options
+      split_simple(options).tap do |new_chunk|
+        Tools.debug :old_chunk => self, :new_chunk=> new_chunk
+        Tools.debug :old_chunk_keys => self.keys, :new_chunk_keys=> new_chunk.keys
+      end
     end
 
 
@@ -520,32 +503,37 @@ module Monotable
     #   if records.length > 0 then size1 is > 0
     #   if records.length > 1 then size2 is also > 0
     #   size1 + size2 == accounting_size
-    def split_without_key_slow
+    #
+    # Options:
+    #   :on_key
+    def split_setup_slow(options={})
+      on_key = options[:on_key]
       chunk_accounting_size = accounting_size
       half_size  = chunk_accounting_size/2
-      accounting_offset = 0
 
       Tools.debug :half_size => half_size, :chunk_accounting_size => chunk_accounting_size
 
+      accounting_offset = 0
       count = 0
+      key = nil
       each_record do |record|
+        key = record.key
         asize = record.accounting_size
-        Tools.debug :key => record.key, :asize => asize, :accounting_offset => accounting_offset
-        if accounting_offset + asize/2 > half_size
-          return {
-            :on_key => record.key,
-            :size1 => accounting_offset,
-            :size2 => chunk_accounting_size-accounting_offset,
-            :count1 => count,
-            :count2 => self.length - count,
-            }
-        end
+        Tools.debug :key => key, :asize => asize, :accounting_offset => accounting_offset
+        break if on_key && (key >= on_key)
+        break if !on_key && (accounting_offset + asize/2 > half_size)
         count += 1
         accounting_offset += asize
       end
-      raise "this should never happen"
+      options.merge(
+        :on_key => on_key || key,
+        :new_chunk_accounting_size => accounting_size - accounting_offset,
+        :new_chunk_record_count => length - count,
+        :old_chunk_accounting_size => accounting_offset,
+        :old_chunk_record_count => count
+      )
     end
-    alias :split_without_key :split_without_key_slow
+    alias :split_setup :split_setup_slow
 
     #***************************************************
     # Parsing Helpers

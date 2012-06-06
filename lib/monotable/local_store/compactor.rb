@@ -36,7 +36,7 @@ module Monotable
         chunk.compact_to_store_path = store_path_from_filename(to_store_path)
 
       when :split then
-        chunk2 = chunk.split(journal_entry[:key],journal_entry[:to_basename])
+        chunk2 = chunk.split(journal_entry)
         raise "chunk2 must have its basename set. journal_entry[:to_basename]=#{journal_entry[:to_basename].inspect}" unless chunk2.basename
         chunks[chunk2.basename] = chunk2
       else

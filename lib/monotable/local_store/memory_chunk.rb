@@ -30,12 +30,10 @@ module Monotable
     #***************************************************
     # split
     #***************************************************
-    def split(on_key,to_basename=nil)
-      Tools.debug :cover? => cover?(on_key) if on_key
-      Tools.debug_raise :error => "on_key not covered", :on_key => on_key, :range => range unless cover?(on_key) if on_key
-      split_helper(on_key) do |on_key|
-        setup_newly_split_chunk on_key, split_into(on_key,MemoryChunk.new(:basename => to_basename))
-      end
+    def split_simple(options={})
+      Tools.debug options
+      options[:new_chunk] ||= self.clone
+      super
     end
 
     #***************************************************

@@ -114,31 +114,16 @@ module Monotable
     #*************************************************************
     # chunk splitting
     #*************************************************************
-    # all keys >= on_key are put into a new chunk
-    # TODO: the "self.clone" needs to correctly split all the sub data structures including @records and @deleted_records
-    # TODO: Then we also need to correctly update the record-counts in addition to the accounting-size.
-    # returns the new chunk
-    def split(on_key=nil,to_basename=nil)
-      Tools.debug :on_key => on_key, :cover? => on_key && cover?(on_key)
-      Tools.debug_raise :error => "on_key not covered", :on_key => on_key, :range => range unless cover?(on_key) if on_key
-      split_helper(on_key) do |on_key|
-        new_chunk = self.clone
-        new_chunk.basename = nil
 
-        setup_newly_split_chunk on_key, new_chunk
-
-        if local_store
-          Tools.debug "add to localstore" => new_chunk.range_start
-          new_chunk = local_store.add_chunk new_chunk
-          Tools.debug local_store.chunks.keys
-        else
-          Tools.debug "no localstore"
-        end
-
-        Tools.debug :on_key => on_key, :to_basename => to_basename, "new_chunk:basename"=> new_chunk.basename
-        journal.split self, on_key, new_chunk.basename
-        new_chunk
+    def split_simple(options={})
+      options[:new_chunk] ||= self.clone
+      new_chunk = super
+      if local_store
+        new_chunk.basename = nil  # add_chunk will therefor create a new basename
+        new_chunk = local_store.add_chunk new_chunk
       end
+      journal.split self, options[:on_key], new_chunk.basename
+      new_chunk
     end
 
     #*************************************************************

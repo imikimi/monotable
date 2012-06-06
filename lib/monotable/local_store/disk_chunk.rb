@@ -9,7 +9,7 @@ This implementation of DiskChunk only loads the first IndexBlock when created. O
 
 DiskChunk's record's structure consists of three sub-structures:
 
-  @tip_index_block
+  @top_index_block
     Index & Records on disk
 
   @deleted_records
@@ -28,6 +28,16 @@ DiskChunk's record's structure consists of three sub-structures:
       a) the record exists on disk
       b) the record is NOT deleted
       c) AND @records (and the journal file) holds the up-to-date version
+
+TODO:
+
+  When/if we make Chunks thread-safe, we need to handle splitting carefully. When we split we will share
+  the same file handle, index-block and other fields. I think the best answer is to also share the mutex. This
+  does mean that both chunks will be locked when either is in use.
+
+  Consequently, when we complete a compaction and these DiskChunk objects are "reset", we should re-create the mutex
+  so each has its own.
+
 =end
 
 module Monotable
@@ -36,6 +46,7 @@ module Monotable
     attr_accessor :index_level_offsets
     attr_accessor :index_level_lengths
     attr_accessor :top_index_block
+    attr_accessor :deleted_records
 
     # options
     #   :filename =>
@@ -50,7 +61,7 @@ module Monotable
     end
 
     # returns number of records in the chunk
-    def length; @loaded_record_count - @deleted_records.length + @records.length; end
+    def length; @record_count_on_disk - @deleted_records.length + @records.length; end
 
     # returns a list of all keys in the chunk (unsorted)
     # this is very inefficient - it has to load the entire index into memory, but there is no other way to do it.
@@ -128,6 +139,32 @@ module Monotable
     def delete(key)
       @deleted_records[key]=locate_index_record(key) if exists_on_disk?(key)
       super
+    end
+
+    #***************************************************
+    # splitting
+    #***************************************************
+    def split_simple(options={})
+
+      options[:new_chunk] ||= self.clone
+      super.tap do |new_chunk|
+
+        on_key = options[:on_key]
+
+        # split deleted_records
+        new_chunk.deleted_records = deleted_records.select {|key,value| key >= on_key}
+        self.deleted_records      = deleted_records.select {|key,value| key < on_key}
+
+        # update ".length" (record_count)
+        new_chunk_record_count = options[:new_chunk_record_count]
+        old_chunk_record_count = options[:old_chunk_record_count]
+
+        new_chunk.record_count_on_disk  += new_chunk_record_count - new_chunk.length
+        self.record_count_on_disk       += old_chunk_record_count  - self.length
+
+        Tools.assert new_chunk.length == new_chunk_record_count
+        Tools.assert length == old_chunk_record_count
+      end
     end
 
     #***************************************************

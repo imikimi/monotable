@@ -33,12 +33,27 @@ module Monotable
       caller=caller.split(":")
       method=caller[2][4..-2].split("block in ")[-1]
       caller=sprintf("#{Process.pid}:%-30s%s: ","#{caller[0]}(#{caller[1]})",method)
-      str = str.inspect unless str.kind_of?(String)
+      str = str.inspect[0..1000] unless str.kind_of?(String)
       caller+str
     end
 
     def Tools.debug_raise(str="(execution reached this line)")
-      raise Monotable::InternalError.new debug_info(str)
+      str = str.inspect unless str.kind_of?(String)
+      raise Monotable::InternalError.new str
+    end
+
+    def Tools.required(options,*required_list)
+      required_list.each do |req|
+        Tools.debug_raise "option #{req.inspect} required. Options=#{options.inspect}" unless options.has_key?(req)
+      end
+    end
+
+    def Tools.assert(test,str="(assertion failed)")
+      Tools.debug_raise str unless test
+    end
+
+    def Tools.raise_not_implemented
+      debug_raise "not_implemented"
     end
 
     def Tools.debug(str="(execution reached this line)")
