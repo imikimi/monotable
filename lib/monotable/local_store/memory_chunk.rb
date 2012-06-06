@@ -31,7 +31,6 @@ module Monotable
     # split
     #***************************************************
     def split_simple(options={})
-      Tools.debug options
       options[:new_chunk] ||= self.clone
       super
     end

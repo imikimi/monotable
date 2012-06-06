@@ -91,9 +91,7 @@ module Monotable
     # see WriteAPI
     def set(key,columns)
       ret=set_internal(key,journal.set(self,key,columns))
-      Tools.debug :accounting_size => accounting_size, :max_chunk_size => max_chunk_size
       if accounting_size > max_chunk_size
-        Tools.debug "queue split #{accounting_size} > #{max_chunk_size} self.range=#{self.range.inspect} keys=#{self.keys}"
         EM.next_tick {self.split}
       end
       ret

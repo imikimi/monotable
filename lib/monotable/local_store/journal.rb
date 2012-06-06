@@ -70,7 +70,6 @@ module Monotable
     end
 
     def save_entry(command,chunk,*args)
-      Tools.debug :chunk => chunk.basename, :command => command, :args => args
       string_array = [command,chunk.basename,args].flatten
       save_str=string_array.collect {|str| [str.length.to_asi,str]}.flatten.join
       journal_file.open_append(true)

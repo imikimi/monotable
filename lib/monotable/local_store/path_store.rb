@@ -13,6 +13,7 @@ module Monotable
 
     def initialize(path,options={})
 
+      @file_system = options[:file_system] || Tools::FileSystem.new
       @local_store = options[:local_store] || LocalStore.new(:store_paths=>[path])
       @path = File.expand_path(path)
       @journal_manager = JournalManager.new(path,options.merge(:path_store=>self))
@@ -26,6 +27,12 @@ module Monotable
     # the config file and path for this path_store instance
     def config_filename
       File.join path,LOCAL_STORE_CONFIG_FILE
+    end
+
+
+    # in bytes
+    def free_space
+      @file_system.free_space(path)
     end
 
     def contains_chunk?(chunk)

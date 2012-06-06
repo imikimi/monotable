@@ -35,14 +35,9 @@ class LoadBalancer < TopServerComponent
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
     while chunks.length > local_store.chunks.length+1
       chunk_key = chunks.pop
-      Tools.debug :first_record => (global_index.first_record rescue nil)
-      Tools.debug :move => chunk_key, :client => client
       chunk_data = client.up_replicate_chunk chunk_key
-      Tools.debug :first_record => (global_index.first_record rescue nil)
       chunk = local_store.add_chunk MemoryChunk.new(:data=>chunk_data)
-      Tools.debug :first_record => (global_index.first_record rescue nil)
       global_index.add_local_replica(chunk)
-      Tools.debug :first_record => (global_index.first_record rescue nil)
 
       client.down_replicate_chunk chunk_key
       chunks_moved[chunk_key]=client.to_s

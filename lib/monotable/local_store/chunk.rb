@@ -449,7 +449,6 @@ module Monotable
     #   :new_chunk => a new chunk object or nil, in which case a new object will be created
     #   :to_basename => override basename in new_chunk
     def split_simple(options={})
-      Tools.debug options
       Tools.required options, :on_key, :new_chunk_accounting_size, :new_chunk_record_count, :old_chunk_accounting_size, :old_chunk_record_count
 
       (options[:new_chunk]||=self.clone).tap do |new_chunk|
@@ -479,13 +478,9 @@ module Monotable
     #   :on_key
     #   :to_basename
     def split(options={})
-      Tools.debug options
       options = {on_key:options} if options.kind_of? String
       options = split_setup options
-      split_simple(options).tap do |new_chunk|
-        Tools.debug :old_chunk => self, :new_chunk=> new_chunk
-        Tools.debug :old_chunk_keys => self.keys, :new_chunk_keys=> new_chunk.keys
-      end
+      split_simple(options)
     end
 
 
@@ -511,15 +506,12 @@ module Monotable
       chunk_accounting_size = accounting_size
       half_size  = chunk_accounting_size/2
 
-      Tools.debug :half_size => half_size, :chunk_accounting_size => chunk_accounting_size
-
       accounting_offset = 0
       count = 0
       key = nil
       each_record do |record|
         key = record.key
         asize = record.accounting_size
-        Tools.debug :key => key, :asize => asize, :accounting_offset => accounting_offset
         break if on_key && (key >= on_key)
         break if !on_key && (accounting_offset + asize/2 > half_size)
         count += 1

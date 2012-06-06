@@ -67,7 +67,6 @@ module Monotable
     # this is very inefficient - it has to load the entire index into memory, but there is no other way to do it.
     # Just don't use this for any real work ;).
     def keys
-      Tools.debug :range => range
       keys=[]
       each_key {|key| keys<<key}
       keys
@@ -96,7 +95,6 @@ module Monotable
           yield @records[key]
           mrk_index+=1
         end
-        Tools.debug :disk_key => disk_key, :deleted => @deleted_records[disk_key]
 
         # yield "record" unless it is deleted
         yield record unless @deleted_records[disk_key]

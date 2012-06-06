@@ -1,4 +1,5 @@
 require "rubygems"
+require 'sys/filesystem'
 require 'zlib'
 #require "inline"
 module Monotable
@@ -22,6 +23,23 @@ module Monotable
   end
 =end
   module Tools
+    class FileSystem
+      def space_used(path)
+        size = 0
+        Find.find(path) { |f| size += File.size(f) if File.file?(f) }
+        size
+      end
+
+      def filesystem_stat(path)
+        Sys::Filesystem.stat path
+      end
+
+      def free_space(path)
+        stat = filesystem_stat(path)
+        stat.block_size * stat.blocks_available
+      end
+    end
+
     # thankyou http://www.ruby-forum.com/topic/97203
     def Tools.commaize(num)
       a=num.to_s.split('.')
@@ -57,7 +75,7 @@ module Monotable
     end
 
     def Tools.debug(str="(execution reached this line)")
-#      $stderr.puts debug_info(str)
+      $stderr.puts debug_info(str)
     end
 
     # convert all Hashes datastructure of Arrays and Hashs to indifferent hashes

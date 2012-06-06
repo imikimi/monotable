@@ -23,8 +23,6 @@ module Monotable
     end
 
     def apply_entry(journal_entry,chunk)
-      Tools.debug :chunk => chunk.range, :journal_entry => journal_entry
-      #$stderr.puts "#{self.class}#apply_entry journal_entry[:command]=#{journal_entry[:command]}, journal_entry=#{journal_entry.inspect}"
       case journal_entry[:command]
       when :set then chunk.set(journal_entry[:key],journal_entry[:fields])
       when :delete then chunk.delete(journal_entry[:key])

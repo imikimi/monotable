@@ -202,8 +202,12 @@ module Monotable
       end
     end
 
+    def path_stores_with_free_space
+      path_stores.collect {|ps| {path_store:ps, free_space:ps.free_space}}
+    end
+
     def most_empty_path_store
-      path_stores[0]  # temporary hack
+      path_stores_with_free_space.max {|p1,p2| p1[:free_space] <=> p2[:free_space]}[:path_store]
     end
 
     def add_chunk(chunk)
