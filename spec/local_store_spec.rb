@@ -63,7 +63,6 @@ describe Monotable::LocalStore do
     #load LocalStore anew
     local_store2 = Monotable::LocalStore.new(:store_paths=>[temp_dir])
     local_store2.chunks.length.should == 1
-    puts "in test chunk.filename=#{local_store2.get_chunk("").filename}"
     local_store2.get_chunk("").length.should == 5
     Monotable::MemoryChunk.load(local_store2.get_chunk("").filename).accounting_size.should == 147095
 

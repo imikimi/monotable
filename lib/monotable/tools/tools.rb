@@ -50,7 +50,7 @@ module Monotable
       caller=Kernel.caller[1].split(/.*\/monotable.*\//)[-1]
       caller=caller.split(":")
       method=caller[2][4..-2].split("block in ")[-1]
-      caller=sprintf("#{Process.pid}:%-30s%s: ","#{caller[0]}(#{caller[1]})",method)
+      caller=sprintf("#{Process.pid}:%-30s %s: ","#{caller[0]}(#{caller[1]})",method)
       str = str.inspect[0..1000] unless str.kind_of?(String)
       caller+str
     end

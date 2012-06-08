@@ -2,6 +2,14 @@
 #SimpleCov.start
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 
+def setup_log_path
+  unless Monotable::Log.log_path
+    Monotable::Log.log_path = Dir.mktmpdir
+    Monotable::Tools.debug "log_path" => Monotable::Log.log_path
+  end
+end
+setup_log_path
+
 module TestingHash
   # self contains at least all the keys in other, and their values match
   def >=(other)

@@ -31,7 +31,6 @@ class ClusterManager < TopServerComponent
 
   def broadcast_servers(skip_servers=[])
     if @broadcast_servers_queued
-#      puts "#{self.class}#add_servers PID=#{Process.pid} already queued:server.cluster_manager.broadcast_servers servers=#{server.keys.sort.join(',')}"
       return
     end
     @broadcast_servers_queued=true
@@ -42,14 +41,11 @@ class ClusterManager < TopServerComponent
       skip_server_param << name unless skip_server_param.index(name)
     end
 
-#    puts "#{self.class}#add_servers PID=#{Process.pid} queue:server.cluster_manager.broadcast_servers servers=#{servers.keys.sort.join(',')}"
     EventMachine::Synchrony.add_timer(0) do
       @broadcast_servers_queued=false
       server_names = servers.keys
-#      puts "#{self.class}#broadcast_servers PID=#{Process.pid} servers=#{server_names.join(',')}"
       servers.each do |name,client|
         next if skip_servers.index(name)
-#        puts "  PID=#{Process.pid} sent to: #{client} servers=#{server_names.join(',')}"
         client.update_servers(server_names,skip_server_param)
       end
     end

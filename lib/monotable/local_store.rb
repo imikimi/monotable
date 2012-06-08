@@ -1,5 +1,10 @@
-require File.join(File.dirname(__FILE__),"xbd")
-require File.join(File.dirname(__FILE__),"version")
+require File.join(File.dirname(__FILE__),"tools.rb")
+
+monotable_require "", %w{
+  xbd
+  version
+  constants
+}
 
 require 'digest/md5'
 require 'yaml'
@@ -8,36 +13,32 @@ require 'fileutils'
 require 'json'
 require 'rubygems'
 
-def monotable_require(relative_path,modules)
-  modules.each do |mod|
-    require File.join(File.dirname(__FILE__),relative_path.to_s,mod)
-  end
-end
-
 monotable_require :local_store, %w{
   api
-  string
+
   global
-  cache
+
   record_cache
   index_block_cache
-  constants
-  tools
-  file_handle
+
   journal
   compactor
   journal_manager
   compaction_manager
-  logger
+
   column
   columns
+
   record
-  chunk
+
   index_block
   index_block_encoder
+
+  chunk
   memory_chunk
   disk_chunk_base
   disk_chunk
+
   path_store
   local_store
 }

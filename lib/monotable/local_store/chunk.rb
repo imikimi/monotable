@@ -177,8 +177,7 @@ module Monotable
     attr_accessor :records
     attr_accessor :accounting_size         # the bytesize of all keys, field-names and field-values
 
-    attr_accessor :range_start  # all keys are >= range_start; always non-nil
-    attr_accessor :range_end    # all keys are < range_end; always non-nil
+    attr_accessor :range        # all keys are within this range. This is a ruby, right-open-ended range: range_start_key...range_end_key
 
     attr_accessor :data_block_offset
     attr_accessor :file_handle
@@ -209,8 +208,7 @@ module Monotable
       @max_chunk_size = options[:max_chunk_size] || ((ps=options[:path_store]) && ps.max_chunk_size) || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || ((ps=options[:path_store]) && ps.max_index_block_size) ||  DEFAULT_MAX_INDEX_BLOCK_SIZE
 
-      @range_start = options[:range_start] || FIRST_POSSIBLE_KEY
-      @range_end = options[:range_end] || LAST_POSSIBLE_KEY
+      @range = (options[:range_start] || FIRST_POSSIBLE_KEY) ... (options[:range_end] || LAST_POSSIBLE_KEY)
       @records = options[:records] || {}
       @accounting_size =0
       @record_count_on_disk = 0
@@ -241,9 +239,11 @@ module Monotable
     end
 
     # note that this range is inclusive left, exclusive right: [a..b)
-    def range
-      range_start...range_end
-    end
+    def range_start;  range.first; end
+    def range_end;    range.last; end
+
+    def range_start=(s);    @range = s...range_end; end
+    def range_end=(e);      @range = range_start...e; end
 
     def filename
       @file_handle && @file_handle.to_s
@@ -349,8 +349,7 @@ module Monotable
 
     def load_saved_chunk_info
       sci=saved_chunk_info
-      @range_start = sci["range_start"] || ""
-      @range_end = sci["range_end"] || LAST_POSSIBLE_KEY
+      @range = (sci["range_start"] || FIRST_POSSIBLE_KEY) ... (sci["range_end"] || LAST_POSSIBLE_KEY)
       @accounting_size = (sci["accounting_size"] || 0).to_i
       @record_count_on_disk = (sci["record_count"] || 0).to_i
       @max_chunk_size = (sci["max_chunk_size"] || DEFAULT_MAX_CHUNK_SIZE).to_i
@@ -361,8 +360,8 @@ module Monotable
     def save_saved_chunk_info
       #puts "#{self.class}#save_saved_chunk_info length=#{length}"
       sci=saved_chunk_info
-      sci["range_start"] = @range_start
-      sci["range_end"] = @range_end
+      sci["range_start"] = range_start
+      sci["range_end"] = range_end
       sci["accounting_size"] = @accounting_size
       sci["record_count"] = length
       sci["max_chunk_size"] = @max_chunk_size
