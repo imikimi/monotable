@@ -26,9 +26,6 @@ monotable_require :local_store, %w{
   journal_manager
   compaction_manager
 
-  column
-  columns
-
   record
 
   index_block
