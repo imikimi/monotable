@@ -17,13 +17,7 @@ monotable_require '', %w{
   client/server_client
   exceptions/exceptions
   server
-}
-
-monotable_require :goliath_server, %w{
-  params_and_body
-  goliath_server
-}
-
-monotable_require :event_machine_server, %w{
-  event_machine_server
+  goliath_server/params_and_body
+  goliath_server/goliath_server
+  event_machine_server/event_machine_server
 }
