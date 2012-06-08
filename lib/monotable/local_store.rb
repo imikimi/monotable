@@ -1,7 +1,6 @@
 require File.join(File.dirname(__FILE__),"tools.rb")
 
 monotable_require "", %w{
-  xbd
   version
   constants
 }
@@ -11,7 +10,7 @@ require 'yaml'
 require 'cgi'
 require 'fileutils'
 require 'json'
-require 'rubygems'
+require 'xbd'
 
 monotable_require :local_store, %w{
   api
