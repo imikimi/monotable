@@ -3,6 +3,7 @@ class Server
 
   # config variables
   attr_reader :port,:host,:options
+  attr_reader :start_time
   attr_accessor :verbose
 
   # server module instances
@@ -21,6 +22,10 @@ class Server
       puts ""
     end
 
+    @start_time = Time.now
+
+
+
     @local_store = Monotable::LocalStore.new(options)
     @router = Monotable::Router.new(self)
     @cluster_manager = Monotable::ClusterManager.new(self)
@@ -34,6 +39,10 @@ class Server
     @cluster_manager.local_server = "#{@host}:#{@port}"
 
     initialize_new_store if options[:initialize_new_store]
+  end
+
+  def up_time
+    Time.now - start_time
   end
 
   def initialize_new_store

@@ -18,7 +18,8 @@ module Monotable
       active_tasks[name] ||= EventMachine::PeriodicTimer.new(task_periods[name]) do
         start_time = Time.now
         yield
-        Log.info "periodic task #{name}: took #{Time.now-start_time} seconds"
+        ms = ((Time.now-start_time)*1000).to_i
+        Log.info "periodic task #{name}: took #{ms} ms" if ms >= 10
       end
     end
 
@@ -27,7 +28,7 @@ module Monotable
       active_tasks[:break] ||= EventMachine::PeriodicTimer.new(0.1) {}
 
       start_task(:local_store_balancer) {local_store.balance_path_stores}
-      start_task(:heartbeat) {}
+      start_task(:heartbeat) {Log.info "uptime: #{server.up_time.to_i} seconds"}
     end
 
     def stop
