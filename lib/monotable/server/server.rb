@@ -6,7 +6,7 @@ class Server
   attr_accessor :verbose
 
   # server module instances
-  attr_reader :local_store,:router,:cluster_manager,:load_balancer,:global_index
+  attr_reader :local_store,:router,:cluster_manager,:load_balancer,:global_index,:periodic_tasks
 
   # options
   #   :store_paths=>["path",...]
@@ -26,6 +26,7 @@ class Server
     @cluster_manager = Monotable::ClusterManager.new(self)
     @load_balancer = Monotable::LoadBalancer.new(self)
     @global_index = Monotable::GlobalIndex.new(self)
+    @periodic_tasks = Monotable::PeriodicTasks.new(self)
 
     @port = options[:port] || 8080
     @host = options[:host] || 'localhost'

@@ -1,77 +1,45 @@
 #!/usr/bin/env ruby
 require 'rubygems'
-require 'optparse'
-require 'ostruct'
+require 'trollop'
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 
-class OptionsParser
-  attr_accessor :options
+def trollop_opts_parser(args)
+  Trollop::options(args) do
+    version v="Monotable Daemon v#{Monotable::VERSION} (c) Imikimi LLC (see LICENCE.TXT)"
+    banner <<ENDBANNER
+#{v}
 
-  def initialize(args)
-    @args=args
-    @options={:verbose=>true}
-    @parser = OptionParser.new do |opts|
-      opts.banner = "Usage: #{__FILE__} [options]"
-      opts.separator ""
-      opts.separator "Options:"
+Purpose: Start the Monotable Daemon
 
-      opts.on("-s","--store_paths list", Array, "Local store paths") do |list|
-        options[:store_paths]=list
-      end
+Usage:
 
-      opts.on_tail("--help", "Show this message") do
-        show_usage
-      end
+  monotable [options]
 
-      opts.on("-q", "--quiet", "Silence output") {|p| options[:verbose]=false}
-      opts.on("-p", "--port #", "Port number to listen to") {|p| options[:port]=p.to_i}
-      opts.on("-h", "--host address", "Host address to listen to") {|h| options[:host]=h}
-      opts.on("--initialize", "Initialize new store.") {|h| options[:initialize_new_multi_store]=true}
-
-      opts.on_tail("--version", "Show version") do
-        puts Monotable::VERSION
-        exit
-      end
+Options:
+ENDBANNER
+    opt :quiet, "Silence output"
+    opt :port, "Port number to listen to"
+    opt :host, "host address to listen to"
+    opt :verbose, "Verbose output"
+    opt :initialize, "initialize a new store"
+    opt :store_paths, "one or more local paths to store data (required)", :type => :strings
+  end.tap do |opts|
+    opts[:initialize_new_multi_store] = opts[:initialize]
+    Trollop::die :store_paths, "At least one store_path required." unless opts[:store_paths] && opts[:store_paths].length>0
+    opts[:store_paths].each do |path|
+      Trollop::die :store_paths, "store path #{path.inspect} does not exist" unless File.exists?(path)
+      Trollop::die :store_paths, "store path #{path.inspect} is not a directory" unless File.stat(path).directory?
     end
   end
-
-  def parse
-    non_options=@parser.parse!(@args)
-    show_usage("Only options allowed. Please don't include: #{non_options.join(" ")}") if non_options.length>0
-    validate
-    @options
-  rescue StandardError => e
-    show_usage(e.to_s)
-  end
-
-  def show_usage(message=nil)
-    puts @parser
-    puts "\nOptions parsed: #{options.inspect}"
-    puts "\nError: #{message}" if message
-    exit
-  end
-
-  def validate
-    unless options[:store_paths]
-      show_usage "store_paths required"
-    end
-    options[:store_paths].each do |path|
-      show_usage "store path #{path.inspect} does not exist" unless File.exists?(path)
-      show_usage "store path #{path.inspect} is not a directory" unless File.stat(path).directory?
-    end
-  end
-
 end
 
-options=OptionsParser.new(ARGV).parse
-
-options[:store_paths].each do |path|
-  Dir.mkdir(path) unless File.exists?(path)
-end
+options=trollop_opts_parser(ARGV)
 
 puts "Monotable internal initialization..."
-require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
 begin
-  Monotable::GoliathServer::HttpServer.start(options)
+  Monotable::GoliathServer::HttpServer.start(options) do |server|
+    server.periodic_tasks.start
+  end
 #  Monotable::EventMachineServer::HttpServer.start(options)
 rescue Monotable::UserInterventionRequiredError => user_error
   $stderr.puts "\n#{user_error.class}:\n  #{user_error.to_s.gsub("\n","\n  ")}"

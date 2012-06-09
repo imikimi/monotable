@@ -65,82 +65,35 @@ class HttpServer < Goliath::API
     attr_reader :server
     attr_reader :running
 
-    def setup_logger
-      log = Log4r::Logger.new('goliath')
-      log_format = Log4r::PatternFormatter.new(:pattern => "[#{Process.pid}:%l] %d :: %m")
-      setup_file_logger(log, log_format) if @log_file
-      setup_stdout_logger(log, log_format) if @log_stdout
-
-      log.level = @verbose ? Log4r::DEBUG : Log4r::INFO
-      log
-    end
-
-    # Setup file logging
-    #
-    # @param log [Logger] The logger to add file logging too
-    # @param log_format [Log4r::Formatter] The log format to use
-    # @return [Nil]
-    def setup_file_logger(log, log_format)
-      FileUtils.mkdir_p(File.dirname(@log_file))
-
-      log.add(Log4r::FileOutputter.new('fileOutput', {:filename => @log_file,
-                                                      :trunc => false,
-                                                      :formatter => log_format}))
-    end
-
-    # Setup stdout logging                                                                                                #
-    # @param log [Logger] The logger to add stdout logging too
-    # @param log_format [Log4r::Formatter] The log format to use
-    # @return [Nil]
-    def setup_stdout_logger(log, log_format)
-      log.add(Log4r::StdoutOutputter.new('console', :formatter => log_format))
-    end
-
-
     # options
     #   :store_paths=>["path",...]
     #   :port => Fixnum - TCP port to listen on, default 8080
     #   :host => host to listen on - default "localhost"
     #   :cluster => {} => params for initializing the cluster-manager
-    def start(options={})
+    def start(options={},&block)
       @server = Monotable::Server.new(options)
-      verbose=server.verbose
+      Log.verbose = server.verbose
 
       # Start up server
-=begin
-      server.post_init
-      runner = Goliath::Runner.new([], GoliathServer::HttpServer.new)
-      Goliath.env=:production # or :development
-      runner.port = server.port
-      runner.address = server.host
-      runner.app = Goliath::Rack::Builder.build(GoliathServer::HttpServer, runner.api)
-      runner.log_stdout = verbose
-      puts ">>> Goliath start" if verbose
-      runner.run
-      puts "<<< Goliath done" if verbose
-=end
-      @log_stdout=true if verbose
-      log = setup_logger
 
       Goliath.env=:production # or :development
-      log.info("Starting server on #{server.host}:#{server.port} in #{Goliath.env} mode. Watch out for stones.")
+      Log.info "Starting server on #{server.host}:#{server.port} in #{Goliath.env} mode. Watch out for stones."
 
       gserver = Goliath::Server.new(server.host, server.port)
-      gserver.logger = log
+      gserver.logger = Log
       gserver.api = GoliathServer::HttpServer.new
       gserver.app = Goliath::Rack::Builder.build(GoliathServer::HttpServer, gserver.api)
       gserver.plugins = []
       gserver.options = {}
       gserver.start do
+        yield server if block
         ServerClient.use_synchrony = true
         @running = true
 
         server.post_init
-        if verbose
-          puts({"Cluster status" => server.cluster_manager.status}.to_yaml)
-          puts "\nMonotable init successful."
-          puts "Monotable now listenting on: #{server.host}:#{server.port}"
-        end
+        Log.info({"Cluster status" => server.cluster_manager.status}.to_yaml)
+        Log.info "\nMonotable init successful."
+        Log.info "Monotable now listenting on: #{server.host}:#{server.port}"
       end
     end
   end

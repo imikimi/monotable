@@ -10,5 +10,5 @@ monotable_require :server, %w{
   request_handler
   server_controller
   record_request_handler
-  periodic_task
+  periodic_tasks
 }
