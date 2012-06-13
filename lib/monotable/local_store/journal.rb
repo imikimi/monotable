@@ -10,28 +10,33 @@ module Monotable
       # set Journal.async_compaction=true to enable asynchronous compaction
       attr_accessor :async_compaction
 
-      def encode_journal_entry(command,args)
+      def encode_journal_entry(command, args)
         [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
       end
 
-      def parse_entry_without_checksum(io_stream)
+      # parses exactly the data encode_journal_entry generates
+      def parse_encoded_journal_entry(encoded_journal_entry_stream)
+        command = encoded_journal_entry_stream.read_asi_string
         strings = []
-        strings << io_stream.read_asi_string while !io_stream.eof?
-        command = strings[1]
-        chunk_basename = strings[0]
-        {:command => command.to_sym, :chunk_basename => chunk_basename}.merge(case command
-          when "delete"       then {:key=>strings[2]}
+        strings << encoded_journal_entry_stream.read_asi_string while !encoded_journal_entry_stream.eof?
+        {:command => command.to_sym}.merge(case command
+          when "delete"       then {:key=>strings[0]}
           when "delete_chunk" then {}
-          when "split"        then {:on_key => strings[2], :to_basename => strings[3]}
-          when "move_chunk"   then {:to_store_path => strings[2]}
-          when "set"          then {:key => strings[2], :fields => Hash[*strings[3..-1]]}
+          when "split"        then {:on_key => strings[0], :to_basename => strings[1]}
+          when "move_chunk"   then {:to_store_path => strings[0]}
+          when "set"          then {:key => strings[0], :fields => Hash[*strings[1..-1]]}
           else raise InternalError.new "parse_entry: invalid journal entry command: #{command.inspect}"
         end)
       end
 
+      # Note, the "encoded_journal_entry" is wrapped in an asi_checksum and is prefixed by
+      #   the chunk's basename asi_string.
+      # parse_entry knows how to decode everything
       def parse_entry(io_stream)
         entry_string=Monotable::Tools.read_asi_checksum_string_from_file(io_stream)
-        parse_entry_without_checksum StringIO.new(entry_string)
+        io_stream = StringIO.new(entry_string)
+        chunk_basename = io_stream.read_asi_string
+        parse_encoded_journal_entry(io_stream).merge(:chunk_basename => chunk_basename)
       end
     end
 
@@ -67,6 +72,10 @@ module Monotable
       @local_store ||= journal_manager && journal_manager.local_store
     end
 
+    # Writes the encoded_journal_entry to disk.
+    # encoded_journal_entry is prepended with the chunk.basename string.
+    #   chunk.basename is used instead of chunk.range_start because it allows the compactor to find the chunk's file on disk trivially rather having to scan all chunks on disk.
+    # The data written to disk is also checksummed.
     def journal_write(chunk, encoded_journal_entry)
       data_to_write = [chunk.basename.length.to_asi, chunk.basename, encoded_journal_entry].join
       offset = @size
@@ -104,4 +113,3 @@ module Monotable
     end
   end
 end
-
