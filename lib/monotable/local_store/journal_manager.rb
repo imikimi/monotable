@@ -84,28 +84,8 @@ module Monotable
     #**********************************************
     # Journal API
     #**********************************************
-    def journal_write(save_str)
-      @current_journal.journal_write(save_str)
-    end
-
-    def set(chunk,key,record)
-      @current_journal.set(chunk,key,record)
-    end
-
-    def delete(chunk,key)
-      @current_journal.delete(chunk,key)
-    end
-
-    def delete_chunk(chunk)
-      @current_journal.delete_chunk(chunk)
-    end
-
-    def split(chunk,key,to_filename)
-      @current_journal.split(chunk,key,to_filename)
-    end
-
-    def move_chunk(chunk,path_store)
-      @current_journal.move_chunk(chunk,path_store)
+    def journal_write(chunk,encoded_journal_entry)
+      @current_journal.journal_write(chunk,encoded_journal_entry)
     end
 
     #**********************************************

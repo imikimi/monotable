@@ -80,21 +80,19 @@ module Monotable
       @file_handle.read(0)
     end
 
-    def journal_write(partial_journal_write_string)
+    def journal_write(encoded_journal_entry)
       if next_replica_server
-        next_replica_server.journal_write self,partial_journal_write_string
+        next_replica_server.journal_write self, encoded_journal_entry
       end
-      journal.journal_write [basename.length.to_asi,basename,partial_journal_write_string].join
+      journal.journal_write self, encoded_journal_entry
     end
 
-    def save_journal_entry(command,chunk,*args)
-      partial_save_string = [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
-
-      journal_write(partial_save_string)
+    def save_journal_entry(command, *args)
+      journal_write Journal.encode_journal_entry(command, args)
     end
 
     def move(new_path_store)
-      save_journal_entry "move_chunk", self, new_path_store.path
+      save_journal_entry "move_chunk", new_path_store.path
     end
 
     #*************************************************************
@@ -104,7 +102,7 @@ module Monotable
 
     # see WriteAPI
     def set(key,columns)
-      save_info = save_journal_entry("set", self, key, columns.collect {|k,v| [k,v]})
+      save_info = save_journal_entry "set", key, columns.collect {|k,v| [k,v]}
       record = JournalDiskRecord.new self, key, columns, save_info
       ret = set_internal key, record
       if accounting_size > max_chunk_size
@@ -115,14 +113,14 @@ module Monotable
 
     # see WriteAPI
     def delete(key)
-      save_journal_entry "delete", self, key
+      save_journal_entry "delete", key
       delete_internal(key)
     end
 
     # delete this chunk
     # TODO: this should actually move the chunk into the "Trash" - a holding area where we can later do a verification against the cluster to make sure it is safe to delete this chunk.
     def delete_chunk
-      save_journal_entry "delete_chunk", self
+      save_journal_entry "delete_chunk"
     end
 
     #*************************************************************
@@ -136,7 +134,7 @@ module Monotable
         new_chunk.basename = nil  # add_chunk will therefor create a new basename
         new_chunk = local_store.add_chunk new_chunk
       end
-      save_journal_entry "split", self, options[:on_key], new_chunk.basename
+      save_journal_entry "split", options[:on_key], new_chunk.basename
       new_chunk
     end
 

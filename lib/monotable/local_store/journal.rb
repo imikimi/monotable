@@ -10,6 +10,10 @@ module Monotable
       # set Journal.async_compaction=true to enable asynchronous compaction
       attr_accessor :async_compaction
 
+      def encode_journal_entry(command,args)
+        [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
+      end
+
       def parse_entry_without_checksum(io_stream)
         strings = []
         strings << io_stream.read_asi_string while !io_stream.eof?
@@ -31,36 +35,11 @@ module Monotable
       end
     end
 
-    # all possible mutations to a chunk go through this API
-    module WriteAPI
-      def set(chunk,key,record)
-        save_info = save_journal_entry("set", chunk, key, record.collect {|k,v| [k,v]})
-        JournalDiskRecord.new chunk, key, record, save_info
-      end
-
-      def delete(chunk,key)
-        save_journal_entry "delete", chunk, key
-      end
-
-      def delete_chunk(chunk)
-        save_journal_entry "delete_chunk", chunk
-      end
-
-      def move_chunk(chunk,path_store)
-        save_journal_entry "move_chunk", chunk, path_store.path
-      end
-
-      def split(chunk,key,to_basename)
-        save_journal_entry "split", chunk, key, to_basename
-      end
-    end
-
     attr_accessor :journal_file
     attr_accessor :read_only
     attr_accessor :size
     attr_accessor :journal_manager
     attr_accessor :max_journal_size
-    include WriteAPI
 
     def initialize(file_name,options={})
       @journal_manager=options[:journal_manager]
@@ -88,21 +67,14 @@ module Monotable
       @local_store ||= journal_manager && journal_manager.local_store
     end
 
-    def journal_write(save_str)
+    def journal_write(chunk, encoded_journal_entry)
+      data_to_write = [chunk.basename.length.to_asi, chunk.basename, encoded_journal_entry].join
       offset = @size
-      journal_file.open_append(true)
-      @size+=Monotable::Tools.write_asi_checksum_string(journal_file,save_str)
+      journal_file.open_append true
+      @size += Monotable::Tools.write_asi_checksum_string journal_file, data_to_write
       journal_file.flush
       EM::next_tick {self.compact} if full?
-      {:offset => offset, :length => save_str.length, :journal => self}
-    end
-
-    def save_journal_entry(command,chunk,*args)
-      partial_save_string = [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
-
-      chunk.journal_write(partial_save_string)
-
-#      journal_write(save_str)
+      {:offset => offset, :length => data_to_write.length, :journal => self}
     end
 
     # compact this journal and all the chunks it is tied to
