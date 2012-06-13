@@ -1,6 +1,6 @@
-require 'simplecov'
-SimpleCov.start
-$stderr.puts "SimpleCov.start"
+#require 'simplecov'
+#SimpleCov.start
+#$stderr.puts "SimpleCov.start"
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
 
 class VirtualSizeFileSystemMock < Monotable::Tools::FileSystem

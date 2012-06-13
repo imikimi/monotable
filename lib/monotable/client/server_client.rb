@@ -202,6 +202,8 @@ module Monotable
     def join(server,skip_servers=[]); request(:put,"server/join?server_name=#{ue server}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
     def update_servers(servers,skip_servers=[]); request(:post,"server/update_servers?servers=#{ue servers.join(',')}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
 
+    def journal_write(chunk,journal_write_string); request(:put,"server/journal_entry/#{chunk}", :body => journal_write_string); end
+
     # returns the raw chunk-file
     def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{ue chunk_key}",:raw_response => true); end
     def down_replicate_chunk(chunk_key); request(:post,"server/down_replicate_chunk/#{ue chunk_key}"); end

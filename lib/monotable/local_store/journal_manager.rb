@@ -84,6 +84,10 @@ module Monotable
     #**********************************************
     # Journal API
     #**********************************************
+    def journal_write(save_str)
+      @current_journal.journal_write(save_str)
+    end
+
     def set(chunk,key,record)
       @current_journal.set(chunk,key,record)
     end

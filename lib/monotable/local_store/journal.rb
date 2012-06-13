@@ -9,12 +9,60 @@ module Monotable
     class << self
       # set Journal.async_compaction=true to enable asynchronous compaction
       attr_accessor :async_compaction
+
+      def parse_entry_without_checksum(io_stream)
+        strings = []
+        strings << io_stream.read_asi_string while !io_stream.eof?
+        command = strings[1]
+        chunk_basename = strings[0]
+        {:command => command.to_sym, :chunk_basename => chunk_basename}.merge(case command
+          when "delete"       then {:key=>strings[2]}
+          when "delete_chunk" then {}
+          when "split"        then {:on_key => strings[2], :to_basename => strings[3]}
+          when "move_chunk"   then {:to_store_path => strings[2]}
+          when "set"          then {:key => strings[2], :fields => Hash[*strings[3..-1]]}
+          else raise InternalError.new "parse_entry: invalid journal entry command: #{command.inspect}"
+        end)
+      end
+
+      def parse_entry(io_stream)
+        entry_string=Monotable::Tools.read_asi_checksum_string_from_file(io_stream)
+        parse_entry_without_checksum StringIO.new(entry_string)
+      end
     end
+
+    # all possible mutations to a chunk go through this API
+    module WriteAPI
+      def set(chunk,key,record)
+        offset=@size
+        save_str=save_entry("set", chunk, key, record.collect {|k,v| [k,v]})
+        length=save_str.length
+        JournalDiskRecord.new(chunk,key,self,offset,length,record)
+      end
+
+      def delete(chunk,key)
+        save_entry "delete", chunk, key
+      end
+
+      def delete_chunk(chunk)
+        save_entry "delete_chunk", chunk
+      end
+
+      def move_chunk(chunk,path_store)
+        save_entry "move_chunk", chunk, path_store.path
+      end
+
+      def split(chunk,key,to_basename)
+        save_entry "split", chunk, key, to_basename
+      end
+    end
+
     attr_accessor :journal_file
     attr_accessor :read_only
     attr_accessor :size
     attr_accessor :journal_manager
     attr_accessor :max_journal_size
+    include WriteAPI
 
     def initialize(file_name,options={})
       @journal_manager=options[:journal_manager]
@@ -34,33 +82,6 @@ module Monotable
       Journal.parse_entry(journal_file.read_handle)
     end
 
-    class << self
-      def parse_entry(io_stream)
-        entry_string=Monotable::Tools.read_asi_checksum_string_from_file(io_stream)
-        io_stream = StringIO.new(entry_string)
-        strings = []
-        strings << io_stream.read_asi_string while !io_stream.eof?
-        command = strings[0]
-        case command
-        when "del"          then {:command=>:delete,      :chunk_basename=>strings[1], :key=>strings[2]}
-        when "delete_chunk" then {:command=>:delete_chunk,:chunk_basename=>strings[1]}
-        when "split"        then {:command=>:split,       :chunk_basename=>strings[1], :on_key=>strings[2], :to_basename => strings[3]}
-        when "move_chunk" then
-          {:command => :move_chunk, :chunk_basename => strings[1], :to_store_path => strings[2]}
-        when "set" then
-          fields={}
-          i=3
-          while i < strings.length
-            fields[strings[i]] = strings[i+1]
-            i+=2
-          end
-          {:command=>:set,:chunk_basename=>strings[1],:key=>strings[2],:fields=>fields}
-        else
-          raise InternalError.new "parse_entry: invalid journal entry command: #{command.inspect}"
-        end
-      end
-    end
-
     def journal
       self
     end
@@ -69,9 +90,7 @@ module Monotable
       @local_store ||= journal_manager && journal_manager.local_store
     end
 
-    def save_entry(command,chunk,*args)
-      string_array = [command,chunk.basename,args].flatten
-      save_str=string_array.collect {|str| [str.length.to_asi,str]}.flatten.join
+    def journal_write(save_str)
       journal_file.open_append(true)
       @size+=Monotable::Tools.write_asi_checksum_string(journal_file,save_str)
       journal_file.flush
@@ -79,27 +98,12 @@ module Monotable
       save_str
     end
 
-    def set(chunk,key,record)
-      offset=@size
-      save_str=save_entry("set", chunk, key, record.collect {|k,v| [k,v]})
-      length=save_str.length
-      JournalDiskRecord.new(chunk,key,self,offset,length,record)
-    end
+    def save_entry(command,chunk,*args)
+      partial_save_string = [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
 
-    def delete(chunk,key)
-      save_entry "del", chunk, key
-    end
+      chunk.journal_write(partial_save_string)
 
-    def delete_chunk(chunk)
-      save_entry "delete_chunk", chunk
-    end
-
-    def move_chunk(chunk,path_store)
-      save_entry "move_chunk", chunk, path_store.path
-    end
-
-    def split(chunk,key,to_basename)
-      save_entry "split", chunk, key, to_basename
+#      journal_write(save_str)
     end
 
     # compact this journal and all the chunks it is tied to

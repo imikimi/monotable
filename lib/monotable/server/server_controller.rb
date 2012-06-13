@@ -21,6 +21,7 @@ class ServerController < RequestHandler
     when "POST/down_replicate_chunk" then down_replicate_chunk
     when "POST/balance" then balance
     when "POST/split_chunk" then split_chunk
+    when "PUT/journal_entry" then journal_write
     else handle_unknown_request
     end
   end
@@ -50,6 +51,15 @@ class ServerController < RequestHandler
     return handle_invalid_request("'server_name' parameter required") unless server_name
     add_servers([server_name],skip_servers)
     self.servers # return our list of known servers
+  end
+
+  def journal_write
+    chunk = server.local_store.get_chunk(@resource_id)
+    if chunk
+      chunk.write_from_upstream_replica(body)
+    else
+      respond 404, {:status => "chunk not on server"}
+    end
   end
 
   def update_servers

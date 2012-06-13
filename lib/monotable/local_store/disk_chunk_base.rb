@@ -12,6 +12,7 @@ module Monotable
   class DiskChunkBase < Chunk
     attr_accessor :path_store
     attr_accessor :journal
+    attr_accessor :next_replica_server
 
     class << self
       def reset_disk_chunks
@@ -77,6 +78,15 @@ module Monotable
 
     def chunk_file_data
       @file_handle.read(0)
+    end
+
+    def journal_write(partial_journal_write_string)
+      if next_replica_server
+        next_replica_server.journal_write self,partial_journal_write_string
+      end
+      [basename.length.to_asi,basename,partial_journal_write_string].join.tap do |write_string|
+        journal.journal_write write_string
+      end
     end
 
     def move(new_path_store)
