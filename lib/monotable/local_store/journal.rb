@@ -34,24 +34,24 @@ module Monotable
     # all possible mutations to a chunk go through this API
     module WriteAPI
       def set(chunk,key,record)
-        save_info = save_entry("set", chunk, key, record.collect {|k,v| [k,v]})
+        save_info = save_journal_entry("set", chunk, key, record.collect {|k,v| [k,v]})
         JournalDiskRecord.new chunk, key, record, save_info
       end
 
       def delete(chunk,key)
-        save_entry "delete", chunk, key
+        save_journal_entry "delete", chunk, key
       end
 
       def delete_chunk(chunk)
-        save_entry "delete_chunk", chunk
+        save_journal_entry "delete_chunk", chunk
       end
 
       def move_chunk(chunk,path_store)
-        save_entry "move_chunk", chunk, path_store.path
+        save_journal_entry "move_chunk", chunk, path_store.path
       end
 
       def split(chunk,key,to_basename)
-        save_entry "split", chunk, key, to_basename
+        save_journal_entry "split", chunk, key, to_basename
       end
     end
 
@@ -97,7 +97,7 @@ module Monotable
       {:offset => offset, :length => save_str.length, :journal => self}
     end
 
-    def save_entry(command,chunk,*args)
+    def save_journal_entry(command,chunk,*args)
       partial_save_string = [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
 
       chunk.journal_write(partial_save_string)

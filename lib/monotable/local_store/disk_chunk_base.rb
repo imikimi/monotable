@@ -87,8 +87,14 @@ module Monotable
       journal.journal_write [basename.length.to_asi,basename,partial_journal_write_string].join
     end
 
+    def save_journal_entry(command,chunk,*args)
+      partial_save_string = [command,args].flatten.collect {|str| [str.length.to_asi,str]}.flatten.join
+
+      journal_write(partial_save_string)
+    end
+
     def move(new_path_store)
-      journal.move_chunk(self,new_path_store)
+      save_journal_entry "move_chunk", self, new_path_store.path
     end
 
     #*************************************************************
@@ -107,14 +113,14 @@ module Monotable
 
     # see WriteAPI
     def delete(key)
-      journal.delete(self,key)
+      save_journal_entry "delete", self, key
       delete_internal(key)
     end
 
     # delete this chunk
     # TODO: this should actually move the chunk into the "Trash" - a holding area where we can later do a verification against the cluster to make sure it is safe to delete this chunk.
     def delete_chunk
-      journal.delete_chunk(self)
+      save_journal_entry "delete_chunk", self
     end
 
     #*************************************************************
@@ -128,7 +134,7 @@ module Monotable
         new_chunk.basename = nil  # add_chunk will therefor create a new basename
         new_chunk = local_store.add_chunk new_chunk
       end
-      journal.split self, options[:on_key], new_chunk.basename
+      save_journal_entry "split", self, options[:on_key], new_chunk.basename
       new_chunk
     end
 
