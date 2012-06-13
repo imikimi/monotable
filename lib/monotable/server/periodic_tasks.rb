@@ -24,10 +24,10 @@ module Monotable
     end
 
     def start
-      # if we dont have the :break timer, then you can't control-c the daemon
+      # if we dont have this "break" timer, then you can't control-c the daemon
       active_tasks[:break] ||= EventMachine::PeriodicTimer.new(0.1) {}
 
-      start_task(:local_store_balancer) {local_store.balance_path_stores}
+      start_task(:local_store_balancer) {PathStoreBalancer.new(local_store).balance}
       start_task(:heartbeat) {Log.info "uptime: #{server.up_time.to_i} seconds"}
     end
 

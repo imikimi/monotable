@@ -189,53 +189,6 @@ module Monotable
     end
     public
 
-    #********************************************************
-    # Path-Store Balancing
-    # NOTE: this only journals the proposed chunk-moves to bring things into balance
-    # TODO: detect if we already have moves scheduled, take them into account, and only if we still need balancing, do more moving.
-    #********************************************************
-    def path_stores_out_of_balance_threshold
-      DEFAULT_MAX_CHUNK_SIZE * 5
-    end
-
-    class PathStoreBalanceWrapper
-      attr_accessor :path_store
-
-      def initialize(ps) @path_store = ps; end
-      def free_space; @free_space ||= path_store.free_space; end
-
-      def sort_chunks_by_size
-        chunks_by_size.sort_by! {|chunk| chunk.accounting_size}
-      end
-
-      def chunks_by_size
-        @chunks_by_size ||= ps.chunks.values
-      end
-
-      def pop
-        chunks_by_size.pop.tap do |chunk|
-          @free_space -= chunk.accounting_size
-        end
-      end
-
-      def push(chunk)
-        @free_space.push chunk.accounting_size
-        chunk.move(path_store)
-        chunks_buy_size<<chunk
-        sort_chunks_by_size
-      end
-
-      def <=>(second)
-        free_space <=> second.free_space
-      end
-    end
-
-    def balance_path_stores
-      ps_list = path_stores.collect {|ps| PathStoreBalanceWrapper.new(ps)}
-      while (emptiest = ps_list.max).free_space - (fullest = ps_list.min).free_space > path_stores_out_of_balance_threshold
-        emptiest.push fullest.pop
-      end
-    end
     #*************************************************************
     # Internal API
     #*************************************************************

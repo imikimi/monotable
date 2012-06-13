@@ -47,7 +47,9 @@ module DaemonTestHelper
         :store_paths => num_store_paths.times.collect {local_store_path},
 #        :verbose => true,
       }.merge(options)
-      )
+      ) do
+      end
+#      SimpleCov.at_exit {SimpleCov.result}
     }
     server_clients << client=Monotable::ServerClient.new(daemon_uri(daemon_number))
     wait_for_server_to_start client

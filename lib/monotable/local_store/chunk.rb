@@ -176,6 +176,7 @@ module Monotable
     attr_accessor :columns
     attr_accessor :records
     attr_accessor :accounting_size         # the bytesize of all keys, field-names and field-values
+    attr_reader :size_overhead_estimate   # the delta between accounting_size and actual size at loadtime
 
     attr_accessor :range        # all keys are within this range. This is a ruby, right-open-ended range: range_start_key...range_end_key
 
@@ -297,6 +298,10 @@ module Monotable
       "<#{self.class} range_start=#{range_start.inspect} range_end=#{range_end.inspect} accounting_size=#{accounting_size} length=#{length}>"
     end
 
+    def estimated_file_size
+      size_overhead_estimate + accounting_size
+    end
+
     #***************************************************
     # Iterators
     #***************************************************
@@ -354,6 +359,8 @@ module Monotable
       @record_count_on_disk = (sci["record_count"] || 0).to_i
       @max_chunk_size = (sci["max_chunk_size"] || DEFAULT_MAX_CHUNK_SIZE).to_i
       @max_index_block_size = (sci["max_index_block_size"] || DEFAULT_MAX_INDEX_BLOCK_SIZE).to_i
+
+      @size_overhead_estimate = file_handle ? file_handle.length - @accounting_size : 0
       #puts "#{self.class}#load_saved_chunk_info sci=#{sci.inspect}"
     end
 

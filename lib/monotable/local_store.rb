@@ -37,4 +37,6 @@ monotable_require :local_store, %w{
 
   path_store
   local_store
+
+  path_store_balancer
 }

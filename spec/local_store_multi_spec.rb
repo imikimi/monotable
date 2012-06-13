@@ -10,26 +10,6 @@ describe Monotable::LocalStore do
     cleanup
   end
 
-  class VirtualSizeFileSystemMock < Monotable::Tools::FileSystem
-    def initialize(virtual_size)
-      @virtual_size = virtual_size
-    end
-
-    def free_space(dir_path)
-      @virtual_size - space_used(dir_path)
-    end
-  end
-
-  class FixedFreeSpaceFileSystemMock < Monotable::Tools::FileSystem
-    def initialize(free_space)
-      @free_space = free_space
-    end
-
-    def free_space(dir_path)
-      @free_space
-    end
-  end
-
   def blank_server
     reset_temp_dir
     Monotable::Server.new(:store_paths=>[local_store_path],:initialize_new_store=>true)

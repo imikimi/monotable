@@ -1,11 +1,31 @@
-#require 'simplecov'
-#SimpleCov.start
+require 'simplecov'
+SimpleCov.start
+$stderr.puts "SimpleCov.start"
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
+
+class VirtualSizeFileSystemMock < Monotable::Tools::FileSystem
+  def initialize(virtual_size)
+    @virtual_size = virtual_size
+  end
+
+  def free_space(dir_path)
+    @virtual_size - space_used(dir_path)
+  end
+end
+
+class FixedFreeSpaceFileSystemMock < Monotable::Tools::FileSystem
+  def initialize(free_space)
+    @free_space = free_space
+  end
+
+  def free_space(dir_path)
+    @free_space
+  end
+end
 
 def setup_log_path
   unless Monotable::Log.log_path
     Monotable::Log.log_path = Dir.mktmpdir
-    Monotable::Tools.debug "log_path" => Monotable::Log.log_path
   end
 end
 setup_log_path

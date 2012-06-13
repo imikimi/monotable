@@ -1,4 +1,5 @@
 module Monotable
+Tools.debug
 module HttpServer
 
 class ServerController < RequestHandler
@@ -8,6 +9,7 @@ class ServerController < RequestHandler
   end
 
   def handle
+    Tools.debug "#{method}/#{action}"
     case "#{method}/#{action}"
     when "GET/chunks" then chunks
     when "GET/chunk" then chunk

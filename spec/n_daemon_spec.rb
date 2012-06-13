@@ -1,4 +1,4 @@
-require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable'))
+require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
 require 'rubygems'
 require 'rest_client'
 require 'tmpdir'
