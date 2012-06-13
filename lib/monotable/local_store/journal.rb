@@ -34,10 +34,8 @@ module Monotable
     # all possible mutations to a chunk go through this API
     module WriteAPI
       def set(chunk,key,record)
-        offset=@size
-        save_str=save_entry("set", chunk, key, record.collect {|k,v| [k,v]})
-        length=save_str.length
-        JournalDiskRecord.new(chunk,key,self,offset,length,record)
+        save_info = save_entry("set", chunk, key, record.collect {|k,v| [k,v]})
+        JournalDiskRecord.new chunk, key, record, save_info
       end
 
       def delete(chunk,key)
@@ -91,11 +89,12 @@ module Monotable
     end
 
     def journal_write(save_str)
+      offset = @size
       journal_file.open_append(true)
       @size+=Monotable::Tools.write_asi_checksum_string(journal_file,save_str)
       journal_file.flush
       EM::next_tick {self.compact} if full?
-      save_str
+      {:offset => offset, :length => save_str.length, :journal => self}
     end
 
     def save_entry(command,chunk,*args)

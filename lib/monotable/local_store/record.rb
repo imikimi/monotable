@@ -222,13 +222,17 @@ module Monotable
     attr_accessor :disk_offset
     attr_accessor :disk_length
 
-    def initialize(chunk,key,journal,disk_offset,disk_length,record)
+    # journal_info require:
+    #   :journal => journal object
+    #   :offset => offset of entry on disk
+    #   :length => length of entry on disk
+    def initialize(chunk,key,record,journal_info)
       @chunk = chunk
       @chunk_memory_revision = chunk.memory_revision
       @key=key
-      self.journal=journal
-      self.disk_offset=disk_offset
-      self.disk_length=disk_length
+      self.journal=journal_info[:journal]
+      self.disk_offset=journal_info[:offset]
+      self.disk_length=journal_info[:length]
       self.accounting_size=case record
       when Record then record.accounting_size
       when Hash then calculate_accounting_size(record)

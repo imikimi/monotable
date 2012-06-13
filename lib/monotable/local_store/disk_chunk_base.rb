@@ -84,9 +84,7 @@ module Monotable
       if next_replica_server
         next_replica_server.journal_write self,partial_journal_write_string
       end
-      [basename.length.to_asi,basename,partial_journal_write_string].join.tap do |write_string|
-        journal.journal_write write_string
-      end
+      journal.journal_write [basename.length.to_asi,basename,partial_journal_write_string].join
     end
 
     def move(new_path_store)
