@@ -1,3 +1,18 @@
+=begin
+TODO: What happens if this gets run again before the next compaction?
+We need to note, for each chunk, if it already is moving to a new store. That way if we
+run this again, we can recalculate based on where the chunks are already slated to move to.
+Chunks already moving could be redirected, but ONLY if we do-so within the same journal file. Otherwise
+we will be moving them twice, and that's just silly.
+
+TODO: We should also prefer to move chunks that are already touched by the current journal. We are going
+to be loading and saving them ANYWAY, so it is essentially no additional overhead to move them.
+
+NOTE: moving a chunk actually means loading, decodeing, recoding and writing it with the current system.
+We could add some code to be smarter about that - detect that there are no edits, but if we use the TODO
+above, this may be a rare case.
+
+=end
 module Monotable
   class PathStoreBalancer
     # PathStoreWrapper
