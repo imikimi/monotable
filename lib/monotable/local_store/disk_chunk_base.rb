@@ -12,7 +12,8 @@ module Monotable
   class DiskChunkBase < Chunk
     attr_accessor :path_store
     attr_accessor :journal
-    attr_accessor :next_replica_server
+    attr_accessor :replica_servers
+    attr_accessor :replica_number
 
     class << self
       def reset_disk_chunks
@@ -58,6 +59,11 @@ module Monotable
     def init_disk_chunk_base(options={})
       raise ":filename required" unless options[:filename]
       init_chunk(options)
+
+      # init to no replicas
+      @replica_servers = [:local_host]
+      @replica_number = 0
+
       @journal = options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       init_from_disk
@@ -80,10 +86,13 @@ module Monotable
       @file_handle.read(0)
     end
 
+    def next_replica_server; replica_servers[replica_number+1] end
+    def master_replica_server; replica_servers[0] end
+    def master_replica?; replica_number==0; end
+    def last_replica?; replica_number + 1 == replica_servers.length; end
+
     def journal_write(encoded_journal_entry)
-      if next_replica_server
-        next_replica_server.journal_write self, encoded_journal_entry
-      end
+      next_replica_server.journal_write self, encoded_journal_entry unless last_replica?
       journal.journal_write self, encoded_journal_entry
     end
 
