@@ -21,6 +21,8 @@ class ClusterManager < TopServerComponent
     @local_server = add(@local_server_address)
   end
 
+  def [](server_name) servers[server_name] end
+
   # add a server to the list of known servers
   def add(server_address)
     @servers[server_address] ||= ServerClient.new(server_address,:internal=>true)
@@ -70,7 +72,7 @@ class ClusterManager < TopServerComponent
   # TODO: eventually this should use the PAXOS (or equiv) system
   def locate_first_chunk
     remote_servers.each do |k,server|
-      return server if server.chunk ""
+      return server if server.chunk_info ""
     end
     nil
   end

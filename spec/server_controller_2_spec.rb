@@ -23,19 +23,19 @@ describe Monotable::HttpServer::ServerController do
   it "server/down_replicate_chunk should work" do
 
     server_client.chunks.should == ["", "+++0", "++0", "+0", "0"]
-    server_client.chunk("0").should >= {"range_start"=>"0", "range_end"=>Monotable::LAST_POSSIBLE_KEY}
+    server_client.chunk_info("0").should >= {"range_start"=>"0", "range_end"=>Monotable::LAST_POSSIBLE_KEY}
 
     server_client.split_chunk("foo")
 
     server_client.chunks.should == ["", "+++0", "++0", "+0", "0", "foo"]
-    server_client.chunk("0").should >= {"range_start"=>"0", "range_end"=>"foo"}
-    server_client.chunk("foo").should >= {"range_start"=>"foo", "range_end"=>Monotable::LAST_POSSIBLE_KEY}
+    server_client.chunk_info("0").should >= {"range_start"=>"0", "range_end"=>"foo"}
+    server_client.chunk_info("foo").should >= {"range_start"=>"foo", "range_end"=>Monotable::LAST_POSSIBLE_KEY}
 
     server_client.down_replicate_chunk("foo")
 
     server_client.chunks.should == ["", "+++0", "++0", "+0", "0"]
-    server_client.chunk("0").should >= {"range_start"=>"0", "range_end"=>"foo"}
-    server_client.chunk("foo").should == nil
+    server_client.chunk_info("0").should >= {"range_start"=>"0", "range_end"=>"foo"}
+    server_client.chunk_info("foo").should == nil
 
   end
 

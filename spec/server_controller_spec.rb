@@ -11,6 +11,12 @@ require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 describe Monotable::HttpServer::ServerController do
   include DaemonTestHelper
 
+  def reset_daemon
+    puts ""
+    shutdown_daemon
+    start_daemon(:num_store_paths => 1,:initialize_new_test_store => true)
+  end
+
   before(:all) do
     start_daemon(:num_store_paths => 1,:initialize_new_test_store => true)
   end
@@ -37,11 +43,11 @@ describe Monotable::HttpServer::ServerController do
   end
 
   it "server/chunk should work" do
-    server_client.chunk("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
+    server_client.chunk_info("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
   it "server/chunk should work with any key in the chunk" do
-    server_client.chunk("abc").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
+    server_client.chunk_info("abc").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
   it "server/chunk_keys should work" do
@@ -56,20 +62,39 @@ describe Monotable::HttpServer::ServerController do
     status[:record_count].should==0
   end
 
-  it "server/up_replicate_chunk should work" do
+  it "server/chunk_replication_clients should work" do
+    server_client.join("frank",["frank"])
+
+    server_client.chunk_info("")["replication_clients"].should == []
+    server_client.set_chunk_replication_clients("",["frank"])
+    server_client.chunk_info("")["replication_clients"].should == ["frank"]
+    server_client.set_chunk_replication_clients("",[])
+    server_client.chunk_info("")["replication_clients"].should == []
+  end
+
+  it "server/chunk should work" do
     # add something to the chunk we are going to up-replicate so we can verify it gets passed through
     test_record = {"field1"=>"value1"}
     server_client.set("foo",test_record)
     server_client["foo"].should==test_record
 
     # up_replicate
-    chunk_data = server_client.up_replicate_chunk("")
+    chunk_data = server_client.chunk("")
 
     # parse and verify returned data
     chunk = Monotable::MemoryChunk.new(:data => chunk_data)
     chunk.range_start.should == ""
     chunk.keys.should == ["u/foo"]
     chunk["u/foo"].should == test_record
+  end
+
+  it "delete server/chunk should work" do
+    # add something to the chunk we are going to up-replicate so we can verify it gets passed through
+
+    server_client.chunks.should == [""]
+    server_client.delete_chunk("")
+    server_client.chunks.should == []
+    reset_daemon
   end
 
   it "server/split_chunk should work" do

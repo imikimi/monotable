@@ -10,15 +10,19 @@ class ServerController < RequestHandler
   def handle
     case "#{method}/#{action}"
     when "GET/chunks" then chunks
-    when "GET/chunk" then chunk
+    when "GET/chunk_info" then chunk_info
     when "GET/chunk_keys" then chunk_keys
     when "GET/servers" then servers
     when "GET/heartbeat" then heartbeat
     when "GET/local_store_status" then local_store_status
     when "PUT/join" then join # using PUT because its ok to join again if already joined
     when "POST/update_servers" then update_servers
-    when "POST/up_replicate_chunk" then up_replicate_chunk
-    when "POST/down_replicate_chunk" then down_replicate_chunk
+
+    when "GET/chunk" then get_chunk
+    when "POST/clone_chunk" then clone_chunk
+    when "DELETE/chunk" then delete_chunk
+    when "POST/chunk_replication_clients" then set_chunk_replication_clients
+
     when "POST/balance" then balance
     when "POST/split_chunk" then split_chunk
     when "PUT/journal_entry" then journal_write
@@ -55,11 +59,10 @@ class ServerController < RequestHandler
 
   def journal_write
     chunk = server.local_store.get_chunk(@resource_id)
-    if chunk
-      chunk.write_from_upstream_replica(body)
-    else
-      respond 404, {:status => "chunk not on server"}
-    end
+    return respond 404, {:status => "chunk not on server"} unless chunk
+
+    chunk.journal_write(body)
+    respond 200, {:result => :success}
   end
 
   def update_servers
@@ -89,14 +92,11 @@ class ServerController < RequestHandler
   # given any @resource_id as a key, selects the chunk that covers that key
   # returns info about the chunk on the server
   # returns 404 if chunk not found
-  def chunk
+  def chunk_info
     return handle_invalid_request("chunk-id required") unless @resource_id
     chunk = server.local_store.get_chunk(@resource_id)
-    if chunk
-      respond 200, :status => "found", :chunk_info => chunk.status
-    else
-      respond 404, {:status => "chunk not on server"}
-    end
+    return respond 404, {:status => "chunk not on server"} unless chunk
+    respond 200, :status => "found", :chunk_info => chunk.status
   end
 
   # given any @resource_id as a key, selects the chunk that covers that key
@@ -105,38 +105,38 @@ class ServerController < RequestHandler
   def chunk_keys
     return handle_invalid_request("chunk-id required") unless @resource_id
     chunk = server.local_store.get_chunk(@resource_id)
-    if chunk
-      respond 200, :status => "found", :keys => chunk.keys
-    else
-      respond 404, {:status => "chunk not on server", :keys=>[]}
-    end
+    return respond 404, {:status => "chunk not on server", :keys => []} unless chunk
+    respond 200, :status => "found", :keys => chunk.keys
   end
 
   def split_chunk
     on_key = @resource_id
     return handle_invalid_request("split-on key required") unless on_key
     chunk = server.local_store.get_chunk(on_key)
-    if chunk
-      right_chunk = chunk.split(on_key)
-      server.global_index.add_local_replica(right_chunk,true)
-      respond 200, :status => "success", :chunks => [chunk.status, right_chunk.status]
-    else
-      respond 404, {:status => "chunk not on server"}
-    end
+    return respond 404, {:status => "chunk not on server"} unless chunk
+
+    right_chunk = chunk.split(on_key)
+    server.global_index.add_local_replica(right_chunk,true)
+    respond 200, :status => "success", :chunks => [chunk.status, right_chunk.status]
   end
 
   def heartbeat
     respond 200, {:status => :alive}
   end
 
-  # returns the up-to-date chunk as a binary chunk-file
-  # The final version should look more like this:
-  #   1) caller starts streaming all NEW updates to the chunk
-  #   2) all previous updates are compacted asynchronously
-  #   3) caller receives the compacted chunk-file data
-  #   4) caller adds itself to the chunk global-index-record's server-list
-  #   1 & 2 would be started by this call, then 3 & 4 would be a processed in a callback
-  def up_replicate_chunk
+  def clone_chunk
+    client_address = params[:from_server]
+
+    client = server.cluster_manager[client_address]
+    return respond 500, {:status => "unknown from_server #{from_server.inspect}"} unless client
+
+    chunk_data = client.chunk(@resource_id)
+    chunk = server.local_store.add_chunk MemoryChunk.new(:data=>chunk_data)
+
+    respond 200, {:result => :success}
+  end
+
+  def get_chunk
     # compact chunk
     current_async_compaction = Journal.async_compaction
     Journal.async_compaction = false
@@ -144,15 +144,31 @@ class ServerController < RequestHandler
     Journal.async_compaction = current_async_compaction
 
     # return chunk
-    chunk=server.local_store.chunks[@resource_id]
+    chunk = server.local_store.chunks[@resource_id]
+    return respond 404, {:status => "chunk not on server"} unless chunk
+
     chunk_data = chunk.chunk_file_data
     respond_binary 200,chunk_data
   end
 
-  def down_replicate_chunk
-    chunk=server.local_store.chunks[@resource_id]
+  def set_chunk_replication_clients
+    chunk = server.local_store.chunks[@resource_id]
+    return respond 404, {:status => "chunk not on server"} unless chunk
+
+    clients = params[:clients].split(",").collect do |to_server|
+      server.cluster_manager[to_server].tap do |server_client|
+        return respond 500, {:status => "unknown to_server #{to_server.inspect}"} unless server_client
+      end
+    end
+    chunk.replication_clients = clients
+    respond 200, {:result => :success}
+  end
+
+  def delete_chunk
+    chunk = server.local_store.chunks[@resource_id]
+    return respond 404, {:status => "chunk not on server"} unless chunk
+
     server.local_store.delete_chunk @resource_id
-    server.global_index.remove_local_replica(chunk)
     respond 200, {:result => :success}
   end
 

@@ -59,6 +59,9 @@ module Monotable
       str = str.inspect unless str.kind_of?(String)
       raise Monotable::InternalError.new str
     end
+    class << self
+      alias :raise_internal :debug_raise
+    end
 
     def Tools.required(options,*required_list)
       required_list.each do |req|

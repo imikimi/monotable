@@ -4,7 +4,7 @@ module HttpServer
 class RequestHandler
   attr_accessor :options
   attr_accessor :response_type
-  attr_reader :method, :params, :uri, :response, :controller, :action, :post_action_path, :resource_id
+  attr_reader :method, :params, :uri, :response, :controller, :action, :post_action_path, :resource_id, :body
   attr_reader :server
 
   # options:
@@ -16,6 +16,7 @@ class RequestHandler
     @response_type = options[:response_type] || :json
 
     @method = options[:method]
+    @body = options[:body]
     @params = options[:params]
     @uri    = options[:uri]
 

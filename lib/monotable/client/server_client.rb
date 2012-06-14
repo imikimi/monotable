@@ -60,7 +60,7 @@ module Monotable
         key=parse["not_authoritative_for_key"]
         raise NotAuthoritativeForKey.new(key)
       else
-        raise NetworkError.new("invalid response code: #{code.inspect}")
+        raise NetworkError.new("invalid response code: #{code.inspect} body: #{JSON.parse(body).inspect rescue body.inspect}")
       end
     end
 
@@ -180,7 +180,7 @@ module Monotable
     def servers; request(:get,"server/servers")[:servers]; end
 
     # returns nil if chunk not found
-    def chunk(key); request(:get,"server/chunk/#{ue key}", :accept_404=>true)[:chunk_info]; end
+    def chunk_info(key); request(:get,"server/chunk_info/#{ue key}", :accept_404=>true)[:chunk_info]; end
 
     # returns nil if chunk not found
     def chunk_keys(key); request(:get,"server/chunk_keys/#{ue key}", :accept_404=>true)[:keys]; end
@@ -200,13 +200,21 @@ module Monotable
     def split_chunk(on_key); request(:post,"server/split_chunk/#{ue on_key}")[:chunks]; end
     def balance; request(:post,"server/balance"); end
     def join(server,skip_servers=[]); request(:put,"server/join?server_name=#{ue server}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
-    def update_servers(servers,skip_servers=[]); request(:post,"server/update_servers?servers=#{ue servers.join(',')}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
+    def update_servers(servers,skip_servers=[]); request(:post,"server/update_servers",:params=>{:servers=>servers.join(','), :skip_servers=>skip_servers.join(',')})[:servers]; end
 
-    def journal_write(chunk,journal_write_string); request(:put,"server/journal_entry/#{chunk}", :body => journal_write_string); end
+    def journal_write(chunk,journal_write_string);
+      request(
+        :put,"server/journal_entry/#{chunk}",
+        :body => journal_write_string,
+        :content_type => "application/octet-stream"
+      );
+    end
 
     # returns the raw chunk-file
-    def up_replicate_chunk(chunk_key); request(:post,"server/up_replicate_chunk/#{ue chunk_key}",:raw_response => true); end
-    def down_replicate_chunk(chunk_key); request(:post,"server/down_replicate_chunk/#{ue chunk_key}"); end
+    def chunk(chunk_key); request(:get,"server/chunk/#{ue chunk_key}",:raw_response => true); end
+    def clone_chunk(chunk_key,from_server); request(:post,"server/clone_chunk/#{ue chunk_key}",:params => {:from_server => from_server}); end
+    def delete_chunk(chunk_key); request(:delete,"server/chunk/#{ue chunk_key}"); end
+    def set_chunk_replication_clients(chunk_key,clients); request(:post,"server/chunk_replication_clients/#{ue chunk_key}", :params => {:clients => clients.join(',')}); end
   end
 
   class ServerClient

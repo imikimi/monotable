@@ -4,7 +4,6 @@ module HttpServer
 class RecordRequestHandler < RequestHandler
 
   attr_accessor :internal
-  def body; @body||=options[:body]; end
 
 =begin
 Valid Patterns:

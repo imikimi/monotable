@@ -6,9 +6,6 @@ module DaemonTestHelper
   def daemon_uri(daemon_number=0); "http://"+daemon_address(daemon_number); end
   def server_client(daemon_number=0); server_clients[daemon_number]; end
 
-  def local_store_paths
-    @local_store_paths||=[]
-  end
 
   def local_store_path
     ret = Dir.mktmpdir
@@ -16,12 +13,22 @@ module DaemonTestHelper
     ret
   end
 
+  class DaemonTracker
+    class << self
+      attr_accessor :server_pids, :server_clients, :local_store_paths
+    end
+  end
+
+  def local_store_paths
+    DaemonTracker.local_store_paths||=[]
+  end
+
   def server_pids
-    @server_pids||=[]
+    DaemonTracker.server_pids||=[]
   end
 
   def server_clients
-    @server_clients||=[]
+    DaemonTracker.server_clients||=[]
   end
 
   def wait_for_server_to_start(client,max_wait = 1)
@@ -39,7 +46,7 @@ module DaemonTestHelper
     print "<"
     # Start up the daemon
     daemon_number = server_pids.length
-    server_pids<< fork {
+    server_pids << fork {
       Monotable::GoliathServer::HttpServer.start({
 #      Monotable::EventMachineServer::HttpServer.start({
         :port=>port + daemon_number,
@@ -47,8 +54,7 @@ module DaemonTestHelper
         :store_paths => num_store_paths.times.collect {local_store_path},
 #        :verbose => true,
       }.merge(options)
-      ) do
-      end
+      )
 #      SimpleCov.at_exit {SimpleCov.result}
     }
     server_clients << client=Monotable::ServerClient.new(daemon_uri(daemon_number))
@@ -61,7 +67,7 @@ module DaemonTestHelper
       Process.kill 'TERM', server_pid
       Process.wait server_pid
     end
-    @server_clients = @server_pids=nil
+    DaemonTracker.server_clients = DaemonTracker.server_pids = nil
     cleanup
   end
 
@@ -69,7 +75,7 @@ module DaemonTestHelper
     local_store_paths.each do |local_store_path|
       FileUtils.rm_rf local_store_path
     end
-    @local_store_paths=nil
+    DaemonTracker.local_store_paths = nil
   end
 
   def clear_store
