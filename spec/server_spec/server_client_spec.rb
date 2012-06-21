@@ -1,12 +1,10 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
-require File.join(File.dirname(__FILE__),"common_api_tests")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 require 'rest_client'
 require 'tmpdir'
 require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 
 module Monotable
 describe ServerClient do
@@ -86,8 +84,7 @@ describe ServerClient do
 
   it "should be able to set/get a single large binary field" do
     clear_store
-    file = File.expand_path(File.join(File.dirname(__FILE__),"test_data","0-65535.words.binary"))
-    data = File.open(file,"rb") {|f|f.read}
+    data = load_test_data "0-65535.words.binary"
     client.update_field("foo","file",data)
     f=client.get_field("foo","file")
     f.should == data

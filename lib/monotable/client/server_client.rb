@@ -104,8 +104,11 @@ module Monotable
     #   https://github.com/archiloque/rest-client/blob/master/lib/restclient.rb
     def request(method,request_path,options={})
       request_path = "#{server}/#{request_path}"
-      return em_synchrony_request method, request_path, options if ServerClient.use_synchrony
-      rest_client_request(method,request_path,options)
+      if ServerClient.use_synchrony
+        em_synchrony_request method, request_path, options
+      else
+        rest_client_request(method,request_path,options)
+      end
     end
   end
 
@@ -174,29 +177,23 @@ module Monotable
     end
   end
 
-  # this api is supported for testing, it should never be used by an actual client
-  module ServerClientServerReadAPI
+  # this api is supported for internal use, it should never be used by an actual client
+  module ServerClientServerAPI
     def chunks; request(:get,"server/chunks")[:chunks]; end
     def servers; request(:get,"server/servers")[:servers]; end
-
-    # returns nil if chunk not found
-    def chunk_info(key); request(:get,"server/chunk_info/#{ue key}", :accept_404=>true)[:chunk_info]; end
-
-    # returns nil if chunk not found
-    def chunk_keys(key); request(:get,"server/chunk_keys/#{ue key}", :accept_404=>true)[:keys]; end
-
-    #
     def local_store_status; request(:get,"server/local_store_status"); end
+
+    # returns nil if chunk not found
+    def chunk_status(key); request(:get,"server/chunk_status/#{ue key}", :accept_404=>true)[:status]; end
+    def chunk_keys(key); request(:get,"server/chunk_keys/#{ue key}", :accept_404=>true)[:keys]; end
+    def chunk_replication(key); request(:get,"server/chunk_replication/#{ue key}", :accept_404=>true); end
 
     # returns true if the server is up and responding to the heartbeat
     def up?
       request(:get,"server/heartbeat")[:status]=="alive";
     rescue Errno::ECONNREFUSED => e
     end
-  end
 
-  # this api is supported for testing, it should never be used by an actual client
-  module ServerClientServerModifyAPI
     def split_chunk(on_key); request(:post,"server/split_chunk/#{ue on_key}")[:chunks]; end
     def balance; request(:post,"server/balance"); end
     def join(server,skip_servers=[]); request(:put,"server/join?server_name=#{ue server}&skip_servers=#{ue skip_servers.join(',')}")[:servers]; end
@@ -212,16 +209,18 @@ module Monotable
 
     # returns the raw chunk-file
     def chunk(chunk_key); request(:get,"server/chunk/#{ue chunk_key}",:raw_response => true); end
+
+    # tell server to clone a chunk from_server to its own local_store
     def clone_chunk(chunk_key,from_server); request(:post,"server/clone_chunk/#{ue chunk_key}",:params => {:from_server => from_server}); end
     def delete_chunk(chunk_key); request(:delete,"server/chunk/#{ue chunk_key}"); end
-    def set_chunk_replication_clients(chunk_key,clients); request(:post,"server/chunk_replication_clients/#{ue chunk_key}", :params => {:clients => clients.join(',')}); end
+
+    def set_chunk_replication(chunk_key,source="",client=""); request(:post,"server/chunk_replication/#{ue chunk_key}", :params => {:replication_source => source, :replication_client => client}); end
   end
 
   class ServerClient
     include ServerClientReadAPI
     include ServerClientWriteAPI
-    include ServerClientServerReadAPI
-    include ServerClientServerModifyAPI
+    include ServerClientServerAPI
     include RestClientHelper
     attr_accessor :server, :client_options
     attr_accessor :path_prefix

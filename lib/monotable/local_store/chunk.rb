@@ -215,6 +215,10 @@ module Monotable
       @record_count_on_disk = 0
     end
 
+    def key
+      range_start
+    end
+
     def valid_range?
       range_start < range_end
     end

@@ -1,5 +1,5 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
+require File.expand_path(File.join(File.dirname(__FILE__),"..","daemon_test_helper"))
 require 'find'
 
 describe Monotable::PathStoreBalancer do

@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 require 'rubygems'
 require 'rest_client'
 require 'tmpdir'
@@ -6,7 +6,6 @@ require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 
 describe Monotable::EventMachineServer do
   include DaemonTestHelper
@@ -29,7 +28,7 @@ describe Monotable::EventMachineServer do
   it "should be possible replicate" do
     chunk_name = server_client.chunks[-1]
     server_client(0).set_chunk_replication_clients(chunk_name,[daemon_address(1)])
-    server_client(0).chunk_info(chunk_name)["replication_clients"].should == [daemon_address(1)]
+    server_client(0).chunk_status(chunk_name)["replication_clients"].should == [daemon_address(1)]
 
     server_client(1).chunks.should==[]
     server_client(1).clone_chunk(chunk_name,daemon_address(0))

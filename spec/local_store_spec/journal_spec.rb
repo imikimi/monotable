@@ -1,5 +1,4 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
-require File.join(File.dirname(__FILE__),"common_api_tests")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 
 # TODO: test the case where we write to a chunk, start async compaction, write again while compaction is going, and
 # THEN compaction completes. Are we in a consistent state? I don't think the chunk.reset currently does the right thing.

@@ -2,6 +2,8 @@
 #SimpleCov.start
 #$stderr.puts "SimpleCov.start"
 require File.join(File.dirname(__FILE__),"../lib/monotable/monotable")
+require File.join(File.dirname(__FILE__),"common_api_tests")
+require File.join(File.dirname(__FILE__),'daemon_test_helper')
 
 class VirtualSizeFileSystemMock < Monotable::Tools::FileSystem
   def initialize(virtual_size)
@@ -58,7 +60,7 @@ module MonotableHelperMethods
   end
 
   def load_test_data(filename)
-    File.open(File.join(File.dirname(__FILE__),"test_data",filename)) {|f| return f.read.force_encoding("BINARY")}
+    File.open(File.join(test_data_dir,filename)) {|f| return f.read.force_encoding("BINARY")}
     nil
   end
 
@@ -88,9 +90,7 @@ module MonotableHelperMethods
   def chunkify_test_data_directory
     temp_dir=reset_temp_dir
 
-    out_file=File.join(temp_dir,"test_data")
-
-    Monotable::Tools.chunkify_directory(test_data_dir,out_file)
+    Monotable::Tools.chunkify_directory(test_data_dir,temp_dir)
   end
 end
 

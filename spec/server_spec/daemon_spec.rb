@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 require 'rubygems'
 require 'rest_client'
 require 'tmpdir'
@@ -6,8 +6,6 @@ require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
-require File.expand_path(File.join(File.dirname(__FILE__),'mono_table_helper_methods'))
 
 describe Monotable::EventMachineServer do
   include DaemonTestHelper

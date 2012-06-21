@@ -1,6 +1,6 @@
 require 'tmpdir'
 require 'fileutils'
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 
 module Monotable
 describe FileHandle do

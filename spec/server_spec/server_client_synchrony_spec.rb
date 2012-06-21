@@ -1,12 +1,10 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
-require File.join(File.dirname(__FILE__),"common_api_tests")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 require 'rest_client'
 require 'tmpdir'
 require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 
 module Monotable
 describe ServerClient do
@@ -34,7 +32,7 @@ describe ServerClient do
   it "should be accessible via HTTP" do
     server_client(1).set("foo", "fookey" => "fooval")
     server_client(0).chunk_keys("foo").should == ["u/foo"]
-    server_client(1).chunk_keys("foo").should == []
+    server_client(1).chunk_keys("foo").should == nil
     clear_store
     server_client(0).chunk_keys("foo").should == []
   end

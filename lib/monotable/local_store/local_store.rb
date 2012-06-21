@@ -185,7 +185,7 @@ module Monotable
         "Chunk2: #{chunk.basename.inspect}\n" if chunks_by_basename[chunk.basename]
       raise "chunk does not have a path_store" unless chunk.path_store
       chunks_by_basename[chunk.basename] =
-      chunks[chunk.range_start] = chunk
+      chunks[chunk.key] = chunk
     end
     public
 
@@ -223,15 +223,12 @@ module Monotable
       add_chunk_internal disk_chunk
     end
 
-    def delete_chunk(chunk_id)
-      chunk = chunks[chunk_id]
+    def delete_chunk(chunk)
+      chunk = chunks[chunk] if chunk.kind_of? String
       raise "chunk does not exist: #{chunk_id.inspect}" unless chunk
 
-      path_store = chunk.path_store
-
-      path_store.delete_chunk(chunk)
-
-      chunks.delete(chunk_id)
+      chunk.path_store.delete_chunk(chunk)
+      chunks.delete(chunk.key)
     end
 
     def update_path_store(chunk)
@@ -272,7 +269,7 @@ module Monotable
     def verify_chunk_ranges
       last_key=nil
       chunks.each do |key,chunk|
-        raise "key=#{key.inspect} doesn'chunks_by_basename match chunk.range_start=#{chunk.range_start.inspect}" unless key==chunk.range_start
+        raise "key=#{key.inspect} doesn't match chunk.key=#{chunk.key.inspect}" unless key==chunk.key
         raise "consecutive range keys out of order last_key=#{last_key.inspect} chunk.range_start=#{chunk.range_start.inspect} chunk.range_end=#{chunk.range_end.inspect}" unless
           last_key==nil || last_key<=chunk.range_start
       end

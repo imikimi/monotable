@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__),"mono_table_helper_methods")
+require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
 require 'rubygems'
 require 'rest_client'
 require 'tmpdir'
@@ -6,7 +6,6 @@ require 'fileutils'
 require 'net/http'
 require 'json'
 require 'uri'
-require File.expand_path(File.join(File.dirname(__FILE__),'daemon_test_helper'))
 
 describe Monotable::HttpServer::ServerController do
   include DaemonTestHelper
@@ -43,11 +42,11 @@ describe Monotable::HttpServer::ServerController do
   end
 
   it "server/chunk should work" do
-    server_client.chunk_info("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
+    server_client.chunk_status("").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
   it "server/chunk should work with any key in the chunk" do
-    server_client.chunk_info("abc").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
+    server_client.chunk_status("abc").should >= {"range_start" => "", "record_count" => 0, "accounting_size" => 0} # an empty chunk
   end
 
   it "server/chunk_keys should work" do
@@ -62,14 +61,14 @@ describe Monotable::HttpServer::ServerController do
     status[:record_count].should==0
   end
 
-  it "server/chunk_replication_clients should work" do
+  it "server/chunk_replication_client should work" do
     server_client.join("frank",["frank"])
 
-    server_client.chunk_info("")["replication_clients"].should == []
-    server_client.set_chunk_replication_clients("",["frank"])
-    server_client.chunk_info("")["replication_clients"].should == ["frank"]
-    server_client.set_chunk_replication_clients("",[])
-    server_client.chunk_info("")["replication_clients"].should == []
+    server_client.chunk_status("").should >= {"replication_client" => nil, "replication_source" => nil}
+    server_client.set_chunk_replication("","stella","frank")
+    server_client.chunk_status("").should >= {"replication_client" => "frank", "replication_source" => "stella"}
+    server_client.set_chunk_replication("","","")
+    server_client.chunk_status("").should >= {"replication_client" => nil, "replication_source" => nil}
   end
 
   it "server/chunk should work" do

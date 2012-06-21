@@ -12,7 +12,20 @@ module Monotable
   class DiskChunkBase < Chunk
     attr_accessor :path_store
     attr_accessor :journal
-    attr_accessor :replication_clients
+    attr_accessor :replication_client, :replication_source
+
+    # "" is replaced with nil
+    def replication_client=(rc)
+      @replication_client = (rc && rc.length==0) ? nil : rc
+    end
+
+    # "" is replaced with nil
+    def replication_source=(rc)
+      @replication_source = (rc && rc.length==0) ? nil : rc
+    end
+
+    def master?; !replication_source; end
+    def slave?; !!replication_source; end
 
     class << self
       def reset_disk_chunks
@@ -59,9 +72,6 @@ module Monotable
       raise ":filename required" unless options[:filename]
       init_chunk(options)
 
-      # init to no replicas
-      @replication_clients = []
-
       @journal = options[:journal] || (path_store && path_store.journal) || Journal.new(options[:filename]+".testing_journal")
 
       init_from_disk
@@ -85,11 +95,12 @@ module Monotable
     end
 
     def status
-      super.merge :replication_clients => replication_clients.collect {|a|a.to_s}
+      super.merge(:replication_client => replication_client && replication_client.to_s,
+        :replication_source => replication_source && replication_source.to_s)
     end
 
     def journal_write(encoded_journal_entry)
-      replication_clients.each {|rc| rc.journal_write self, encoded_journal_entry}
+      replication_client.journal_write self, encoded_journal_entry if replication_client
       journal.journal_write self, encoded_journal_entry
     end
 
