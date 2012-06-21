@@ -14,7 +14,7 @@ require File.join(File.dirname(__FILE__),"tools.rb")
 
 monotable_require '', %w{
   local_store
-  client/server_client
+  client
   exceptions/exceptions
   server
   goliath_server/params_and_body
