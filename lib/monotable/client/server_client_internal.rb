@@ -9,6 +9,7 @@ module ServerClientInternalAPI
   def chunk_status(key); request(:get,"server/chunk_status/#{ue key}", :accept_404=>true)[:status]; end
   def chunk_keys(key); request(:get,"server/chunk_keys/#{ue key}", :accept_404=>true)[:keys]; end
   def chunk_replication(key); request(:get,"server/chunk_replication/#{ue key}", :accept_404=>true); end
+  def global_index_record(key); request(:get,"server/global_index_record/#{ue key}"); end
 
   # returns true if the server is up and responding to the heartbeat
   def up?
@@ -37,5 +38,10 @@ module ServerClientInternalAPI
   def delete_chunk(chunk_key); request(:delete,"server/chunk/#{ue chunk_key}"); end
 
   def set_chunk_replication(chunk_key,source="",client=""); request(:post,"server/chunk_replication/#{ue chunk_key}", :params => {:replication_source => source, :replication_client => client})[:status]; end
+
+  # must be called on the Master server for the chunk specified by chunk_key
+  def up_replicate_chunk(chunk_key,to_server); request(:put,"server/up_replicate_chunk/#{ue chunk_key}", :params => {:to_server => to_server.to_s})[:status]; end
+  def down_replicate_chunk(chunk_key,to_server); request(:put,"server/down_replicate_chunk/#{ue chunk_key}", :params => {:to_server => to_server.to_s})[:status]; end
+  def move_chunk(chunk_key,from_server,to_server); request(:put,"server/move_chunk/#{ue chunk_key}", :params => {:from_server => from_server.to_s, :to_server => to_server.to_s})[:status]; end
 end
 end

@@ -35,11 +35,14 @@ class LoadBalancer < TopServerComponent
     # if the most_loaded_neighbor has 2 or more chunks than we do, move some over here!
     while chunks.length > local_store.chunks.length+1
       chunk_key = chunks.pop
-      chunk_data = client.up_replicate_chunk chunk_key
+
+      master_client = # find master server, then just call "move_chunk" on its client
+
+      chunk_data = client.chunk chunk_key
       chunk = local_store.add_chunk MemoryChunk.new(:data=>chunk_data)
       global_index.add_local_replica(chunk)
 
-      client.down_replicate_chunk chunk_key
+      client.delete_chunk chunk_key
       chunks_moved[chunk_key]=client.to_s
     end
     chunks_moved

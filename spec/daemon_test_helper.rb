@@ -57,7 +57,7 @@ module DaemonTestHelper
       )
 #      SimpleCov.at_exit {SimpleCov.result}
     }
-    server_clients << client=Monotable::ServerClient.new(daemon_uri(daemon_number))
+    server_clients << client=Monotable::ServerClient.new(daemon_address(daemon_number))
     wait_for_server_to_start client
   end
 

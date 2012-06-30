@@ -86,6 +86,7 @@ module Monotable
     #options
     def initialize(server,options={})
       @server=server
+      raise "invalid server #{server.inspect}" if server[/^http/]
       @client_options = options
       @path_prefix = options[:internal] ? "internal/" : ""
     end

@@ -75,6 +75,10 @@ module Monotable
       @user_keys = options[:user_keys]
     end
 
+    def inspect
+      "<#{self.class} user_keys => #{@user_keys.inspect}>"
+    end
+
     #routing_option should be :gte or :lte
     # yields the store to route to and the options, internalized
     def route_get_range(options,routing_option)

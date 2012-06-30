@@ -27,8 +27,8 @@ describe Monotable::EventMachineServer do
 
   it "should be possible replicate" do
     chunk_name = server_client.chunks[-1]
-    server_client(0).set_chunk_replication_clients(chunk_name,[daemon_address(1)])
-    server_client(0).chunk_status(chunk_name)["replication_clients"].should == [daemon_address(1)]
+    server_client(0).set_chunk_replication(chunk_name,nil,daemon_address(1))
+    server_client(0).chunk_status(chunk_name)["replication_client"].should == daemon_address(1)
 
     server_client(1).chunks.should==[]
     server_client(1).clone_chunk(chunk_name,daemon_address(0))

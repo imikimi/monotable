@@ -11,4 +11,5 @@ monotable_require :server, %w{
   server_controller
   record_request_handler
   periodic_tasks
+  master_chunk
 }

@@ -1,21 +1,19 @@
 module Monotable
-class MasterChunk
+class MasterChunk < TopServerComponent
   attr_accessor :chunk,:local_server
 
-  def initialize(local_server,chunk)
+  def initialize(server,chunk)
     @chunk = chunk
-    @local_server = local_server
+    @server = server
     raise MonotableDataStructureError.new "this is not the Master server for chunk #{chunk.key.inspect}" unless chunk.master?
   end
-
-  def cluster_manager; @cluster_manager||=local_server.cluster_manager; end
 
   def refresh_replication_chain(servers=global_index.chunk_servers(chunk))
     clients = [nil] + servers.collect {|s| cluster_manager[s]} + [nil]
 
     #TODO: <parallel>
     clients.each_with_index do |client,i|
-      client && client.set_replication clients[i-1],clients[i+1]
+      client && client.set_chunk_replication(chunk,clients[i-1],clients[i+1])
     end
     #</parallel>
   end
@@ -37,7 +35,7 @@ class MasterChunk
     refresh_replication_chain(servers)
   end
 
-  def move_chunk(from_server,to_server)
+  def move(from_server,to_server)
     up_replicate(to_server)
     down_replicate(from_server)
   end

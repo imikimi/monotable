@@ -14,16 +14,6 @@ module Monotable
     attr_accessor :journal
     attr_accessor :replication_client, :replication_source
 
-    # "" is replaced with nil
-    def replication_client=(rc)
-      @replication_client = (rc && rc.length==0) ? nil : rc
-    end
-
-    # "" is replaced with nil
-    def replication_source=(rc)
-      @replication_source = (rc && rc.length==0) ? nil : rc
-    end
-
     def master?; !replication_source; end
     def slave?; !!replication_source; end
 
@@ -100,7 +90,21 @@ module Monotable
     end
 
     def journal_write(encoded_journal_entry)
-      replication_client.journal_write self, encoded_journal_entry if replication_client
+      journal.journal_write(self, encoded_journal_entry).tap do
+        replication_client.journal_write self, encoded_journal_entry if replication_client
+      end
+    end
+
+    # only called directly form an upstream journal-write replication
+    def journal_write_and_apply(encoded_journal_entry)
+      io_stream = StringIO.new encoded_journal_entry
+      journal_entry = Journal.parse_encoded_journal_entry io_stream
+      case journal_entry[:command]
+      when :set     then  set journal_entry[:key], journal_entry[:fields]
+      when :delete  then  delete journal_entry[:key]
+      when :split   then  split journal_entry
+      else raise InternalError.new "apply_entry: invalid journal_entry[:command]: #{journal_entry[:command].inspect}"
+      end
       journal.journal_write self, encoded_journal_entry
     end
 

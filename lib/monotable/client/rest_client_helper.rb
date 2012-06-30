@@ -43,7 +43,7 @@ module RestClientHelper
     fields && MemoryRecord.new.init(key,fields)
   end
 
-  def process_response(code,body,options)
+  def process_response(code,body,options,method,request_uri)
     if code == 200 || (options[:accept_404] && code == 404)
       if options[:raw_response]
         body
@@ -56,7 +56,7 @@ module RestClientHelper
       key=parse["not_authoritative_for_key"]
       raise NotAuthoritativeForKey.new(key)
     else
-      raise NetworkError.new("invalid response code: #{code.inspect} body: #{JSON.parse(body).inspect rescue body.inspect}")
+      raise NetworkError.new("request #{method}:#{request_uri} (params=#{options[:params].inspect}) responed with invalid response code: #{code.inspect} body: #{JSON.parse(body).inspect rescue body.inspect}")
     end
   end
 
@@ -72,7 +72,7 @@ module RestClientHelper
       }
     )
     code = request.response_header.status
-    process_response(code,request.response,options)
+    process_response(code,request.response,options,method,request_uri)
   end
 
   def rest_client_request(method,request_path,options={})
@@ -86,7 +86,7 @@ module RestClientHelper
         :content_type => options[:content_type] || :json,
       }
       ) do |response, request, result|
-      process_response(response.code,response.body,options)
+      process_response(response.code,response.body,options,method,request_path)
     end
   end
 

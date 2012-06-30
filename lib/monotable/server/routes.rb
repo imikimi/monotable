@@ -54,8 +54,7 @@ module Routes
       puts "  response_content: #{request_options[:response].content.inspect}"
     end
   rescue Monotable::ArgumentError => e
-    puts "#{self.class}#route_http_request Internal Error: #{e.inspect}"
-    puts "  "+e.backtrace.join("\n  ")
+    # this is a non-error case for the server; the client sent an invalid request
     respond(400, :error => e.inspect)
   rescue Exception => e
     puts "#{self.class}#route_http_request Internal Error: #{e.inspect}"

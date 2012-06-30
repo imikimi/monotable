@@ -1,7 +1,7 @@
 module Monotable
   class GlobalIndex < TopServerComponent
 
-    class ChunkIndexRecord < MemoryRecord # TODO - why doesn't this work? MemoryRecord not defined... ?
+    class ChunkIndexRecord < MemoryRecord
       attr_reader :servers
       attr_reader :next_index_record_key
 
@@ -31,14 +31,15 @@ module Monotable
       end
 
       def add_server(server)
-        server = server.to_s
-        raise InternalError.new("server #{server.inspect} is already in the chunk-list for index-key #{self.key.inspect}") if @servers.index(server)
-        @servers << server
+        @servers = (servers + [server.to_s]).uniq
       end
 
       def remove_server(server)
-        server = server.to_s
-        @servers = @servers.select {|a| a!=server}
+        @servers.delete server
+      end
+
+      def master
+        servers[0]
       end
     end
 
@@ -146,6 +147,10 @@ module Monotable
       find(internal_key,work_log).servers
     end
 
+    def chunk_master(internal_key,work_log=nil)
+      chunk_servers(internal_key).master
+    end
+
     # same as #chunk_servers, only cached
     def cached_chunk_servers(internal_key,work_log=nil)
       cached_find(internal_key,work_log).servers
@@ -166,6 +171,15 @@ module Monotable
       else
         request_router.set ir.key, ir.fields
       end
+      ir.servers
+    end
+
+    def add_replica(chunk,server,initializing=false)
+      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server}
+    end
+
+    def remove_replica(chunk,server)
+      update_chunk_server_list(chunk) {|ir| ir.remove_server server}
     end
 
     def add_local_replica(chunk,initializing=false)
