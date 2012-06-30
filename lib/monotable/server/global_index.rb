@@ -175,19 +175,19 @@ module Monotable
     end
 
     def add_replica(chunk,server,initializing=false)
-      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server}
+      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server.to_s}
     end
 
     def remove_replica(chunk,server)
-      update_chunk_server_list(chunk) {|ir| ir.remove_server server}
+      update_chunk_server_list(chunk) {|ir| ir.remove_server server.to_s}
     end
 
     def add_local_replica(chunk,initializing=false)
-      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server}
+      update_chunk_server_list(chunk,initializing) {|ir| ir.add_server server.to_s}
     end
 
     def remove_local_replica(chunk)
-      update_chunk_server_list(chunk) {|ir| ir.remove_server server}
+      update_chunk_server_list(chunk) {|ir| ir.remove_server server.to_s}
     end
   end
 end
