@@ -190,7 +190,7 @@ class ServerController < RequestHandler
     return respond 404, {:restult => "chunk not on server"} unless chunk
     return respond 400, {:restult => "not master for chunk"} unless chunk.master?
     
-    MasterChunk.new(server,chunk).move_chunk params[:from_server], params[:to_server]    
+    MasterChunk.new(server,chunk).move params[:from_server], params[:to_server]    
     respond 200, {:result => :success}
   end
 

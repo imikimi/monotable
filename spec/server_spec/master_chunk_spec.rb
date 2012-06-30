@@ -53,4 +53,23 @@ describe Monotable::EventMachineServer do
     #verify global index record was updated
     server_client.global_index_record("0")[:fields].should >= {"servers"=>"127.0.0.1:32100"}
   end
+
+  it "should be possible to move a chunk" do
+    #pre-verify the global_index is what we think it should be
+    server_client.global_index_record("0")[:fields].should >= {"servers"=>"127.0.0.1:32100"}
+
+    # do the move
+    server_client(0).move_chunk("0",server_client(0),server_client(1))
+
+    #verify chunk was moved
+    server_client(0).chunks.should==["", "++0", "+0"]
+    server_client(1).chunks.should==["0"]
+
+    #verify replication is setup correctly
+    server_client(0).chunk_status("0").should == nil
+    server_client(1).chunk_status("0").should >= {"replication_client"=>nil, "replication_source"=>nil}
+
+    #verify global index record was updated
+    server_client.global_index_record("0")[:fields].should >= {"servers"=>"127.0.0.1:32101"}
+  end
 end

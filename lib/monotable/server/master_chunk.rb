@@ -13,6 +13,7 @@ class MasterChunk < TopServerComponent
 
     #TODO: <parallel>
     clients.each_with_index do |client,i|
+      #Tools.debug :set_chunk_replication_for => client, :source => clients[i-1], :sink => clients[i+1] if client
       client && client.set_chunk_replication(chunk,clients[i-1],clients[i+1])
     end
     #</parallel>

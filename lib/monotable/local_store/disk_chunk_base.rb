@@ -141,6 +141,8 @@ module Monotable
     # delete this chunk
     # TODO: this should actually move the chunk into the "Trash" - a holding area where we can later do a verification against the cluster to make sure it is safe to delete this chunk.
     def delete_chunk
+      # to not replicate chunk deletions
+      self.replication_client = nil
       save_journal_entry "delete_chunk"
     end
 
