@@ -1,11 +1,4 @@
 require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
-require 'rubygems'
-require 'rest_client'
-require 'tmpdir'
-require 'fileutils'
-require 'net/http'
-require 'json'
-require 'uri'
 
 describe Monotable::HttpServer::ServerController do
   include DaemonTestHelper

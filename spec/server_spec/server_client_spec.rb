@@ -1,10 +1,4 @@
 require File.join(File.dirname(__FILE__),"..","mono_table_helper_methods")
-require 'rest_client'
-require 'tmpdir'
-require 'fileutils'
-require 'net/http'
-require 'json'
-require 'uri'
 
 module Monotable
 describe ServerClient do
