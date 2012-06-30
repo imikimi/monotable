@@ -17,7 +17,7 @@ describe ServerClient do
   end
 
   before(:each) do
-    @client=ServerClient.new(daemon_uri)
+    @client=nil
   end
   attr_accessor :client
 
@@ -26,12 +26,12 @@ describe ServerClient do
   end
 
   def client
-    ServerClient.new(daemon_uri)
+    @client ||= ServerClient.new daemon_address
   end
 
   def blank_store
     clear_store
-    ServerClient.new(daemon_uri)
+    client
   end
 
   it "should fail locally to set with invalid fields" do
@@ -41,7 +41,7 @@ describe ServerClient do
 
   it "should be comparable" do
     client.should == client
-    client.should_not == ServerClient.new(daemon_uri(1))
+    client.should_not == ServerClient.new(daemon_address(1))
   end
 
   it "should be accessible via HTTP" do

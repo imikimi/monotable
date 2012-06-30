@@ -62,10 +62,11 @@ describe Monotable::EventMachineServer do
 
   def validate_index_records_for_chunks_on_server(client,internal_client=nil)
     internal_client||=client.internal
-    server_name = client.server.split("http://")[1]
+    server_name = client.server
     client.chunks.each do |chunk|
       next if chunk==""
       index_record = Monotable::GlobalIndex.index_record(chunk,internal_client)
+#      Monotable::Tools.debug :chunk => chunk, :index_record => index_record
       index_record.servers.should == [server_name]
     end
   end
@@ -140,14 +141,14 @@ describe Monotable::EventMachineServer do
     end
 
     server_client(0).chunk_keys("u/bret").should == ["u/bret"]
-    server_client(1).chunk_keys("u/bret").should == []
+    server_client(1).chunk_keys("u/bret").should == nil
 
     res = server_client(1).balance
     server_client(0).chunks.should == ["", "++0", "+0", "0", "u/bret"]
     server_client(1).chunks.should == ["u/craig", "u/dan", "u/evan", "u/frank"]
 
     server_client.chunk_keys("u/bret").should == ["u/bret"]
-    server_client(1).chunk_keys("u/bret").should == []
+    server_client(1).chunk_keys("u/bret").should == nil
 
     test_records.each do |key,fields|
       r0 = server_client(0).get(key)
@@ -188,8 +189,8 @@ describe Monotable::EventMachineServer do
 
     # verify one record is on server-0 and another is on server-1
     server_client(0).chunk_keys("u/bret").should == ["u/bret"]
-    server_client(1).chunk_keys("u/bret").should == []
-    server_client(0).chunk_keys("u/craig").should == []
+    server_client(1).chunk_keys("u/bret").should == nil
+    server_client(0).chunk_keys("u/craig").should == nil
     server_client(1).chunk_keys("u/craig").should == ["u/craig"]
 
     # validate we can read we can read each record from either server

@@ -73,8 +73,8 @@ describe Monotable::EventMachineServer do
     end
 
     # verify records can be read from the correct servers
-    server_clients.collect{|c|c.chunk_keys("u/bret")}.should == [[],[],["u/bret"],[]]
-    server_clients.collect{|c|c.chunk_keys("u/dan")}.should == [[],["u/dan"],[],[]]
-    server_clients.collect{|c|c.chunk_keys("u/frank")}.should == [[],[],[],["u/frank"]]
+    server_clients.collect{|c|c.chunk_keys("u/bret")}.should ==   [nil,nil,["u/bret"],nil]
+    server_clients.collect{|c|c.chunk_keys("u/dan")}.should ==    [nil,["u/dan"],nil,nil]
+    server_clients.collect{|c|c.chunk_keys("u/frank")}.should ==  [nil,nil,nil,["u/frank"]]
   end
 end

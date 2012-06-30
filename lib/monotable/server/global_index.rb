@@ -148,7 +148,7 @@ module Monotable
     end
 
     def chunk_master(internal_key,work_log=nil)
-      chunk_servers(internal_key).master
+      find(internal_key,work_log).master
     end
 
     # same as #chunk_servers, only cached

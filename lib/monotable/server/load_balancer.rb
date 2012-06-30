@@ -36,38 +36,11 @@ class LoadBalancer < TopServerComponent
     while chunks.length > local_store.chunks.length+1
       chunk_key = chunks.pop
 
-      master_client = # find master server, then just call "move_chunk" on its client
-
-      chunk_data = client.chunk chunk_key
-      chunk = local_store.add_chunk MemoryChunk.new(:data=>chunk_data)
-      global_index.add_local_replica(chunk)
-
-      client.delete_chunk chunk_key
+      master_client = cluster_manager[global_index.chunk_master(chunk_key)]
+      master_client.move_chunk(chunk_key,client,cluster_manager.local_server)
       chunks_moved[chunk_key]=client.to_s
     end
     chunks_moved
-  end
-
-  private
-  # takes a neighbor and its list of chunks, and moves one chunk at a time to us until balanced
-  def async_balance_neighbor(neighbor,chunks,chunks_moved={},&block)
-
-    # if the most_loaded_neighbor has at most 1 or more chunks than we do, we're balanced enough
-    return yield chunks_moved if chunks.length+1 <= local_store.chunks.length
-
-    chunk_key = chunks.pop
-    neighbor.up_replicate_chunk chunk_key do
-      local_store.add_chunk chunk_data
-      client.down_replicate_chunk chunk_key do
-        chunks_moved[chunk_key]=client.to_s
-        async_balance_neighbor(neighbor,chunks,chunks_moved,&block) # async recursion
-      end
-    end
-  end
-  public
-
-  def async_balance(&block)
-    most_loaded_neighbor {|n,c| async_balance_neighbor(n,c,&block)}
   end
 
 end
