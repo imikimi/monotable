@@ -84,7 +84,7 @@ class ServerController < RequestHandler
     chunk = local_store.get_chunk(@resource_id)
     return respond 404, {:restult => "chunk not on server"} unless chunk
 
-    chunk.journal_write_and_apply(body)
+    chunk.journal_write_and_apply(body,local_store)
     respond 200, {:result => :success}
   end
 

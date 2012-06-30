@@ -96,12 +96,12 @@ module Monotable
     end
 
     # only called directly form an upstream journal-write replication
-    def journal_write_and_apply(encoded_journal_entry)
+    def journal_write_and_apply(encoded_journal_entry,local_store)
       io_stream = StringIO.new encoded_journal_entry
       journal_entry = Journal.parse_encoded_journal_entry io_stream
       case journal_entry[:command]
-      when :set     then  set journal_entry[:key], journal_entry[:fields]
-      when :delete  then  delete journal_entry[:key]
+      when :set     then  local_store.set journal_entry[:key], journal_entry[:fields]
+      when :delete  then  local_store.delete journal_entry[:key]
       when :split   then  split journal_entry
       else raise InternalError.new "apply_entry: invalid journal_entry[:command]: #{journal_entry[:command].inspect}"
       end

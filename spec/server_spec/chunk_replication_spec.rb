@@ -30,9 +30,23 @@ describe Monotable::EventMachineServer do
     server_client(0).chunk_keys(chunk_name).should==[]
     server_client(1).chunk_keys(chunk_name).should==[]
 
-    server_client.set("frank","foo" => "bar")
+    # set
+    server_client.set("frank","foo" => "bar", "peggy" => "sue")
+    server_client(0).internal["u/frank"].should == {"foo" => "bar", "peggy" => "sue"}
+    server_client(1).internal["u/frank"].should == {"foo" => "bar", "peggy" => "sue"}
 
-    server_client(0).chunk_keys(chunk_name).should==["u/frank"]
-    server_client(1).chunk_keys(chunk_name).should==["u/frank"]
+    # overwrite
+    server_client.set("frank","foo" => "bar", "peggy" => "food")
+    server_client(0).internal["u/frank"].should == {"foo" => "bar", "peggy" => "food"}
+    server_client(1).internal["u/frank"].should == {"foo" => "bar", "peggy" => "food"}
+
+    # update
+    server_client.update("frank","foo" => "star")
+    server_client(0).internal["u/frank"].should == {"foo" => "star", "peggy" => "food"}
+    server_client(1).internal["u/frank"].should == {"foo" => "star", "peggy" => "food"}
+
+    server_client.delete("frank")
+    server_client(0).internal["u/frank"].should == nil
+    server_client(1).internal["u/frank"].should == nil
   end
 end
