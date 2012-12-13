@@ -1,6 +1,8 @@
 # encoding: BINARY
 =begin
 
+Explanation of binary_prev and binary_next:
+
 N == max_string_length
 
 Prev Guarantee: given a=b.binary_prev(N)

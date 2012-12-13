@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require 'rubygems'
 require 'trollop'
-require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','version.rb'))
 
 def trollop_opts_parser(args)
   Trollop::options(args) do
@@ -24,7 +24,7 @@ ENDBANNER
     opt :initialize, "initialize a new store"
     opt :store_paths, "one or more local paths to store data (required)", :type => :strings
   end.tap do |opts|
-    opts[:initialize_new_multi_store] = opts[:initialize]
+    opts[:initialize_new_store] = opts[:initialize]
     Trollop::die :store_paths, "At least one store_path required." unless opts[:store_paths] && opts[:store_paths].length>0
     opts[:store_paths].each do |path|
       Trollop::die :store_paths, "store path #{path.inspect} does not exist" unless File.exists?(path)
@@ -35,7 +35,11 @@ end
 
 options=trollop_opts_parser(ARGV)
 
+puts "Loading Monotable..."
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
+
 puts "Monotable internal initialization..."
+
 begin
   Monotable::GoliathServer::HttpServer.start(options) do |server|
     server.periodic_tasks.start

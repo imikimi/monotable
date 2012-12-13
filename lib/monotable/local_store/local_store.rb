@@ -117,7 +117,7 @@ module Monotable
 
       @chunks=RBTree.new
       @store_paths = options[:store_paths] || []
-      @path_stores=@store_paths.collect do |path|
+      @path_stores = @store_paths.collect do |path|
         ps=PathStore.new(path,options.merge(:local_store=>self))
         ps.chunks.each do |filename,chunk|
           #puts "#{self.class}#init_local_store add_chunk_internal filename=#{filename}"

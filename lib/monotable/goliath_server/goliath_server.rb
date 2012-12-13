@@ -94,6 +94,7 @@ class HttpServer < Goliath::API
         Log.info({"Cluster status" => server.cluster_manager.status}.to_yaml)
         Log.info "\nMonotable init successful."
         Log.info "Monotable now listenting on: #{server.host}:#{server.port}"
+        puts "Monotable now listenting on: #{server.host}:#{server.port}" unless options[:quiet]
       end
     end
   end

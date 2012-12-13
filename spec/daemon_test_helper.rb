@@ -52,6 +52,7 @@ module DaemonTestHelper
         :port=>port + daemon_number,
         :host=>host,
         :store_paths => num_store_paths.times.collect {local_store_path},
+        :quiet => true,
 #        :verbose => true,
       }.merge(options)
       )
