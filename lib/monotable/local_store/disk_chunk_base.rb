@@ -123,7 +123,7 @@ module Monotable
 
     # see WriteAPI
     def set(key,columns)
-      save_info = save_journal_entry "set", key, columns.collect {|k,v| [k,v]}
+      save_info = save_journal_entry "set", key, columns.collect {|k,v| [k.to_s,v.to_s]}
       record = JournalDiskRecord.new self, key, columns, save_info
       ret = set_internal key, record
       if accounting_size > max_chunk_size

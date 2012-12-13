@@ -69,6 +69,15 @@ describe Monotable::EventMachineServer do
     res[:next_options].should==nil
   end
 
+  it "should handle setting with non-string values gracefully" do
+    setup_store 2
+
+    server_client.set "foo", "field" => 1, 2 => "food"
+    rec = server_client.get_record "foo"
+    rec["field"].should == "1"
+    rec["2"].should == "food"
+  end
+
   it "should be possible to delete all records in the store" do
     setup_store(2)
     clear_store

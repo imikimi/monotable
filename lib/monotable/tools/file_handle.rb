@@ -17,7 +17,7 @@ module Monotable
     attr_accessor :write_mutex
 
     def initialize(fn)
-      @filename=fn
+      @filename=File.expand_path fn
       @write_mutex=Mutex.new
     end
 

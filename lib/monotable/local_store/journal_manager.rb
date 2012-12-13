@@ -63,16 +63,21 @@ module Monotable
       @journal_number=0
     end
 
+    def existing_journals
+      (Dir[File.join(path,"*#{JOURNAL_EXT}")]+Dir[File.join(path,"*#{JOURNAL_EXT}#{COMPACT_DIR_EXT}")]).collect do |journal_filename|
+        journal_filename = journal_filename.chomp COMPACT_DIR_EXT
+        journal_number = journal_filename[/\d+/].to_i
+        [journal_number,journal_filename]
+      end.sort.uniq
+    end
+
     # compact all existing journals on disk
     # options:    see Journal#compact for more information on options
     def compact_existing_journals(options={})
       # make sure we execute the journals in numerical ascending order
 
       # get all the journal filenames and sort them in ascending numerical order
-      journals=Dir[File.join(path,"*#{JOURNAL_EXT}")].collect do |journal_filename|
-        journal_filename[/[^0-9]+([0-9]+)[^0-9]#{JOURNAL_EXT}/]
-        [$1.to_i,journal_filename]
-      end.sort
+      journals=existing_journals
 
       # compact the journals in order
       journals.each do |a|

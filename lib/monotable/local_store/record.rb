@@ -222,6 +222,10 @@ module Monotable
     attr_accessor :disk_offset
     attr_accessor :disk_length
 
+    def stringify_values(hash)
+      hash.each {|k,v| hash[k]=v.to_s}
+    end
+
     # journal_info require:
     #   :journal => journal object
     #   :offset => offset of entry on disk
@@ -229,7 +233,8 @@ module Monotable
     def initialize(chunk,key,record,journal_info)
       @chunk = chunk
       @chunk_memory_revision = chunk.memory_revision
-      @key=key
+      @key = key
+      stringify_values(record) if record.kind_of? Hash
       self.journal=journal_info[:journal]
       self.disk_offset=journal_info[:offset]
       self.disk_length=journal_info[:length]

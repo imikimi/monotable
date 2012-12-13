@@ -109,8 +109,8 @@ module Monotable
 
     def init_local_store(options={})
       puts "LocalStore initializing..." if options[:verbose]
-      @chunks_by_basename={}
-      @options=options
+      @chunks_by_basename = {}
+      @options = options
       Monotable::Global.reset
       @max_chunk_size = options[:max_chunk_size] || DEFAULT_MAX_CHUNK_SIZE
       @max_index_block_size = options[:max_index_block_size] || DEFAULT_MAX_INDEX_BLOCK_SIZE
@@ -118,7 +118,7 @@ module Monotable
       @chunks=RBTree.new
       @store_paths = options[:store_paths] || []
       @path_stores = @store_paths.collect do |path|
-        ps=PathStore.new(path,options.merge(:local_store=>self))
+        ps = PathStore.new(path,options.merge(:local_store=>self))
         ps.chunks.each do |filename,chunk|
           #puts "#{self.class}#init_local_store add_chunk_internal filename=#{filename}"
           add_chunk_internal chunk
@@ -239,7 +239,7 @@ module Monotable
       path_stores.each do |ps|
         return ps.add_chunk(chunk) if ps.contains_chunk?(chunk)
       end
-      raise InternalError.new "PathStore for chunk #{chunk.filename.inspect} could not be found"
+      raise InternalError.new "PathStore for chunk #{chunk.filename.inspect} could not be found. PathStores:\n PathStore: #{path_stores.collect{|ps|ps.path}.join(' PathStore\n')}"
     end
 
     def reset_chunk(full_chunk_path)
