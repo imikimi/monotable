@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'trollop'
+require 'irb'
+
+if Gem::Specification.find_all_by_name('awesome_print')[0]
+  require 'awesome_print'
+  AwesomePrint.defaults = {:indent => -2}
+else
+  puts "NOTE: 'gem install awesome_print' for prettier output"
+  def ap(str,opts={})
+    puts str.inspect
+  end
+end
+
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','version.rb'))
+
+def trollop_opts_parser(args)
+  Trollop::options(args) do
+    version v="Monotable Daemon v#{Monotable::VERSION} (c) Imikimi LLC (see LICENCE.TXT)"
+    banner <<ENDBANNER
+#{v}
+
+Purpose: Monotable Console
+
+Usage:
+
+  monotable [options]
+
+Options:
+ENDBANNER
+    opt :client, "host (and port) of node in monotable", :type => :string
+  end
+end
+
+options=trollop_opts_parser(ARGV)
+
+puts "Loading Monotable..."
+require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','monotable','monotable.rb'))
+
+host = options[:client] || Monotable::Server.default_host_and_port
+client = nil
+if host
+  puts "Initializeing 'client'. Connecting to '#{host}'"
+  client = Monotable::ServerClient.new host
+  puts "client.servers:"
+  ap client.servers
+  puts "client.local_store_status:"
+  ap client.local_store_status
+end
+
+IRB.start

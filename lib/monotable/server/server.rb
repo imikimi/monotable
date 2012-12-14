@@ -1,5 +1,10 @@
 module Monotable
 class Server
+  class << self
+    def default_port; 8080; end
+    def default_host; "localhost"; end
+    def default_host_and_port; "#{default_host}:#{default_port}"; end
+  end
 
   # config variables
   attr_reader :port,:host,:options
@@ -33,8 +38,8 @@ class Server
     @global_index = Monotable::GlobalIndex.new(self)
     @periodic_tasks = Monotable::PeriodicTasks.new(self)
 
-    @port = options[:port] || 8080
-    @host = options[:host] || 'localhost'
+    @port = options[:port] || Server.default_port
+    @host = options[:host] || Server.default_host
 
     @cluster_manager.local_server = "#{@host}:#{@port}"
 
